@@ -8,16 +8,21 @@ import { serializeSavedUrl } from "@/lib/serializers";
 
 export const runtime = "nodejs";
 
+async function loadOwnedThread(userId: string, id: string) {
+  const db = getDb();
+  const thread = await db.query.askThreads.findFirst({
+    where: and(eq(askThreads.id, id), eq(askThreads.userId, userId)),
+  });
+  if (!thread) throw new NotFoundError("Thread");
+  return thread;
+}
+
 export const GET = withApiErrors(
   async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireUser();
     const { id } = await params;
+    const thread = await loadOwnedThread(user.id, id);
     const db = getDb();
-
-    const thread = await db.query.askThreads.findFirst({
-      where: and(eq(askThreads.id, id), eq(askThreads.userId, user.id)),
-    });
-    if (!thread) throw new NotFoundError("Thread");
 
     const messages = await db.query.askMessages.findMany({
       where: eq(askMessages.threadId, id),
@@ -55,5 +60,16 @@ export const GET = withApiErrors(
           }),
       })),
     });
+  }
+);
+
+export const DELETE = withApiErrors(
+  async (_req: Request, { params }: { params: Promise<{ id: string }> }) => {
+    const user = await requireUser();
+    const { id } = await params;
+    await loadOwnedThread(user.id, id);
+    const db = getDb();
+    await db.delete(askThreads).where(and(eq(askThreads.id, id), eq(askThreads.userId, user.id)));
+    return ok({ id });
   }
 );

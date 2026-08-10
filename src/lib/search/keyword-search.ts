@@ -60,3 +60,22 @@ export async function searchUserItems(
 
   return likeRows.map((row) => ({ ...row, rank: 0 }));
 }
+
+/**
+ * A user's most recently saved items, unfiltered by any query match.
+ * Used as a last-resort fallback by callers (like Ask) that want to
+ * ground answers in the user's library even when keyword search finds
+ * no literal overlap with the question — e.g. natural-language questions
+ * or a library whose content language differs from the question's.
+ */
+export async function getRecentUserItems(userId: string, limit: number): Promise<SearchHit[]> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(savedUrls)
+    .where(eq(savedUrls.userId, userId))
+    .orderBy(desc(savedUrls.createdAt))
+    .limit(limit);
+
+  return rows.map((row) => ({ ...row, rank: 0 }));
+}

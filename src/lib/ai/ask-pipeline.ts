@@ -2,8 +2,9 @@ import { eq, asc } from "drizzle-orm";
 import type OpenAI from "openai";
 import { getDb } from "@/db";
 import { askThreads, askMessages, askMessageCitations, userPreferences } from "@/db/schema";
-import { searchUserItems } from "@/lib/search/keyword-search";
-import { buildAskSystemPrompt, buildSourceBlocks } from "@/lib/ai/prompt-templates";
+import { searchUserItems, getRecentUserItems } from "@/lib/search/keyword-search";
+import { getReadLaterQueue } from "@/lib/read-later/get-queue";
+import { buildAskSystemPrompt, buildSourceBlocks, buildReadingListBlock } from "@/lib/ai/prompt-templates";
 import { askOpenRouter } from "@/lib/ai/openrouter";
 import { isOpenRouterConfigured, env } from "@/lib/env";
 import { serializeSavedUrl } from "@/lib/serializers";
@@ -51,7 +52,16 @@ export async function runAskPipeline(params: {
   const { user, question, threadId, answerLanguageOverride } = params;
   const db = getDb();
 
-  const hits = await searchUserItems(user.id, question, { limit: SOURCE_LIMIT });
+  let hits = await searchUserItems(user.id, question, { limit: SOURCE_LIMIT });
+  if (hits.length === 0) {
+    // No keyword overlap between the question and any saved item (common
+    // for natural-language questions, or a library in a different
+    // language than the question). Fall back to the user's whole library
+    // instead of reporting no sources — let the model see what's saved
+    // and decide whether it's relevant.
+    hits = await getRecentUserItems(user.id, SOURCE_LIMIT);
+  }
+  const readLaterQueue = await getReadLaterQueue(user.id);
   const targetLanguage = await resolveTargetLanguage(
     user.id,
     hits[0]?.contentLanguage ?? null,
@@ -88,7 +98,8 @@ export async function runAskPipeline(params: {
   });
 
   const sourceBlocks = buildSourceBlocks(hits);
-  const systemPrompt = buildAskSystemPrompt(sourceBlocks, targetLanguage);
+  const readingListBlock = buildReadingListBlock(readLaterQueue);
+  const systemPrompt = buildAskSystemPrompt(sourceBlocks, targetLanguage, readingListBlock);
 
   let answerText: string;
   let usedFallback = false;

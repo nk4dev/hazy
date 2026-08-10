@@ -38,7 +38,9 @@
     "empty": "まだ何も保存されていません。最初のリンクを保存してみましょう。",
     "sortOldest": "古い順",
     "sortNewest": "新しい順",
-    "itemCount": "{count}件"
+    "itemCount": "{count}件",
+    "viewList": "リスト表示",
+    "viewGrid": "グリッド表示"
   },
   "save": {
     "title": "リンクを保存",

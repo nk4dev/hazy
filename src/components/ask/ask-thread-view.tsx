@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Sparkle, ArrowUpRight, Loader2, CornerDownRight } from "lucide-react";
+import { Sparkle, ArrowUpRight, Loader2, CornerDownRight, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAskThreadQuery, useAskFollowUpMutation } from "@/hooks/use-ask";
-import { Link } from "@/i18n/navigation";
+import { useAskThreadQuery, useAskFollowUpMutation, useDeleteAskThreadMutation } from "@/hooks/use-ask";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,21 +15,16 @@ function CitationCard({ citation }: { citation: AskCitationDTO }) {
   return (
     <Link
       href={`/item/${citation.savedUrlId}`}
-      className="flex items-start gap-3 rounded-md bg-card p-3.5 transition-colors hover:bg-secondary/60"
+      className="flex items-center gap-2.5 rounded-md bg-card px-2.5 py-2 transition-colors hover:bg-secondary/60"
     >
-      <span className="grid size-[26px] shrink-0 place-items-center rounded-md bg-secondary text-[11px] text-muted-foreground">
+      <span className="grid size-[18px] shrink-0 place-items-center rounded bg-secondary text-[10px] text-muted-foreground">
         {citation.rank}
       </span>
-      <div className="min-w-0 flex-1">
-        <div className="mb-1 flex flex-wrap items-baseline gap-2">
-          <span className="text-[15px] font-medium">{citation.title || citation.url}</span>
-          <span className="text-[11.5px] text-muted-foreground">{citation.domain}</span>
-        </div>
-        {citation.snippet && (
-          <p className="text-[13px] leading-relaxed text-foreground/75">{citation.snippet}</p>
-        )}
+      <div className="flex min-w-0 flex-1 items-baseline gap-2">
+        <span className="truncate text-[13.5px] font-medium">{citation.title || citation.url}</span>
+        <span className="shrink-0 text-[11px] text-muted-foreground">{citation.domain}</span>
       </div>
-      <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+      <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
     </Link>
   );
 }
@@ -48,7 +43,7 @@ function AssistantMessage({ message, t }: { message: AskMessageDTO; t: ReturnTyp
           <div className="mb-3 flex items-baseline gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
             {t("fromLibrary")}
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
             {citations.map((c) => (
               <CitationCard key={c.savedUrlId} citation={c} />
             ))}
@@ -61,9 +56,19 @@ function AssistantMessage({ message, t }: { message: AskMessageDTO; t: ReturnTyp
 
 export function AskThreadView({ threadId }: { threadId: string }) {
   const t = useTranslations("ask");
+  const tCommon = useTranslations("common");
   const { data, isLoading } = useAskThreadQuery(threadId);
   const followUp = useAskFollowUpMutation(threadId);
+  const deleteThread = useDeleteAskThreadMutation();
+  const router = useRouter();
   const [question, setQuestion] = useState("");
+
+  function handleDelete() {
+    deleteThread.mutate(threadId, {
+      onSuccess: () => router.push("/ask"),
+      onError: (error) => toast.error(error instanceof Error ? error.message : "Something went wrong."),
+    });
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,7 +92,22 @@ export function AskThreadView({ threadId }: { threadId: string }) {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
-      <h1 className="mb-8 text-lg font-medium text-muted-foreground">{data.thread.title}</h1>
+      <div className="mb-8 flex items-center gap-2">
+        <h1 className="min-w-0 flex-1 truncate text-lg font-medium text-muted-foreground">
+          {data.thread.title}
+        </h1>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 text-muted-foreground hover:text-destructive"
+          aria-label={tCommon("delete")}
+          disabled={deleteThread.isPending}
+          onClick={handleDelete}
+        >
+          <Trash2 className="size-3.5" />
+        </Button>
+      </div>
 
       {data.messages.map((message) =>
         message.role === "assistant" ? (

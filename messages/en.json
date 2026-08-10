@@ -38,7 +38,9 @@
     "empty": "Nothing saved yet. Save your first link to get started.",
     "sortOldest": "Oldest first",
     "sortNewest": "Newest first",
-    "itemCount": "{count, plural, one {# item} other {# items}}"
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "viewList": "List view",
+    "viewGrid": "Grid view"
   },
   "save": {
     "title": "Save a link",

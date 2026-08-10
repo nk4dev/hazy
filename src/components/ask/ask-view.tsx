@@ -2,18 +2,20 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Search, Loader2, MessageCircleQuestion } from "lucide-react";
+import { Search, Loader2, MessageCircleQuestion, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAskMutation, useAskThreadsQuery } from "@/hooks/use-ask";
+import { useAskMutation, useAskThreadsQuery, useDeleteAskThreadMutation } from "@/hooks/use-ask";
 import { useRouter, Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function AskView() {
   const t = useTranslations("ask");
+  const tCommon = useTranslations("common");
   const [question, setQuestion] = useState("");
   const ask = useAskMutation();
   const threads = useAskThreadsQuery();
+  const deleteThread = useDeleteAskThreadMutation();
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
@@ -72,13 +74,24 @@ export function AskView() {
 
       <ul className="flex flex-col divide-y divide-border/60">
         {threads.data?.items.map((thread) => (
-          <li key={thread.id}>
+          <li key={thread.id} className="group flex items-center gap-1">
             <Link
               href={`/ask/${thread.id}`}
-              className="block truncate rounded-md px-2 py-3 text-sm transition-colors hover:bg-secondary/40"
+              className="block min-w-0 flex-1 truncate rounded-md px-2 py-3 text-sm transition-colors hover:bg-secondary/40"
             >
               {thread.title}
             </Link>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+              aria-label={tCommon("delete")}
+              disabled={deleteThread.isPending}
+              onClick={() => deleteThread.mutate(thread.id)}
+            >
+              <Trash2 className="size-3.5" />
+            </Button>
           </li>
         ))}
       </ul>

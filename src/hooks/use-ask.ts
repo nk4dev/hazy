@@ -44,6 +44,15 @@ export function useAskMutation() {
   });
 }
 
+export function useDeleteAskThreadMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (threadId: string) =>
+      unwrap<{ id: string }>(await fetch(`/api/v1/ask/threads/${threadId}`, { method: "DELETE" })),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ask", "threads"] }),
+  });
+}
+
 export function useAskFollowUpMutation(threadId: string) {
   const queryClient = useQueryClient();
   return useMutation({
