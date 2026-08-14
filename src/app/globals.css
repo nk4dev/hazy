@@ -130,4 +130,20 @@
       transparent
     );
   }
+
+  .animate-hz-breathe {
+    animation: hz-breathe 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes hz-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
