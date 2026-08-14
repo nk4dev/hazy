@@ -1,7 +1,7 @@
 import type { SearchHit } from "@/lib/search/keyword-search";
 import type { InboxItem } from "@/lib/read-later/bucketing";
 
-const LANGUAGE_NAME: Record<string, string> = {
+export const LANGUAGE_NAME: Record<string, string> = {
   en: "English",
   ja: "Japanese (日本語)",
 };
@@ -44,4 +44,19 @@ ${sourceBlocks || "(no matching sources found in the user's library)"}
 
 Current "read later" list:
 ${readingListBlock}`;
+}
+
+export function buildSummarizePrompt(
+  item: { title: string | null; url: string; description: string | null; extractedText: string | null },
+  targetLanguage: string
+): string {
+  const languageName = LANGUAGE_NAME[targetLanguage] ?? targetLanguage;
+  const body = (item.extractedText ?? item.description ?? "").slice(0, 6000);
+  return `Summarize the following saved page in ${languageName}, in 2-4 concise sentences. Focus on the key point or takeaway, not a generic description of what the page is.
+
+Title: ${item.title ?? item.url}
+URL: ${item.url}
+
+Content:
+${body || "(no extracted content available — summarize based on the title and URL alone, or say plainly that there isn't enough information to summarize)"}`;
 }

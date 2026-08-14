@@ -21,7 +21,8 @@
     "retry": "Retry",
     "delete": "Delete",
     "close": "Close",
-    "search": "Search"
+    "search": "Search",
+    "summarize": "Summarize"
   },
   "setup": {
     "title": "Setup required",

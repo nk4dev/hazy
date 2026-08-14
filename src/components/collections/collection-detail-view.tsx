@@ -33,7 +33,7 @@ export function CollectionDetailView({ id }: { id: string }) {
         <ul className="flex flex-col divide-y divide-border/60">
           {data.items.map((item) => (
             <li key={item.id}>
-              <ItemRow item={item} />
+              <ItemRow item={item} showSummarize />
             </li>
           ))}
         </ul>

@@ -24,7 +24,6 @@ function useViewMode() {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored === "grid") setView("grid");
   }, []);
 
