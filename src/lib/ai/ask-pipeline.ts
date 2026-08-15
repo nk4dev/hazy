@@ -2,16 +2,23 @@ import { eq, asc } from "drizzle-orm";
 import type OpenAI from "openai";
 import { getDb } from "@/db";
 import { askThreads, askMessages, askMessageCitations, userPreferences } from "@/db/schema";
-import { searchUserItems, getRecentUserItems } from "@/lib/search/keyword-search";
+import { searchUserItems, getRecentUserItems, type SearchHit } from "@/lib/search/keyword-search";
 import { getReadLaterQueue } from "@/lib/read-later/get-queue";
-import { buildAskSystemPrompt, buildSourceBlocks, buildReadingListBlock } from "@/lib/ai/prompt-templates";
-import { askOpenRouter } from "@/lib/ai/openrouter";
+import { buildAskSystemPrompt, formatSearchResults, buildReadingListBlock } from "@/lib/ai/prompt-templates";
+import { createChatCompletion } from "@/lib/ai/openrouter";
+import { SEARCH_SAVED_LINKS_TOOL, SEARCH_SAVED_LINKS_TOOL_NAME, runSearchSavedLinksTool } from "@/lib/ai/ask-tools";
 import { isOpenRouterConfigured, env } from "@/lib/env";
 import { serializeSavedUrl } from "@/lib/serializers";
 import type { AskResponseDTO } from "@/types/api";
 import type { AppUser } from "@/lib/auth/current-user";
 
 const SOURCE_LIMIT = 6;
+const MAX_TOOL_ROUNDS = 4;
+// Caps how much prior thread history is replayed into the model on each
+// follow-up — without this, prompt tokens grow linearly (unbounded) with
+// thread length. Recent turns matter far more than early ones for a
+// conversational follow-up, so only the tail is kept.
+const MAX_HISTORY_MESSAGES = 12;
 
 // Persisted messages are plain text (not translation keys) since they live
 // in the DB and get read back verbatim later. Kept in sync with
@@ -43,6 +50,62 @@ async function resolveTargetLanguage(
   return prefs?.interfaceLocale ?? "en";
 }
 
+/**
+ * Drives the OpenRouter tool-calling loop: the model can call
+ * search_saved_links (possibly more than once, with different queries)
+ * before producing its final answer, instead of being handed a fixed
+ * pre-fetched source list. Search results are numbered globally across
+ * every call in this turn — including repeats of an already-seen link —
+ * so the numbers the model cites with line up 1:1 with the citation list
+ * built from `hits` afterward.
+ */
+async function runToolCallingAsk(
+  userId: string,
+  systemPrompt: string,
+  priorMessages: { role: "user" | "assistant"; content: string }[],
+  question: string
+): Promise<{ answerText: string; hits: SearchHit[] }> {
+  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+    { role: "system", content: systemPrompt },
+    ...priorMessages.map((m) => ({ role: m.role, content: m.content }) as OpenAI.Chat.ChatCompletionMessageParam),
+    { role: "user", content: question },
+  ];
+
+  const hits: SearchHit[] = [];
+  const seenIds = new Set<string>();
+
+  for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
+    const message = await createChatCompletion(messages, { tools: [SEARCH_SAVED_LINKS_TOOL] });
+
+    if (!message.tool_calls || message.tool_calls.length === 0) {
+      if (!message.content) throw new Error("OpenRouter returned an empty response.");
+      return { answerText: message.content, hits };
+    }
+
+    messages.push({ role: "assistant", content: message.content, tool_calls: message.tool_calls });
+
+    for (const toolCall of message.tool_calls) {
+      if (toolCall.type !== "function" || toolCall.function.name !== SEARCH_SAVED_LINKS_TOOL_NAME) {
+        messages.push({ role: "tool", tool_call_id: toolCall.id, content: "Unknown tool." });
+        continue;
+      }
+      const results = await runSearchSavedLinksTool(userId, toolCall.function.arguments);
+      for (const hit of results) {
+        if (!seenIds.has(hit.id)) {
+          seenIds.add(hit.id);
+          hits.push(hit);
+        }
+      }
+      const resultText = formatSearchResults(
+        results.map((hit) => ({ hit, number: hits.findIndex((h) => h.id === hit.id) + 1 }))
+      );
+      messages.push({ role: "tool", tool_call_id: toolCall.id, content: resultText });
+    }
+  }
+
+  throw new Error("OpenRouter tool-calling loop exceeded max rounds without a final answer.");
+}
+
 export async function runAskPipeline(params: {
   user: AppUser;
   question: string;
@@ -52,19 +115,23 @@ export async function runAskPipeline(params: {
   const { user, question, threadId, answerLanguageOverride } = params;
   const db = getDb();
 
-  let hits = await searchUserItems(user.id, question, { limit: SOURCE_LIMIT });
-  if (hits.length === 0) {
+  // A cheap upfront search — used only for target-language detection and as
+  // the deterministic fallback (canned text + citations) when OpenRouter is
+  // unconfigured or errors out. The AI path itself no longer gets these
+  // handed to it directly; it searches live via the search_saved_links tool.
+  let fallbackHits = await searchUserItems(user.id, question, { limit: SOURCE_LIMIT });
+  if (fallbackHits.length === 0) {
     // No keyword overlap between the question and any saved item (common
     // for natural-language questions, or a library in a different
     // language than the question). Fall back to the user's whole library
     // instead of reporting no sources — let the model see what's saved
     // and decide whether it's relevant.
-    hits = await getRecentUserItems(user.id, SOURCE_LIMIT);
+    fallbackHits = await getRecentUserItems(user.id, SOURCE_LIMIT);
   }
   const readLaterQueue = await getReadLaterQueue(user.id);
   const targetLanguage = await resolveTargetLanguage(
     user.id,
-    hits[0]?.contentLanguage ?? null,
+    fallbackHits[0]?.contentLanguage ?? null,
     answerLanguageOverride
   );
 
@@ -82,7 +149,12 @@ export async function runAskPipeline(params: {
       where: eq(askMessages.threadId, threadId),
       orderBy: [asc(askMessages.createdAt)],
     });
-    priorMessages = existing.map((m) => ({ role: m.role, content: m.content }));
+    // Only the most recent turns are sent to the model — see
+    // MAX_HISTORY_MESSAGES. `existing` (full history) is still what's used
+    // everywhere else (thread display, etc.); this slice is AI-input only.
+    priorMessages = existing
+      .slice(-MAX_HISTORY_MESSAGES)
+      .map((m) => ({ role: m.role, content: m.content }));
   } else {
     const [created] = await db
       .insert(askThreads)
@@ -97,30 +169,28 @@ export async function runAskPipeline(params: {
     content: question,
   });
 
-  const sourceBlocks = buildSourceBlocks(hits);
   const readingListBlock = buildReadingListBlock(readLaterQueue);
-  const systemPrompt = buildAskSystemPrompt(sourceBlocks, targetLanguage, readingListBlock);
+  const systemPrompt = buildAskSystemPrompt(targetLanguage, readingListBlock);
 
   let answerText: string;
   let usedFallback = false;
+  let citationHits: SearchHit[] = fallbackHits;
 
   const fallbackText = FALLBACK_TEXT[targetLanguage] ?? FALLBACK_TEXT.en;
 
   if (!isOpenRouterConfigured()) {
     usedFallback = true;
-    answerText = hits.length > 0 ? fallbackText.withSources : fallbackText.empty;
+    answerText = fallbackHits.length > 0 ? fallbackText.withSources : fallbackText.empty;
   } else {
     try {
-      const chatMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: "system", content: systemPrompt },
-        ...priorMessages.map((m) => ({ role: m.role, content: m.content }) as OpenAI.Chat.ChatCompletionMessageParam),
-        { role: "user", content: question },
-      ];
-      answerText = await askOpenRouter(chatMessages);
+      const result = await runToolCallingAsk(user.id, systemPrompt, priorMessages, question);
+      answerText = result.answerText;
+      citationHits = result.hits;
     } catch (error) {
       console.error("OpenRouter call failed, falling back:", error);
       usedFallback = true;
-      answerText = hits.length > 0 ? fallbackText.withSources : fallbackText.empty;
+      answerText = fallbackHits.length > 0 ? fallbackText.withSources : fallbackText.empty;
+      citationHits = fallbackHits;
     }
   }
 
@@ -135,9 +205,9 @@ export async function runAskPipeline(params: {
     })
     .returning();
 
-  if (hits.length > 0) {
+  if (citationHits.length > 0) {
     await db.insert(askMessageCitations).values(
-      hits.map((hit, i) => ({
+      citationHits.map((hit, i) => ({
         messageId: assistantMessage.id,
         savedUrlId: hit.id,
         rank: i + 1,
@@ -146,7 +216,7 @@ export async function runAskPipeline(params: {
     );
   }
 
-  const citations = hits.map((hit, i) => {
+  const citations = citationHits.map((hit, i) => {
     const dto = serializeSavedUrl(hit);
     return {
       savedUrlId: hit.id,
@@ -175,6 +245,6 @@ export async function runAskPipeline(params: {
       createdAt: assistantMessage.createdAt.toISOString(),
     },
     citations,
-    meta: { sourceCount: hits.length },
+    meta: { sourceCount: citationHits.length },
   };
 }
