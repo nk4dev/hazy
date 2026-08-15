@@ -198,6 +198,12 @@ Returns updated `SavedUrlDTO`.
 (e.g. a "retry" button after `fetchStatus: "error"`). No body.
 Returns updated `SavedUrlDTO`.
 
+**`POST /items/:id/summarize`** — (re)generate the AI summary for an
+already-saved item. No body. Requires an AI key configured server-side —
+if none is set, this fails `503 service_not_configured` rather than
+succeeding with a fallback (unlike Ask, there's no non-AI summary to fall
+back to). Returns updated `SavedUrlDTO` with a new `summary`.
+
 ### Search
 
 **`GET /search?q=&limit=`** — plain Postgres full-text keyword search over
@@ -278,6 +284,18 @@ the response still succeeds but `message.usedFallback` is `true` and the
 content is a plain "here's what matched" response instead of a synthesized
 answer — render this the same way, just maybe with a small "AI unavailable"
 hint if `usedFallback` is true.
+
+The server answers by having the model search the user's saved links
+itself (it may search multiple times per question before replying), so:
+- **Latency is higher and more variable than a single LLM call** — budget
+  for several seconds, and show a real loading/thinking state rather than
+  a fixed-duration spinner.
+- **`citations` can be a longer, variable-length list** (not a small fixed
+  count) — don't design the citations UI around a small number of chips;
+  a scrollable list is safer than a fixed row.
+- `usedFallback: false` with an empty `citations` array is a valid
+  response (the model answered without finding — or without needing — a
+  saved source). Don't treat "no citations" as an error state.
 
 **`GET /ask/threads`** — list the caller's threads (most recently updated
 first, capped at 50).
