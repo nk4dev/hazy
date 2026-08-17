@@ -1,13 +1,15 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCollectionQuery } from "@/hooks/use-collections";
+import { toast } from "sonner";
+import { useCollectionQuery, useRemoveFromCollectionMutation } from "@/hooks/use-collections";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ItemRow } from "@/components/library/item-row";
 
 export function CollectionDetailView({ id }: { id: string }) {
   const t = useTranslations("collections");
   const { data, isLoading } = useCollectionQuery(id);
+  const removeFromCollection = useRemoveFromCollectionMutation();
 
   if (isLoading) {
     return (
@@ -33,7 +35,25 @@ export function CollectionDetailView({ id }: { id: string }) {
         <ul className="flex flex-col divide-y divide-border/60">
           {data.items.map((item) => (
             <li key={item.id}>
-              <ItemRow item={item} showSummarize />
+              <ItemRow
+                item={item}
+                showSummarize
+                removeLabel={t("remove")}
+                removePending={
+                  removeFromCollection.isPending &&
+                  removeFromCollection.variables?.savedUrlId === item.id
+                }
+                onRemove={() =>
+                  removeFromCollection.mutate(
+                    { collectionId: id, savedUrlId: item.id },
+                    {
+                      onSuccess: () => toast.success(t("removed")),
+                      onError: (error) =>
+                        toast.error(error instanceof Error ? error.message : "Something went wrong."),
+                    }
+                  )
+                }
+              />
             </li>
           ))}
         </ul>

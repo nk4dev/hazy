@@ -1,4 +1,4 @@
-import { ArrowUpRight, Loader2, Sparkles } from "lucide-react";
+import { ArrowUpRight, Loader2, Sparkles, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Link } from "@/i18n/navigation";
@@ -10,9 +10,15 @@ import type { SavedUrlDTO } from "@/types/api";
 export function ItemRow({
   item,
   showSummarize = false,
+  onRemove,
+  removePending = false,
+  removeLabel,
 }: {
   item: SavedUrlDTO;
   showSummarize?: boolean;
+  onRemove?: () => void;
+  removePending?: boolean;
+  removeLabel?: string;
 }) {
   const t = useTranslations("common");
   const summarize = useSummarizeItemMutation(item.id);
@@ -56,6 +62,19 @@ export function ItemRow({
           ) : (
             <Sparkles className="size-3.5" />
           )}
+        </Button>
+      )}
+      {onRemove && (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+          aria-label={removeLabel ?? t("delete")}
+          disabled={removePending}
+          onClick={onRemove}
+        >
+          {removePending ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
         </Button>
       )}
     </div>

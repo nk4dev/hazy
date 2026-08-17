@@ -78,7 +78,9 @@
     "title": "Collections",
     "empty": "No collections yet.",
     "create": "New collection",
-    "namePlaceholder": "Collection name"
+    "namePlaceholder": "Collection name",
+    "remove": "Remove from collection",
+    "removed": "Removed from collection"
   },
   "readLater": {
     "title": "Read later",

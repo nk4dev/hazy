@@ -78,7 +78,9 @@
     "title": "コレクション",
     "empty": "まだコレクションがありません。",
     "create": "新しいコレクション",
-    "namePlaceholder": "コレクション名"
+    "namePlaceholder": "コレクション名",
+    "remove": "コレクションから削除",
+    "removed": "コレクションから削除しました"
   },
   "readLater": {
     "title": "後で見る",

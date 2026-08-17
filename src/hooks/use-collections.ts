@@ -59,3 +59,19 @@ export function useAddToCollectionMutation() {
     },
   });
 }
+
+export function useRemoveFromCollectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ collectionId, savedUrlId }: { collectionId: string; savedUrlId: string }) =>
+      unwrap(
+        await fetch(`/api/v1/collections/${collectionId}/items/${savedUrlId}`, {
+          method: "DELETE",
+        })
+      ),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
+    },
+  });
+}
