@@ -1,17 +1,17 @@
+import { relations, sql } from "drizzle-orm";
 import {
-  pgTable,
-  uuid,
-  text,
-  varchar,
-  timestamp,
   boolean,
+  customType,
+  index,
   integer,
   pgEnum,
+  pgTable,
+  text,
+  timestamp,
   unique,
-  index,
-  customType,
+  uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
-import { relations, sql } from "drizzle-orm";
 
 const tsvector = customType<{ data: string }>({
   dataType() {
@@ -20,15 +20,8 @@ const tsvector = customType<{ data: string }>({
 });
 
 export const localeEnum = pgEnum("locale", ["en", "ja"]);
-export const answerLanguageModeEnum = pgEnum("answer_language_mode", [
-  "interface",
-  "source",
-]);
-export const fetchStatusEnum = pgEnum("fetch_status", [
-  "pending",
-  "success",
-  "error",
-]);
+export const answerLanguageModeEnum = pgEnum("answer_language_mode", ["interface", "source"]);
+export const fetchStatusEnum = pgEnum("fetch_status", ["pending", "success", "error"]);
 export const readLaterStatusEnum = pgEnum("read_later_status", [
   "inbox",
   "snoozed",
@@ -52,9 +45,7 @@ export const userPreferences = pgTable("user_preferences", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   interfaceLocale: localeEnum("interface_locale").notNull().default("en"),
-  answerLanguageMode: answerLanguageModeEnum("answer_language_mode")
-    .notNull()
-    .default("interface"),
+  answerLanguageMode: answerLanguageModeEnum("answer_language_mode").notNull().default("interface"),
   notifyReadLaterDigest: boolean("notify_read_later_digest").notNull().default(true),
   notifyWeeklyStats: boolean("notify_weekly_stats").notNull().default(false),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -142,10 +133,7 @@ export const collectionItems = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
-    unique("collection_items_collection_saved_url_unique").on(
-      table.collectionId,
-      table.savedUrlId
-    ),
+    unique("collection_items_collection_saved_url_unique").on(table.collectionId, table.savedUrlId),
   ]
 );
 

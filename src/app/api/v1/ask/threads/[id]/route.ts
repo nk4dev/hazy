@@ -1,9 +1,9 @@
 import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { askThreads, askMessages } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
-import { ok, withApiErrors } from "@/lib/api/response";
+import { askMessages, askThreads } from "@/db/schema";
 import { NotFoundError } from "@/lib/api/errors";
+import { ok, withApiErrors } from "@/lib/api/response";
+import { requireUser } from "@/lib/auth/current-user";
 import { serializeSavedUrl } from "@/lib/serializers";
 
 export const runtime = "nodejs";
@@ -45,9 +45,11 @@ export const GET = withApiErrors(
         usedFallback: m.usedFallback,
         createdAt: m.createdAt.toISOString(),
         citations: m.citations
-          .filter((c) => c.savedUrl)
+          .filter((c): c is typeof c & { savedUrl: NonNullable<typeof c.savedUrl> } =>
+            Boolean(c.savedUrl)
+          )
           .map((c) => {
-            const dto = serializeSavedUrl(c.savedUrl!);
+            const dto = serializeSavedUrl(c.savedUrl);
             return {
               savedUrlId: c.savedUrlId,
               title: dto.title,

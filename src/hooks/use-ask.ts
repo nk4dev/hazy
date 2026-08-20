@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AskResponseDTO, AskThreadDTO, AskMessageDTO } from "@/types/api";
+import type { AskMessageDTO, AskResponseDTO, AskThreadDTO } from "@/types/api";
 
 type ApiEnvelope<T> = { data: T } | { error: { code: string; message: string } };
 

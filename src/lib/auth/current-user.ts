@@ -1,9 +1,9 @@
 import { auth, currentUser as clerkCurrentUser } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { users, userPreferences } from "@/db/schema";
-import { isClerkConfigured, isDatabaseConfigured } from "@/lib/env";
+import { userPreferences, users } from "@/db/schema";
 import { UnauthorizedError } from "@/lib/api/errors";
+import { isClerkConfigured, isDatabaseConfigured } from "@/lib/env";
 
 export type AppUser = typeof users.$inferSelect;
 
@@ -44,9 +44,7 @@ export async function getOptionalUser(): Promise<AppUser | null> {
     .onConflictDoNothing({ target: users.clerkId })
     .returning();
 
-  const user =
-    created ??
-    (await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) }));
+  const user = created ?? (await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) }));
 
   if (!user) {
     // Extremely unlikely race (conflict + re-read miss); surface as unauthorized

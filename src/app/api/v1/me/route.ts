@@ -2,8 +2,8 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
 import { userPreferences } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
 import { ok, withApiErrors } from "@/lib/api/response";
+import { requireUser } from "@/lib/auth/current-user";
 
 export const runtime = "nodejs";
 

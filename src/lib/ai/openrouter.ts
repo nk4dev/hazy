@@ -27,7 +27,9 @@ function extractMessage(completion: OpenAI.Chat.ChatCompletion): OpenAI.Chat.Cha
     // for cases the SDK doesn't treat as a thrown error — a deprecated/
     // retired model, no provider currently serving it, rate limiting, etc.
     const errorMessage = (completion as { error?: { message?: string } }).error?.message;
-    throw new Error(`OpenRouter returned no choices: ${errorMessage ?? JSON.stringify(completion)}`);
+    throw new Error(
+      `OpenRouter returned no choices: ${errorMessage ?? JSON.stringify(completion)}`
+    );
   }
   const message = completion.choices[0]?.message;
   if (!message) {
@@ -57,7 +59,9 @@ export async function createChatCompletion(
   return extractMessage(completion);
 }
 
-export async function askOpenRouter(messages: OpenAI.Chat.ChatCompletionMessageParam[]): Promise<string> {
+export async function askOpenRouter(
+  messages: OpenAI.Chat.ChatCompletionMessageParam[]
+): Promise<string> {
   const message = await createChatCompletion(messages);
   const content = message.content;
   if (!content) {

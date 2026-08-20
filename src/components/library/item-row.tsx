@@ -1,10 +1,10 @@
 import { ArrowUpRight, Loader2, Sparkles, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Link } from "@/i18n/navigation";
 import { Favicon } from "@/components/favicon";
 import { Button } from "@/components/ui/button";
 import { useSummarizeItemMutation } from "@/hooks/use-item";
+import { Link } from "@/i18n/navigation";
 import type { SavedUrlDTO } from "@/types/api";
 
 export function ItemRow({
@@ -53,7 +53,8 @@ export function ItemRow({
           disabled={summarize.isPending}
           onClick={() =>
             summarize.mutate(undefined, {
-              onError: (error) => toast.error(error instanceof Error ? error.message : "Something went wrong."),
+              onError: (error) =>
+                toast.error(error instanceof Error ? error.message : "Something went wrong."),
             })
           }
         >
@@ -74,7 +75,11 @@ export function ItemRow({
           disabled={removePending}
           onClick={onRemove}
         >
-          {removePending ? <Loader2 className="size-3.5 animate-spin" /> : <X className="size-3.5" />}
+          {removePending ? (
+            <Loader2 className="size-3.5 animate-spin" />
+          ) : (
+            <X className="size-3.5" />
+          )}
         </Button>
       )}
     </div>

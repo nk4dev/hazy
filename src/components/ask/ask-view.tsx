@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { Loader2, MessageCircleQuestion, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Search, Loader2, MessageCircleQuestion, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useAskMutation, useAskThreadsQuery, useDeleteAskThreadMutation } from "@/hooks/use-ask";
-import { useRouter, Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAskMutation, useAskThreadsQuery, useDeleteAskThreadMutation } from "@/hooks/use-ask";
+import { Link, useRouter } from "@/i18n/navigation";
 
 export function AskView() {
   const t = useTranslations("ask");
@@ -23,7 +23,8 @@ export function AskView() {
     if (!question.trim()) return;
     ask.mutate(question.trim(), {
       onSuccess: (result) => router.push(`/ask/${result.thread.id}`),
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Something went wrong."),
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : "Something went wrong."),
     });
   }
 
@@ -41,7 +42,6 @@ export function AskView() {
             placeholder={t("placeholder")}
             className="w-full bg-transparent text-[16px] outline-none placeholder:text-muted-foreground"
             disabled={ask.isPending}
-            autoFocus
           />
           {ask.isPending ? (
             <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
@@ -60,6 +60,7 @@ export function AskView() {
       {threads.isLoading && (
         <div className="flex flex-col gap-2">
           {Array.from({ length: 3 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static-length placeholder list, never reordered
             <Skeleton key={i} className="h-12 w-full rounded-md" />
           ))}
         </div>

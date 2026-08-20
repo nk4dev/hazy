@@ -1,13 +1,15 @@
-import postgres from "postgres";
-import { drizzle as drizzlePostgresJs } from "drizzle-orm/postgres-js";
 import { neon } from "@neondatabase/serverless";
 import { drizzle as drizzleNeonHttp } from "drizzle-orm/neon-http";
-import { env, isDatabaseConfigured } from "@/lib/env";
+import { drizzle as drizzlePostgresJs } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 import { ServiceNotConfiguredError } from "@/lib/api/errors";
+import { env, isDatabaseConfigured } from "@/lib/env";
 import { isLocalDatabaseUrl, resolveSslMode } from "./connection-options";
 import * as schema from "./schema";
 
-type Db = ReturnType<typeof drizzlePostgresJs<typeof schema>> | ReturnType<typeof drizzleNeonHttp<typeof schema>>;
+type Db =
+  | ReturnType<typeof drizzlePostgresJs<typeof schema>>
+  | ReturnType<typeof drizzleNeonHttp<typeof schema>>;
 
 let cached: Db | null = null;
 
@@ -22,13 +24,15 @@ let cached: Db | null = null;
  * Cloudflare Workers as well as Node — Workers doesn't support the raw TCP
  * sockets postgres.js needs. */
 export function getDb(): Db {
-  if (!isDatabaseConfigured()) {
+  const databaseUrl = env.DATABASE_URL;
+  if (!isDatabaseConfigured() || !databaseUrl) {
     throw new ServiceNotConfiguredError("database");
   }
-  const databaseUrl = env.DATABASE_URL!;
   if (!cached) {
     cached = isLocalDatabaseUrl(databaseUrl)
-      ? drizzlePostgresJs(postgres(databaseUrl, { max: 5, ssl: resolveSslMode(databaseUrl) }), { schema })
+      ? drizzlePostgresJs(postgres(databaseUrl, { max: 5, ssl: resolveSslMode(databaseUrl) }), {
+          schema,
+        })
       : drizzleNeonHttp(neon(databaseUrl), { schema });
   }
   return cached;

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Link } from "@/i18n/navigation";
 import { HazyMark } from "@/components/hazy-mark";
 import { Badge } from "@/components/ui/badge";
+import { Link } from "@/i18n/navigation";
 
 export const metadata: Metadata = {
   title: "API Docs — Hazy",
-  description: "Public API reference for building external clients (mobile apps, extensions, etc.) against Hazy.",
+  description:
+    "Public API reference for building external clients (mobile apps, extensions, etc.) against Hazy.",
 };
 
 type HttpMethod = "GET" | "POST" | "PATCH" | "DELETE";
@@ -60,7 +61,15 @@ function Endpoint({
   );
 }
 
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+function Section({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} className="scroll-mt-24 space-y-4">
       <h2 className="text-xl font-medium tracking-tight">{title}</h2>
@@ -118,12 +127,17 @@ export default function ApiDocsPage() {
           <div className="space-y-2">
             <h1 className="text-2xl font-medium tracking-tight">Hazy API</h1>
             <p className="max-w-[64ch] text-[14.5px] leading-relaxed text-muted-foreground">
-              This is the public contract for <code className="rounded bg-muted px-1 py-0.5 font-mono text-[13px]">/api/v1/**</code>,
-              the JSON API the Hazy web app itself runs on — stable enough to build any external
+              This is the public contract for{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[13px]">/api/v1/**</code>
+              , the JSON API the Hazy web app itself runs on — stable enough to build any external
               client against (a smartphone app, a browser extension, a CLI) without access to this
-              repository. There is no separate API-key system: external clients authenticate the same
-              way the web app does, via a Clerk session token. A Markdown copy of this same reference
-              lives at <code className="rounded bg-muted px-1 py-0.5 font-mono text-[13px]">docs/api.md</code> in the repo.
+              repository. There is no separate API-key system: external clients authenticate the
+              same way the web app does, via a Clerk session token. A Markdown copy of this same
+              reference lives at{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[13px]">
+                docs/api.md
+              </code>{" "}
+              in the repo.
             </p>
           </div>
 
@@ -131,10 +145,16 @@ export default function ApiDocsPage() {
             <Code>{`https://<deployed-host>/api/v1`}</Code>
             <p className="text-[13.5px] leading-relaxed text-muted-foreground">
               For local development,{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">http://localhost:3000/api/v1</code>{" "}
-              (use <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">10.0.2.2</code> in place of{" "}
-              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">localhost</code> from an Android
-              emulator; a physical device needs the host machine&apos;s LAN IP).
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">
+                http://localhost:3000/api/v1
+              </code>{" "}
+              (use{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">10.0.2.2</code>{" "}
+              in place of{" "}
+              <code className="rounded bg-muted px-1 py-0.5 font-mono text-[12.5px]">
+                localhost
+              </code>{" "}
+              from an Android emulator; a physical device needs the host machine&apos;s LAN IP).
             </p>
           </Section>
 
@@ -177,9 +197,9 @@ export default function ApiDocsPage() {
             </p>
             <Code>{`{ "error": { "code": "string_error_code", "message": "Human-readable message.", "details": {} } }`}</Code>
             <p>
-              <code>details</code> is optional. Always branch on the presence of <code>data</code> vs{" "}
-              <code>error</code> in the body — status codes are also meaningful (see Errors), but the
-              body shape is the source of truth.
+              <code>details</code> is optional. Always branch on the presence of <code>data</code>{" "}
+              vs <code>error</code> in the body — status codes are also meaningful (see Errors), but
+              the body shape is the source of truth.
             </p>
           </Section>
 
@@ -221,8 +241,8 @@ export default function ApiDocsPage() {
                       <code>not_found</code>
                     </td>
                     <td>
-                      Resource doesn&apos;t exist, or exists but isn&apos;t owned by the caller — the
-                      API never distinguishes the two.
+                      Resource doesn&apos;t exist, or exists but isn&apos;t owned by the caller —
+                      the API never distinguishes the two.
                     </td>
                   </tr>
                   <tr>
@@ -250,8 +270,8 @@ export default function ApiDocsPage() {
           <Section id="models" title="Data models">
             <p>
               Exact TypeScript DTOs the backend returns. A few endpoints intentionally return a raw
-              database row instead of one of these DTOs — called out explicitly where that&apos;s the
-              case.
+              database row instead of one of these DTOs — called out explicitly where that&apos;s
+              the case.
             </p>
             <Code>{`type SavedUrlDTO = {
   id: string;                    // uuid
@@ -321,20 +341,27 @@ type AskResponseDTO = {
           </Section>
 
           <Section id="items" title="Saved items">
-            <Endpoint id="items-post" method="POST" path="/items" status="200 (already saved) or 201 (new)">
+            <Endpoint
+              id="items-post"
+              method="POST"
+              path="/items"
+              status="200 (already saved) or 201 (new)"
+            >
               <p>
                 Save a new URL (fetches metadata server-side; ~8s timeout, show a loading state).
                 Idempotent — dedupes by normalized URL.
               </p>
               <Code>{`{ "url": string }`}</Code>
-              <p>Returns <code>SavedUrlDTO</code>.</p>
+              <p>
+                Returns <code>SavedUrlDTO</code>.
+              </p>
             </Endpoint>
             <Endpoint id="items-list" method="GET" path="/items?cursor=&limit=&sort=">
               <p>
                 Paginated list of saved items. Query (all optional): <code>cursor</code> (uuid, from
-                the previous page&apos;s <code>nextCursor</code>), <code>limit</code> (1–100, default
-                30), <code>sort</code> (<code>&quot;newest&quot; | &quot;oldest&quot;</code>, default
-                &quot;newest&quot;).
+                the previous page&apos;s <code>nextCursor</code>), <code>limit</code> (1–100,
+                default 30), <code>sort</code> (<code>&quot;newest&quot; | &quot;oldest&quot;</code>
+                , default &quot;newest&quot;).
               </p>
               <p>
                 Returns <code>PaginatedResponse&lt;SavedUrlDTO&gt;</code>.
@@ -349,7 +376,9 @@ type AskResponseDTO = {
               <p>Edit title/summary. Body (all optional):</p>
               <Code>{`{ "title"?: string | null,   // ≤500 chars
   "summary"?: string | null } // ≤4000 chars`}</Code>
-              <p>Returns updated <code>SavedUrlDTO</code>.</p>
+              <p>
+                Returns updated <code>SavedUrlDTO</code>.
+              </p>
             </Endpoint>
             <Endpoint id="items-delete" method="DELETE" path="/items/:id">
               <p>
@@ -361,23 +390,27 @@ type AskResponseDTO = {
                 Re-fetch metadata for an already-saved URL (e.g. a &quot;retry&quot; button after{" "}
                 <code>fetchStatus: &quot;error&quot;</code>). No body.
               </p>
-              <p>Returns updated <code>SavedUrlDTO</code>.</p>
+              <p>
+                Returns updated <code>SavedUrlDTO</code>.
+              </p>
             </Endpoint>
             <Endpoint id="items-summarize" method="POST" path="/items/:id/summarize">
               <p>
-                (Re)generate the AI summary. No body. Fails <code>503 service_not_configured</code> if
-                no AI key is set server-side — unlike Ask, there&apos;s no non-AI fallback for this
-                one.
+                (Re)generate the AI summary. No body. Fails <code>503 service_not_configured</code>{" "}
+                if no AI key is set server-side — unlike Ask, there&apos;s no non-AI fallback for
+                this one.
               </p>
-              <p>Returns updated <code>SavedUrlDTO</code>.</p>
+              <p>
+                Returns updated <code>SavedUrlDTO</code>.
+              </p>
             </Endpoint>
           </Section>
 
           <Section id="search" title="Search">
             <Endpoint id="search-get" method="GET" path="/search?q=&limit=">
               <p>
-                Plain Postgres full-text keyword search over the caller&apos;s saved items. Works even
-                with no AI configured. Query: <code>q</code> (required, non-empty),{" "}
+                Plain Postgres full-text keyword search over the caller&apos;s saved items. Works
+                even with no AI configured. Query: <code>q</code> (required, non-empty),{" "}
                 <code>limit</code> (1–50, default 20).
               </p>
               <p>
@@ -409,8 +442,8 @@ type AskResponseDTO = {
               <Code>{`{ "status": "inbox" | "snoozed" | "read" | "archived",
   "snoozedUntil"?: string /* ISO 8601 */ }`}</Code>
               <p>
-                <strong className="text-foreground">Returns the raw read_later_state row</strong>, not
-                a <code>SavedUrlDTO</code>:
+                <strong className="text-foreground">Returns the raw read_later_state row</strong>,
+                not a <code>SavedUrlDTO</code>:
               </p>
               <Code>{`{
   id: string; userId: string; savedUrlId: string;
@@ -463,14 +496,23 @@ type AskResponseDTO = {
                 <code>{`{ "id": string }`}</code>.
               </p>
             </Endpoint>
-            <Endpoint id="collections-items-add" method="POST" path="/collections/:id/items" status="201">
+            <Endpoint
+              id="collections-items-add"
+              method="POST"
+              path="/collections/:id/items"
+              status="201"
+            >
               <p>Idempotent (adding the same item twice is a no-op).</p>
               <Code>{`{ "savedUrlId": string /* uuid */ }`}</Code>
               <p>
                 Returns <code>{`{ "collectionId": string, "savedUrlId": string }`}</code>.
               </p>
             </Endpoint>
-            <Endpoint id="collections-items-remove" method="DELETE" path="/collections/:id/items/:savedUrlId">
+            <Endpoint
+              id="collections-items-remove"
+              method="DELETE"
+              path="/collections/:id/items/:savedUrlId"
+            >
               <p>
                 Returns <code>{`{ "collectionId": string, "savedUrlId": string }`}</code>.
               </p>
@@ -483,10 +525,11 @@ type AskResponseDTO = {
               <Code>{`{ "question": string,   // 1-2000 chars
   "answerLanguageOverride"?: "en" | "ja" }`}</Code>
               <p>
-                Returns <code>AskResponseDTO</code>. If AI isn&apos;t configured, or the AI call fails
-                for any reason, this <strong className="text-foreground">does not error</strong> — it
-                succeeds with <code>message.usedFallback: true</code> and plain keyword-match content
-                instead of a synthesized answer.
+                Returns <code>AskResponseDTO</code>. If AI isn&apos;t configured, or the AI call
+                fails for any reason, this{" "}
+                <strong className="text-foreground">does not error</strong> — it succeeds with{" "}
+                <code>message.usedFallback: true</code> and plain keyword-match content instead of a
+                synthesized answer.
               </p>
               <p>
                 The model answers by searching the user&apos;s saved links itself (possibly several
@@ -494,8 +537,8 @@ type AskResponseDTO = {
               </p>
               <ul className="list-disc space-y-1.5 pl-5">
                 <li>
-                  Latency is higher and more variable than a single LLM call — expect several seconds,
-                  and show a real loading/thinking state.
+                  Latency is higher and more variable than a single LLM call — expect several
+                  seconds, and show a real loading/thinking state.
                 </li>
                 <li>
                   <code>citations</code> is a variable-length list, not a small fixed count —
@@ -522,7 +565,12 @@ type AskResponseDTO = {
                 Returns <code>{`{ "id": string }`}</code>.
               </p>
             </Endpoint>
-            <Endpoint id="ask-threads-messages" method="POST" path="/ask/threads/:id/messages" status="201">
+            <Endpoint
+              id="ask-threads-messages"
+              method="POST"
+              path="/ask/threads/:id/messages"
+              status="201"
+            >
               <p>
                 Ask a follow-up in an existing thread. Body: same as <code>POST /ask</code>. Returns{" "}
                 <code>AskResponseDTO</code>.
@@ -530,8 +578,8 @@ type AskResponseDTO = {
               <p>
                 If <code>:id</code> doesn&apos;t exist or isn&apos;t owned by the caller, this fails{" "}
                 <strong className="text-foreground">400 validation_error</strong> (&quot;Thread not
-                found&quot;) — not 404 like every other resource lookup in this API. Handle that case
-                specifically if you route errors by status code.
+                found&quot;) — not 404 like every other resource lookup in this API. Handle that
+                case specifically if you route errors by status code.
               </p>
             </Endpoint>
           </Section>
@@ -552,12 +600,17 @@ type AskResponseDTO = {
 }`}</Code>
             </Endpoint>
             <Endpoint id="me-patch" method="PATCH" path="/me">
-              <p>Update preferences (not profile fields — those come from Clerk). Body (all optional):</p>
+              <p>
+                Update preferences (not profile fields — those come from Clerk). Body (all
+                optional):
+              </p>
               <Code>{`{ "interfaceLocale"?: "en" | "ja",
   "answerLanguageMode"?: "interface" | "source",
   "notifyReadLaterDigest"?: boolean,
   "notifyWeeklyStats"?: boolean }`}</Code>
-              <p>Returns the raw updated <code>user_preferences</code> row.</p>
+              <p>
+                Returns the raw updated <code>user_preferences</code> row.
+              </p>
             </Endpoint>
             <p className="text-[13px] text-muted-foreground">
               <code>POST /webhooks/clerk</code> is a server-to-server webhook Clerk calls directly —
@@ -580,7 +633,8 @@ type AskResponseDTO = {
           <Section id="i18n" title="i18n">
             <p>
               The backend is locale-aware via <code>preferences.interfaceLocale</code> (
-              <code>en</code> | <code>ja</code>) and <code>answerLanguageMode</code>. A client should:
+              <code>en</code> | <code>ja</code>) and <code>answerLanguageMode</code>. A client
+              should:
             </p>
             <ul className="list-disc space-y-1.5 pl-5">
               <li>
@@ -588,13 +642,13 @@ type AskResponseDTO = {
                 matching the two supported values.
               </li>
               <li>
-                Persist the choice via <code>PATCH /me</code> (<code>interfaceLocale</code>), not just
-                locally, so it&apos;s consistent across every client the same user uses.
+                Persist the choice via <code>PATCH /me</code> (<code>interfaceLocale</code>), not
+                just locally, so it&apos;s consistent across every client the same user uses.
               </li>
               <li>
-                Pass <code>answerLanguageOverride</code> on <code>/ask</code> calls only when the user
-                explicitly overrides the answer language for that one question; otherwise omit it and
-                let the backend use <code>answerLanguageMode</code>.
+                Pass <code>answerLanguageOverride</code> on <code>/ask</code> calls only when the
+                user explicitly overrides the answer language for that one question; otherwise omit
+                it and let the backend use <code>answerLanguageMode</code>.
               </li>
             </ul>
           </Section>

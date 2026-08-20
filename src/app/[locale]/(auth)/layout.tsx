@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import { isClerkConfigured } from "@/lib/env";
-import { redirect } from "@/i18n/navigation";
 import { HazyMark } from "@/components/hazy-mark";
+import { redirect } from "@/i18n/navigation";
+import { isClerkConfigured } from "@/lib/env";
 
 export default async function AuthLayout({
   children,

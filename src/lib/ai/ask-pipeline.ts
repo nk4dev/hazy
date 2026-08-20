@@ -1,16 +1,24 @@
-import { eq, asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type OpenAI from "openai";
 import { getDb } from "@/db";
-import { askThreads, askMessages, askMessageCitations, userPreferences } from "@/db/schema";
-import { searchUserItems, getRecentUserItems, type SearchHit } from "@/lib/search/keyword-search";
-import { getReadLaterQueue } from "@/lib/read-later/get-queue";
-import { buildAskSystemPrompt, formatSearchResults, buildReadingListBlock } from "@/lib/ai/prompt-templates";
+import { askMessageCitations, askMessages, askThreads, userPreferences } from "@/db/schema";
+import {
+  runSearchSavedLinksTool,
+  SEARCH_SAVED_LINKS_TOOL,
+  SEARCH_SAVED_LINKS_TOOL_NAME,
+} from "@/lib/ai/ask-tools";
 import { createChatCompletion } from "@/lib/ai/openrouter";
-import { SEARCH_SAVED_LINKS_TOOL, SEARCH_SAVED_LINKS_TOOL_NAME, runSearchSavedLinksTool } from "@/lib/ai/ask-tools";
-import { isOpenRouterConfigured, env } from "@/lib/env";
+import {
+  buildAskSystemPrompt,
+  buildReadingListBlock,
+  formatSearchResults,
+} from "@/lib/ai/prompt-templates";
+import type { AppUser } from "@/lib/auth/current-user";
+import { env, isOpenRouterConfigured } from "@/lib/env";
+import { getReadLaterQueue } from "@/lib/read-later/get-queue";
+import { getRecentUserItems, type SearchHit, searchUserItems } from "@/lib/search/keyword-search";
 import { serializeSavedUrl } from "@/lib/serializers";
 import type { AskResponseDTO } from "@/types/api";
-import type { AppUser } from "@/lib/auth/current-user";
 
 const SOURCE_LIMIT = 6;
 const MAX_TOOL_ROUNDS = 4;
@@ -67,7 +75,9 @@ async function runToolCallingAsk(
 ): Promise<{ answerText: string; hits: SearchHit[] }> {
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
-    ...priorMessages.map((m) => ({ role: m.role, content: m.content }) as OpenAI.Chat.ChatCompletionMessageParam),
+    ...priorMessages.map(
+      (m) => ({ role: m.role, content: m.content }) as OpenAI.Chat.ChatCompletionMessageParam
+    ),
     { role: "user", content: question },
   ];
 
@@ -135,7 +145,7 @@ export async function runAskPipeline(params: {
     answerLanguageOverride
   );
 
-  let thread;
+  let thread: typeof askThreads.$inferSelect | undefined;
   let priorMessages: { role: "user" | "assistant"; content: string }[] = [];
 
   if (threadId) {

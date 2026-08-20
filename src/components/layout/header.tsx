@@ -1,12 +1,12 @@
 import { UserButton } from "@clerk/nextjs";
-import { getTranslations } from "next-intl/server";
 import { Settings } from "lucide-react";
-import { Link } from "@/i18n/navigation";
+import { getTranslations } from "next-intl/server";
 import { HazyMark } from "@/components/hazy-mark";
-import { NavLinks } from "@/components/layout/nav-links";
 import { LocaleSwitcher } from "@/components/layout/locale-switcher";
+import { NavLinks } from "@/components/layout/nav-links";
 import { SaveUrlDialog } from "@/components/save/save-url-dialog";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 
 export async function Header() {
   const t = await getTranslations("common");

@@ -2,9 +2,9 @@
 
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { useCollectionQuery, useRemoveFromCollectionMutation } from "@/hooks/use-collections";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ItemRow } from "@/components/library/item-row";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCollectionQuery, useRemoveFromCollectionMutation } from "@/hooks/use-collections";
 
 export function CollectionDetailView({ id }: { id: string }) {
   const t = useTranslations("collections");
@@ -26,9 +26,7 @@ export function CollectionDetailView({ id }: { id: string }) {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
       <h1 className="mb-1 text-2xl font-medium">{data.name}</h1>
-      {data.description && (
-        <p className="mb-6 text-sm text-muted-foreground">{data.description}</p>
-      )}
+      {data.description && <p className="mb-6 text-sm text-muted-foreground">{data.description}</p>}
       {data.items.length === 0 ? (
         <p className="py-16 text-center text-sm text-muted-foreground">{t("empty")}</p>
       ) : (
@@ -49,7 +47,9 @@ export function CollectionDetailView({ id }: { id: string }) {
                     {
                       onSuccess: () => toast.success(t("removed")),
                       onError: (error) =>
-                        toast.error(error instanceof Error ? error.message : "Something went wrong."),
+                        toast.error(
+                          error instanceof Error ? error.message : "Something went wrong."
+                        ),
                     }
                   )
                 }

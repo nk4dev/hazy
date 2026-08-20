@@ -3,8 +3,8 @@ import { getDb } from "@/db";
 import { savedUrls, userPreferences } from "@/db/schema";
 import { askOpenRouter } from "@/lib/ai/openrouter";
 import { buildSummarizePrompt } from "@/lib/ai/prompt-templates";
-import { isOpenRouterConfigured } from "@/lib/env";
 import { NotFoundError, ServiceNotConfiguredError } from "@/lib/api/errors";
+import { isOpenRouterConfigured } from "@/lib/env";
 import { serializeSavedUrl } from "@/lib/serializers";
 import type { SavedUrlDTO } from "@/types/api";
 

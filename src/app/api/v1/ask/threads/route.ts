@@ -1,8 +1,8 @@
 import { desc, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { askThreads } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
 import { ok, withApiErrors } from "@/lib/api/response";
+import { requireUser } from "@/lib/auth/current-user";
 
 export const runtime = "nodejs";
 
