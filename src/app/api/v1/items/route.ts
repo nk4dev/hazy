@@ -1,11 +1,11 @@
-import { and, desc, asc, eq, lt, gt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { savedUrls, readLaterState } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
+import { readLaterState, savedUrls } from "@/db/schema";
 import { ok, withApiErrors } from "@/lib/api/response";
-import { parseAndNormalizeUrl } from "@/lib/metadata/normalize-url";
+import { requireUser } from "@/lib/auth/current-user";
 import { fetchUrlMetadata } from "@/lib/metadata/fetch-metadata";
+import { parseAndNormalizeUrl } from "@/lib/metadata/normalize-url";
 import { serializeSavedUrl } from "@/lib/serializers";
 
 export const runtime = "nodejs";
@@ -86,7 +86,9 @@ export const GET = withApiErrors(async (req: Request) => {
   const conditions = [eq(savedUrls.userId, user.id)];
   if (cursorCreatedAt) {
     conditions.push(
-      sort === "newest" ? lt(savedUrls.createdAt, cursorCreatedAt) : gt(savedUrls.createdAt, cursorCreatedAt)
+      sort === "newest"
+        ? lt(savedUrls.createdAt, cursorCreatedAt)
+        : gt(savedUrls.createdAt, cursorCreatedAt)
     );
   }
 

@@ -1,10 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { collections, collectionItems } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
-import { ok, withApiErrors } from "@/lib/api/response";
+import { collectionItems, collections } from "@/db/schema";
 import { NotFoundError } from "@/lib/api/errors";
+import { ok, withApiErrors } from "@/lib/api/response";
+import { requireUser } from "@/lib/auth/current-user";
 import { serializeSavedUrl } from "@/lib/serializers";
 
 export const runtime = "nodejs";
@@ -37,8 +37,10 @@ export const GET = withApiErrors(
       description: collection.description,
       color: collection.color,
       items: rows
-        .filter((r) => r.savedUrl)
-        .map((r) => serializeSavedUrl(r.savedUrl!, r.savedUrl!.readLaterState)),
+        .filter((r): r is typeof r & { savedUrl: NonNullable<typeof r.savedUrl> } =>
+          Boolean(r.savedUrl)
+        )
+        .map((r) => serializeSavedUrl(r.savedUrl, r.savedUrl.readLaterState)),
     });
   }
 );
@@ -71,7 +73,9 @@ export const DELETE = withApiErrors(
     const { id } = await params;
     await loadOwnedCollection(user.id, id);
     const db = getDb();
-    await db.delete(collections).where(and(eq(collections.id, id), eq(collections.userId, user.id)));
+    await db
+      .delete(collections)
+      .where(and(eq(collections.id, id), eq(collections.userId, user.id)));
     return ok({ id });
   }
 );

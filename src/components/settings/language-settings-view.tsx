@@ -1,11 +1,11 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useMeQuery, useUpdatePreferencesMutation } from "@/hooks/use-me";
 import { useRouter } from "@/i18n/navigation";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 
 const INTERFACE_LOCALES: { value: "en" | "ja"; label: string }[] = [
   { value: "en", label: "English" },

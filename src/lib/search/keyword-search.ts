@@ -1,8 +1,22 @@
-import { and, desc, eq, or, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, or, type SQL, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { savedUrls } from "@/db/schema";
 
 export type SearchHit = typeof savedUrls.$inferSelect & { rank: number };
+
+export interface DateRange {
+  /** Inclusive lower bound. */
+  from?: Date;
+  /** Inclusive upper bound. */
+  to?: Date;
+}
+
+function dateRangeConditions({ from, to }: DateRange): SQL[] {
+  const conditions: SQL[] = [];
+  if (from) conditions.push(gte(savedUrls.createdAt, from));
+  if (to) conditions.push(lte(savedUrls.createdAt, to));
+  return conditions;
+}
 
 /**
  * Always-available search over a user's own saved URLs — no AI required.
@@ -13,12 +27,13 @@ export type SearchHit = typeof savedUrls.$inferSelect & { rank: number };
 export async function searchUserItems(
   userId: string,
   query: string,
-  { limit = 8 }: { limit?: number } = {}
+  { limit = 8, dateRange = {} }: { limit?: number; dateRange?: DateRange } = {}
 ): Promise<SearchHit[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
   const db = getDb();
+  const dateConditions = dateRangeConditions(dateRange);
 
   const ftsRows = await db
     .select({
@@ -29,7 +44,8 @@ export async function searchUserItems(
     .where(
       and(
         eq(savedUrls.userId, userId),
-        sql`${savedUrls.searchVector} @@ plainto_tsquery('simple', ${trimmed})`
+        sql`${savedUrls.searchVector} @@ plainto_tsquery('simple', ${trimmed})`,
+        ...dateConditions
       )
     )
     .orderBy((t) => desc(t.rank))
@@ -52,7 +68,8 @@ export async function searchUserItems(
           ilike(savedUrls.summary, likeTerm),
           ilike(savedUrls.domain, likeTerm),
           ilike(savedUrls.extractedText, likeTerm)
-        )
+        ),
+        ...dateConditions
       )
     )
     .orderBy(desc(savedUrls.createdAt))
@@ -68,12 +85,16 @@ export async function searchUserItems(
  * no literal overlap with the question — e.g. natural-language questions
  * or a library whose content language differs from the question's.
  */
-export async function getRecentUserItems(userId: string, limit: number): Promise<SearchHit[]> {
+export async function getRecentUserItems(
+  userId: string,
+  limit: number,
+  dateRange: DateRange = {}
+): Promise<SearchHit[]> {
   const db = getDb();
   const rows = await db
     .select()
     .from(savedUrls)
-    .where(eq(savedUrls.userId, userId))
+    .where(and(eq(savedUrls.userId, userId), ...dateRangeConditions(dateRange)))
     .orderBy(desc(savedUrls.createdAt))
     .limit(limit);
 

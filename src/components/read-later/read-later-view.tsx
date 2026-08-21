@@ -1,13 +1,17 @@
 "use client";
 
+import { Check, Clock, GripVertical, Sparkle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Sparkle, Clock, Check, GripVertical } from "lucide-react";
 import { toast } from "sonner";
-import { useReadLaterQuery, useReadLaterStatsQuery, useSetReadLaterStatus } from "@/hooks/use-read-later";
 import { Favicon } from "@/components/favicon";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  useReadLaterQuery,
+  useReadLaterStatsQuery,
+  useSetReadLaterStatus,
+} from "@/hooks/use-read-later";
 import { Link } from "@/i18n/navigation";
 import type { SavedUrlDTO } from "@/types/api";
 
@@ -40,11 +44,21 @@ function ReadLaterRow({ item }: { item: SavedUrlDTO }) {
           {item.estimatedReadMinutes ? ` · ${item.estimatedReadMinutes} min` : ""}
         </div>
       </Link>
-      <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={snooze}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-1.5 text-xs text-muted-foreground"
+        onClick={snooze}
+      >
         <Clock className="size-3.5" />
         {t("later")}
       </Button>
-      <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground" onClick={markRead}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-1.5 text-xs text-muted-foreground"
+        onClick={markRead}
+      >
         <Check className="size-3.5" />
         {t("readIt")}
       </Button>
@@ -78,7 +92,10 @@ export function ReadLaterView() {
         )}
 
         {data && data.todaysThree.length > 0 && (
-          <div className="mb-6 rounded-lg bg-card p-4" style={{ boxShadow: "0 0 0 1px var(--accent-800)" }}>
+          <div
+            className="mb-6 rounded-lg bg-card p-4"
+            style={{ boxShadow: "0 0 0 1px var(--accent-800)" }}
+          >
             <div className="mb-3 flex items-center gap-2">
               <Sparkle className="size-3.5 text-primary" />
               <span className="text-[10.5px] uppercase tracking-wide text-primary">
@@ -143,6 +160,7 @@ export function ReadLaterView() {
           {(stats?.days ?? Array.from({ length: 7 }, () => ({ heightPct: 10, count: 0 }))).map(
             (day, i) => (
               <div
+                // biome-ignore lint/suspicious/noArrayIndexKey: fixed 7-day window in stable order, never reordered
                 key={i}
                 className="flex-1 rounded-sm bg-secondary"
                 style={{ height: `${Math.max(day.heightPct, 6)}%` }}
@@ -162,13 +180,19 @@ export function ReadLaterView() {
           {t("notifications")}
         </div>
         <div className="mb-5 flex flex-col gap-3">
-          <label className="flex items-center justify-between gap-3 text-[13px]">
+          <label
+            htmlFor="notify-digest"
+            className="flex items-center justify-between gap-3 text-[13px]"
+          >
             <span>{t("notifyDigest")}</span>
-            <Switch defaultChecked />
+            <Switch id="notify-digest" defaultChecked />
           </label>
-          <label className="flex items-center justify-between gap-3 text-[13px]">
+          <label
+            htmlFor="notify-retire"
+            className="flex items-center justify-between gap-3 text-[13px]"
+          >
             <span>{t("notifyRetire")}</span>
-            <Switch />
+            <Switch id="notify-retire" />
           </label>
         </div>
         <div className="hz-rule mb-4" />

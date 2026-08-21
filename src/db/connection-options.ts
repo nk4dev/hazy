@@ -7,6 +7,18 @@
  */
 type PostgresSslOption = boolean | "require" | "allow" | "prefer" | "verify-full";
 
+/** True for a bare local/Docker Postgres connection string (as opposed to a
+ * managed provider like Neon) — used to pick the TCP `postgres` driver over
+ * Neon's HTTP-only serverless one, which can't reach a local database. */
+export function isLocalDatabaseUrl(databaseUrl: string): boolean {
+  try {
+    const { hostname } = new URL(databaseUrl);
+    return ["localhost", "127.0.0.1", "::1"].includes(hostname);
+  } catch {
+    return false;
+  }
+}
+
 export function resolveSslMode(databaseUrl: string): PostgresSslOption | undefined {
   let parsed: URL;
   try {
@@ -27,6 +39,5 @@ export function resolveSslMode(databaseUrl: string): PostgresSslOption | undefin
   }
   if (sslmode) return undefined; // an explicit mode we don't need to override
 
-  const isLocal = ["localhost", "127.0.0.1", "::1"].includes(parsed.hostname);
-  return isLocal ? false : "require";
+  return isLocalDatabaseUrl(databaseUrl) ? false : "require";
 }

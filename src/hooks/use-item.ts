@@ -21,10 +21,24 @@ export function useItemQuery(id: string) {
 export function useRefetchItemMutation(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async () => unwrap<SavedUrlDTO>(await fetch(`/api/v1/items/${id}/refetch`, { method: "POST" })),
+    mutationFn: async () =>
+      unwrap<SavedUrlDTO>(await fetch(`/api/v1/items/${id}/refetch`, { method: "POST" })),
     onSuccess: (data) => {
       queryClient.setQueryData(["item", id], data);
       queryClient.invalidateQueries({ queryKey: ["items"] });
+    },
+  });
+}
+
+export function useSummarizeItemMutation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap<SavedUrlDTO>(await fetch(`/api/v1/items/${id}/summarize`, { method: "POST" })),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["item", id], data);
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
   });
 }

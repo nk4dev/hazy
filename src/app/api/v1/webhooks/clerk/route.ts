@@ -1,8 +1,9 @@
-import { NextRequest } from "next/server";
-import { eq } from "drizzle-orm";
+import type { WebhookEvent } from "@clerk/backend/webhooks";
 import { verifyWebhook } from "@clerk/nextjs/webhooks";
+import { eq } from "drizzle-orm";
+import type { NextRequest } from "next/server";
 import { getDb } from "@/db";
-import { users, userPreferences } from "@/db/schema";
+import { userPreferences, users } from "@/db/schema";
 import { isClerkWebhookConfigured, isDatabaseConfigured } from "@/lib/env";
 
 export const runtime = "nodejs";
@@ -12,7 +13,7 @@ export async function POST(req: NextRequest) {
     return new Response("Webhook not configured", { status: 503 });
   }
 
-  let event;
+  let event: WebhookEvent;
   try {
     event = await verifyWebhook(req);
   } catch (error) {

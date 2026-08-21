@@ -1,13 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useTranslations } from "next-intl";
 import { FolderPlus, Layers } from "lucide-react";
-import { useCollectionsQuery, useCreateCollectionMutation } from "@/hooks/use-collections";
-import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +12,10 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCollectionsQuery, useCreateCollectionMutation } from "@/hooks/use-collections";
+import { Link } from "@/i18n/navigation";
 
 export function CollectionsView() {
   const t = useTranslations("collections");
@@ -30,7 +30,12 @@ export function CollectionsView() {
     if (!name.trim()) return;
     create.mutate(
       { name: name.trim() },
-      { onSuccess: () => { setOpen(false); setName(""); } }
+      {
+        onSuccess: () => {
+          setOpen(false);
+          setName("");
+        },
+      }
     );
   }
 
@@ -70,6 +75,7 @@ export function CollectionsView() {
       {isLoading && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {Array.from({ length: 6 }).map((_, i) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: static-length placeholder list, never reordered
             <Skeleton key={i} className="h-24 w-full rounded-lg" />
           ))}
         </div>

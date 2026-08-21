@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
 import { savedUrls } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
-import { ok, withApiErrors } from "@/lib/api/response";
 import { NotFoundError } from "@/lib/api/errors";
+import { ok, withApiErrors } from "@/lib/api/response";
+import { requireUser } from "@/lib/auth/current-user";
 import { fetchUrlMetadata } from "@/lib/metadata/fetch-metadata";
 import { serializeSavedUrl } from "@/lib/serializers";
 

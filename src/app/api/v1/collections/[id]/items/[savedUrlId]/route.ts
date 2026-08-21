@@ -1,17 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/db";
-import { collections, collectionItems } from "@/db/schema";
-import { requireUser } from "@/lib/auth/current-user";
-import { ok, withApiErrors } from "@/lib/api/response";
+import { collectionItems, collections } from "@/db/schema";
 import { NotFoundError } from "@/lib/api/errors";
+import { ok, withApiErrors } from "@/lib/api/response";
+import { requireUser } from "@/lib/auth/current-user";
 
 export const runtime = "nodejs";
 
 export const DELETE = withApiErrors(
-  async (
-    _req: Request,
-    { params }: { params: Promise<{ id: string; savedUrlId: string }> }
-  ) => {
+  async (_req: Request, { params }: { params: Promise<{ id: string; savedUrlId: string }> }) => {
     const user = await requireUser();
     const { id, savedUrlId } = await params;
     const db = getDb();
@@ -23,9 +20,7 @@ export const DELETE = withApiErrors(
 
     await db
       .delete(collectionItems)
-      .where(
-        and(eq(collectionItems.collectionId, id), eq(collectionItems.savedUrlId, savedUrlId))
-      );
+      .where(and(eq(collectionItems.collectionId, id), eq(collectionItems.savedUrlId, savedUrlId)));
 
     return ok({ collectionId: id, savedUrlId });
   }

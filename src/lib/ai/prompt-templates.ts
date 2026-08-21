@@ -1,16 +1,29 @@
-import type { SearchHit } from "@/lib/search/keyword-search";
 import type { InboxItem } from "@/lib/read-later/bucketing";
+import type { SearchHit } from "@/lib/search/keyword-search";
 
-const LANGUAGE_NAME: Record<string, string> = {
+export const LANGUAGE_NAME: Record<string, string> = {
   en: "English",
   ja: "Japanese (日本語)",
 };
 
-export function buildSourceBlocks(hits: SearchHit[]): string {
-  return hits
-    .map((hit, i) => {
-      const excerpt = (hit.extractedText ?? hit.description ?? hit.summary ?? "").slice(0, 800);
-      return `[${i + 1}] ${hit.title ?? hit.url} (${hit.domain ?? hit.url})\n${excerpt}`;
+// Formats search_saved_links tool results for the model. `number` is the
+// citation number to tag each hit with — assigned by the caller so it stays
+// consistent (no renumbering duplicates) across multiple tool calls in the
+// same turn, since the model is instructed to cite using these numbers.
+// Kept short on purpose — this text is prompt tokens spent on every tool
+// call, and a full-length excerpt isn't needed for the model to ground a
+// short conversational answer.
+const SEARCH_RESULT_EXCERPT_LENGTH = 400;
+
+export function formatSearchResults(items: { hit: SearchHit; number: number }[]): string {
+  if (items.length === 0) return "No saved links matched that query.";
+  return items
+    .map(({ hit, number }) => {
+      const excerpt = (hit.extractedText ?? hit.description ?? hit.summary ?? "").slice(
+        0,
+        SEARCH_RESULT_EXCERPT_LENGTH
+      );
+      return `[${number}] ${hit.title ?? hit.url} (${hit.domain ?? hit.url})\n${excerpt}`;
     })
     .join("\n\n");
 }
@@ -22,26 +35,41 @@ export function buildSourceBlocks(hits: SearchHit[]): string {
 // inventing an answer or wrongly claiming it has no relevant sources.
 export function buildReadingListBlock(items: InboxItem[]): string {
   if (items.length === 0) return "(empty — nothing is currently in the read later list)";
-  return items
-    .map((item) => `- ${item.title ?? item.url} (${item.domain ?? item.url})`)
-    .join("\n");
+  return items.map((item) => `- ${item.title ?? item.url} (${item.domain ?? item.url})`).join("\n");
 }
 
-export function buildAskSystemPrompt(
-  sourceBlocks: string,
-  targetLanguage: string,
-  readingListBlock: string
-): string {
+export function buildAskSystemPrompt(targetLanguage: string, readingListBlock: string): string {
   const languageName = LANGUAGE_NAME[targetLanguage] ?? targetLanguage;
-  return `You are Hazy, an assistant that answers questions using ONLY the user's own saved reading, given below as numbered sources, plus their current "read later" list. Rules:
-- Answer only from the sources and read later list provided. If they don't contain an answer, say so plainly — don't invent one.
-- Cite sources inline with bracketed numbers like [1], [2] matching the numbered source list. The read later list below is unnumbered — refer to those items by title instead of a bracketed number.
+  const todayIso = new Date().toISOString().slice(0, 10);
+  return `You are Hazy, an assistant that answers questions using ONLY the user's own saved reading (their bookmarked links), plus their current "read later" list. Rules:
+- Today's date is ${todayIso}.
+- You have a search_saved_links tool. Call it — more than once, with different queries, if that helps — to find saved pages relevant to the question before answering. Don't answer from general knowledge; ground every claim in what the tool returns or the read later list below.
+- The tool accepts optional dateFrom/dateTo (YYYY-MM-DD, inclusive) to filter by when a link was saved. Use them whenever the question refers to a time period — relative (e.g. "last week", "先週", "今月", "this year") or absolute (e.g. "in March", "2024年") — computing the actual dates from today's date above.
+- If the tool results and read later list don't contain an answer, say so plainly — don't invent one.
+- Cite saved links inline with bracketed numbers like [1], [2] matching the numbers the tool gave each result. The read later list below is unnumbered — refer to those items by title instead of a bracketed number.
 - Reply in ${languageName}, regardless of the language the sources are written in.
 - Keep the answer warm and conversational, a few sentences, not a bulleted report.
 
-Sources:
-${sourceBlocks || "(no matching sources found in the user's library)"}
-
 Current "read later" list:
 ${readingListBlock}`;
+}
+
+export function buildSummarizePrompt(
+  item: {
+    title: string | null;
+    url: string;
+    description: string | null;
+    extractedText: string | null;
+  },
+  targetLanguage: string
+): string {
+  const languageName = LANGUAGE_NAME[targetLanguage] ?? targetLanguage;
+  const body = (item.extractedText ?? item.description ?? "").slice(0, 6000);
+  return `Summarize the following saved page in ${languageName}, in 2-4 concise sentences. Focus on the key point or takeaway, not a generic description of what the page is.
+
+Title: ${item.title ?? item.url}
+URL: ${item.url}
+
+Content:
+${body || "(no extracted content available — summarize based on the title and URL alone, or say plainly that there isn't enough information to summarize)"}`;
 }

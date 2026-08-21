@@ -1,14 +1,11 @@
-import type { savedUrls, readLaterState, collections } from "@/db/schema";
-import type { SavedUrlDTO, CollectionDTO } from "@/types/api";
+import type { collections, readLaterState, savedUrls } from "@/db/schema";
+import type { CollectionDTO, SavedUrlDTO } from "@/types/api";
 
 type SavedUrlRow = typeof savedUrls.$inferSelect;
 type ReadLaterRow = typeof readLaterState.$inferSelect;
 type CollectionRow = typeof collections.$inferSelect;
 
-export function serializeSavedUrl(
-  row: SavedUrlRow,
-  readLater?: ReadLaterRow | null
-): SavedUrlDTO {
+export function serializeSavedUrl(row: SavedUrlRow, readLater?: ReadLaterRow | null): SavedUrlDTO {
   return {
     id: row.id,
     url: row.url,
@@ -28,10 +25,7 @@ export function serializeSavedUrl(
   };
 }
 
-export function serializeCollection(
-  row: CollectionRow,
-  itemCount: number
-): CollectionDTO {
+export function serializeCollection(row: CollectionRow, itemCount: number): CollectionDTO {
   return {
     id: row.id,
     name: row.name,
