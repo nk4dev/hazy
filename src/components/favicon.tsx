@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { Globe } from "lucide-react";
+import { useState } from "react";
 
 export function Favicon({
   src,
@@ -29,7 +29,7 @@ export function Favicon({
   return (
     // Arbitrary external favicons at unknown, tiny sizes aren't worth
     // next/image's overhead here.
-    // eslint-disable-next-line @next/next/no-img-element
+    // biome-ignore lint/performance/noImgElement: external favicon, not worth next/image's overhead
     <img
       src={src}
       alt=""

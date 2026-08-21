@@ -1,15 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
 import { Inbox, LayoutGrid, List, Search, X } from "lucide-react";
-import { useItemsQuery } from "@/hooks/use-items";
-import { useSearchQuery } from "@/hooks/use-search";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
+import { ItemCard } from "@/components/library/item-card";
+import { ItemRow } from "@/components/library/item-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ItemRow } from "@/components/library/item-row";
-import { ItemCard } from "@/components/library/item-card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useItemsQuery } from "@/hooks/use-items";
+import { useSearchQuery } from "@/hooks/use-search";
 import type { SavedUrlDTO } from "@/types/api";
 
 type ViewMode = "list" | "grid";
@@ -24,7 +24,6 @@ function useViewMode() {
 
   useEffect(() => {
     const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored === "grid") setView("grid");
   }, []);
 
@@ -64,7 +63,8 @@ export function LibraryView() {
   const [query, setQuery] = useState("");
   const [view, setView] = useViewMode();
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useItemsQuery("newest");
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useItemsQuery("newest");
   const search = useSearchQuery(query);
 
   const isSearching = query.trim().length > 0;
@@ -129,6 +129,7 @@ export function LibraryView() {
           {search.isLoading && (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static-length placeholder list, never reordered
                 <Skeleton key={i} className="h-16 w-full rounded-lg" />
               ))}
             </div>
@@ -148,6 +149,7 @@ export function LibraryView() {
           {isLoading && (
             <div className="flex flex-col gap-2">
               {Array.from({ length: 5 }).map((_, i) => (
+                // biome-ignore lint/suspicious/noArrayIndexKey: static-length placeholder list, never reordered
                 <Skeleton key={i} className="h-16 w-full rounded-lg" />
               ))}
             </div>

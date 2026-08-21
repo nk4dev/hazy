@@ -21,7 +21,8 @@
     "retry": "再試行",
     "delete": "削除",
     "close": "閉じる",
-    "search": "検索"
+    "search": "検索",
+    "summarize": "要約"
   },
   "setup": {
     "title": "設定が必要です",
@@ -77,7 +78,9 @@
     "title": "コレクション",
     "empty": "まだコレクションがありません。",
     "create": "新しいコレクション",
-    "namePlaceholder": "コレクション名"
+    "namePlaceholder": "コレクション名",
+    "remove": "コレクションから削除",
+    "removed": "コレクションから削除しました"
   },
   "readLater": {
     "title": "後で見る",

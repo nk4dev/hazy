@@ -15,7 +15,7 @@ const envSchema = z.object({
   CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
 
   OPENROUTER_API_KEY: z.string().min(1).optional(),
-  OPENROUTER_MODEL_ID: z.string().min(1).default("deepseek/deepseek-r1:free"),
+  OPENROUTER_MODEL_ID: z.string().min(1).default("google/gemma-4-26b-a4b-it:free"),
   OPENROUTER_SITE_URL: z.string().url().default("http://localhost:3000"),
   OPENROUTER_APP_NAME: z.string().min(1).default("Hazy"),
 });

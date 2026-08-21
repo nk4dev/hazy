@@ -21,7 +21,8 @@
     "retry": "Retry",
     "delete": "Delete",
     "close": "Close",
-    "search": "Search"
+    "search": "Search",
+    "summarize": "Summarize"
   },
   "setup": {
     "title": "Setup required",
@@ -77,7 +78,9 @@
     "title": "Collections",
     "empty": "No collections yet.",
     "create": "New collection",
-    "namePlaceholder": "Collection name"
+    "namePlaceholder": "Collection name",
+    "remove": "Remove from collection",
+    "removed": "Removed from collection"
   },
   "readLater": {
     "title": "Read later",

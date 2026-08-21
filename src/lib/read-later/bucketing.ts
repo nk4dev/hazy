@@ -1,4 +1,4 @@
-import type { savedUrls, readLaterState } from "@/db/schema";
+import type { readLaterState, savedUrls } from "@/db/schema";
 
 type SavedUrlRow = typeof savedUrls.$inferSelect;
 type ReadLaterRow = typeof readLaterState.$inferSelect;
@@ -31,15 +31,10 @@ export function bucketReadLaterItems(items: InboxItem[]) {
   const fiveMinutes = remaining.filter(
     (i) => (i.estimatedReadMinutes ?? 99) <= FIVE_MINUTE_THRESHOLD
   );
-  const sitDown = remaining.filter(
-    (i) => (i.estimatedReadMinutes ?? 99) > FIVE_MINUTE_THRESHOLD
-  );
+  const sitDown = remaining.filter((i) => (i.estimatedReadMinutes ?? 99) > FIVE_MINUTE_THRESHOLD);
 
   const totalMinutes = items.reduce((sum, i) => sum + (i.estimatedReadMinutes ?? 0), 0);
-  const todaysThreeMinutes = todaysThree.reduce(
-    (sum, i) => sum + (i.estimatedReadMinutes ?? 0),
-    0
-  );
+  const todaysThreeMinutes = todaysThree.reduce((sum, i) => sum + (i.estimatedReadMinutes ?? 0), 0);
 
   return { todaysThree, fiveMinutes, sitDown, totalMinutes, todaysThreeMinutes };
 }

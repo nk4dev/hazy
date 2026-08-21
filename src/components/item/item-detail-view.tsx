@@ -1,16 +1,16 @@
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Clock, ExternalLink, Loader2, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ExternalLink, RefreshCw, Trash2, Clock, Loader2 } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Favicon } from "@/components/favicon";
+import { AddToCollectionButton } from "@/components/item/add-to-collection-button";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useItemQuery, useRefetchItemMutation } from "@/hooks/use-item";
 import { useDeleteItemMutation } from "@/hooks/use-items";
 import { useRouter } from "@/i18n/navigation";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Favicon } from "@/components/favicon";
-import { AddToCollectionButton } from "@/components/item/add-to-collection-button";
 
 export function ItemDetailView({ id }: { id: string }) {
   const t = useTranslations("item");
@@ -61,12 +61,10 @@ export function ItemDetailView({ id }: { id: string }) {
         )}
       </div>
 
-      <h1 className="mb-3 text-[26px] font-medium leading-tight">
-        {item.title || item.url}
-      </h1>
+      <h1 className="mb-3 text-[26px] font-medium leading-tight">{item.title || item.url}</h1>
 
       {item.ogImageUrl && (
-        // eslint-disable-next-line @next/next/no-img-element
+        // biome-ignore lint/performance/noImgElement: arbitrary external OG image, not worth next/image's overhead
         <img
           src={item.ogImageUrl}
           alt=""

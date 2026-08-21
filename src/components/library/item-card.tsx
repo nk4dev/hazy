@@ -1,5 +1,5 @@
-import { Link } from "@/i18n/navigation";
 import { Favicon } from "@/components/favicon";
+import { Link } from "@/i18n/navigation";
 import type { SavedUrlDTO } from "@/types/api";
 
 export function ItemCard({ item }: { item: SavedUrlDTO }) {
@@ -10,7 +10,7 @@ export function ItemCard({ item }: { item: SavedUrlDTO }) {
     >
       <div className="flex aspect-[16/9] w-full items-center justify-center overflow-hidden bg-secondary">
         {item.ogImageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
+          // biome-ignore lint/performance/noImgElement: arbitrary external OG image, not worth next/image's overhead
           <img src={item.ogImageUrl} alt="" className="size-full object-cover" />
         ) : (
           <Favicon src={item.faviconUrl} domain={item.domain} size={28} />

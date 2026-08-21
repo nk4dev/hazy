@@ -26,5 +26,9 @@ export async function getReadLaterQueue(userId: string): Promise<InboxItem[]> {
     with: { savedUrl: true },
   });
 
-  return rows.filter((row) => row.savedUrl).map((row) => ({ ...row.savedUrl!, readLater: row }));
+  return rows
+    .filter((row): row is typeof row & { savedUrl: NonNullable<typeof row.savedUrl> } =>
+      Boolean(row.savedUrl)
+    )
+    .map((row) => ({ ...row.savedUrl, readLater: row }));
 }

@@ -3,7 +3,11 @@ import { ValidationError } from "@/lib/api/errors";
 const TRACKING_PARAM_PREFIXES = ["utm_"];
 const TRACKING_PARAMS = new Set(["fbclid", "gclid", "msclkid", "mc_cid", "mc_eid", "igshid"]);
 
-export function parseAndNormalizeUrl(raw: string): { url: string; normalizedUrl: string; domain: string } {
+export function parseAndNormalizeUrl(raw: string): {
+  url: string;
+  normalizedUrl: string;
+  domain: string;
+} {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -29,7 +33,9 @@ export function parseAndNormalizeUrl(raw: string): { url: string; normalizedUrl:
       paramsToDelete.push(key);
     }
   });
-  paramsToDelete.forEach((key) => normalized.searchParams.delete(key));
+  paramsToDelete.forEach((key) => {
+    normalized.searchParams.delete(key);
+  });
 
   // Trailing slash on a bare path is cosmetic — treat `example.com` and
   // `example.com/` as the same save.

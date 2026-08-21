@@ -1,7 +1,7 @@
 "use client";
 
+import { Layers, Library, ListChecks, Sparkle } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Sparkle, Library, ListChecks, Layers } from "lucide-react";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 

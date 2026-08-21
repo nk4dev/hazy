@@ -1,9 +1,6 @@
 import type { CoreService } from "@/lib/env";
 
-const SERVICE_INFO: Record<
-  CoreService,
-  { label: string; vars: string[]; signupUrl: string }
-> = {
+const SERVICE_INFO: Record<CoreService, { label: string; vars: string[]; signupUrl: string }> = {
   database: {
     label: "Postgres database (any provider — Neon is a free option)",
     vars: ["DATABASE_URL"],
@@ -11,10 +8,7 @@ const SERVICE_INFO: Record<
   },
   clerk: {
     label: "Clerk (authentication)",
-    vars: [
-      "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
-      "CLERK_SECRET_KEY",
-    ],
+    vars: ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"],
     signupUrl: "https://clerk.com",
   },
 };
@@ -34,17 +28,12 @@ export function SetupRequired({
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-lg rounded-lg bg-card p-8 shadow-[var(--shadow-lg,0_0_0_1px_var(--border))]">
         <h1 className="mb-2 text-2xl font-medium text-foreground">{title}</h1>
-        <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
-          {description}
-        </p>
+        <p className="mb-6 text-sm leading-relaxed text-muted-foreground">{description}</p>
         <ul className="mb-6 flex flex-col gap-4">
           {missing.map((service) => {
             const info = SERVICE_INFO[service];
             return (
-              <li
-                key={service}
-                className="rounded-md bg-secondary p-4 text-sm"
-              >
+              <li key={service} className="rounded-md bg-secondary p-4 text-sm">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="font-medium text-foreground">{info.label}</span>
                   <a

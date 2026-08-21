@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { ArrowUpRight, CornerDownRight, Loader2, Sparkle, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Sparkle, ArrowUpRight, Loader2, CornerDownRight, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
-import { useAskThreadQuery, useAskFollowUpMutation, useDeleteAskThreadMutation } from "@/hooks/use-ask";
-import { Link, useRouter } from "@/i18n/navigation";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  useAskFollowUpMutation,
+  useAskThreadQuery,
+  useDeleteAskThreadMutation,
+} from "@/hooks/use-ask";
+import { Link, useRouter } from "@/i18n/navigation";
 import type { AskCitationDTO, AskMessageDTO } from "@/types/api";
 
 function CitationCard({ citation }: { citation: AskCitationDTO }) {
@@ -29,7 +33,13 @@ function CitationCard({ citation }: { citation: AskCitationDTO }) {
   );
 }
 
-function AssistantMessage({ message, t }: { message: AskMessageDTO; t: ReturnType<typeof useTranslations> }) {
+function AssistantMessage({
+  message,
+  t,
+}: {
+  message: AskMessageDTO;
+  t: ReturnType<typeof useTranslations>;
+}) {
   const citations = message.citations ?? [];
   return (
     <div className="mb-8">
@@ -66,7 +76,8 @@ export function AskThreadView({ threadId }: { threadId: string }) {
   function handleDelete() {
     deleteThread.mutate(threadId, {
       onSuccess: () => router.push("/ask"),
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Something went wrong."),
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : "Something went wrong."),
     });
   }
 
@@ -75,7 +86,8 @@ export function AskThreadView({ threadId }: { threadId: string }) {
     if (!question.trim()) return;
     followUp.mutate(question.trim(), {
       onSuccess: () => setQuestion(""),
-      onError: (error) => toast.error(error instanceof Error ? error.message : "Something went wrong."),
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : "Something went wrong."),
     });
   }
 
@@ -113,7 +125,10 @@ export function AskThreadView({ threadId }: { threadId: string }) {
         message.role === "assistant" ? (
           <AssistantMessage key={message.id} message={message} t={t} />
         ) : (
-          <div key={message.id} className="mb-4 flex items-center gap-2 text-[15px] text-foreground/90">
+          <div
+            key={message.id}
+            className="mb-4 flex items-center gap-2 text-[15px] text-foreground/90"
+          >
             <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" />
             {message.content}
           </div>

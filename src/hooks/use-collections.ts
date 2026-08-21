@@ -45,12 +45,40 @@ export function useCreateCollectionMutation() {
 export function useAddToCollectionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ collectionId, savedUrlId }: { collectionId: string; savedUrlId: string }) =>
+    mutationFn: async ({
+      collectionId,
+      savedUrlId,
+    }: {
+      collectionId: string;
+      savedUrlId: string;
+    }) =>
       unwrap(
         await fetch(`/api/v1/collections/${collectionId}/items`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ savedUrlId }),
+        })
+      ),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
+    },
+  });
+}
+
+export function useRemoveFromCollectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      collectionId,
+      savedUrlId,
+    }: {
+      collectionId: string;
+      savedUrlId: string;
+    }) =>
+      unwrap(
+        await fetch(`/api/v1/collections/${collectionId}/items/${savedUrlId}`, {
+          method: "DELETE",
         })
       ),
     onSuccess: (_data, variables) => {
