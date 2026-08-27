@@ -7,9 +7,11 @@ import {
   SEARCH_SAVED_LINKS_TOOL,
   SEARCH_SAVED_LINKS_TOOL_NAME,
 } from "@/lib/ai/ask-tools";
+import { loadCollectionSources } from "@/lib/ai/collection-sources";
 import { createChatCompletion } from "@/lib/ai/openrouter";
 import {
   buildAskSystemPrompt,
+  buildAttachedSourcesBlock,
   buildReadingListBlock,
   formatSearchResults,
 } from "@/lib/ai/prompt-templates";
@@ -29,15 +31,25 @@ const MAX_TOOL_ROUNDS = 4;
 const MAX_HISTORY_MESSAGES = 12;
 
 // Persisted messages are plain text (not translation keys) since they live
-// in the DB and get read back verbatim later. Kept in sync with
-// messages/{en,ja}.json's ask.aiUnavailable / ask.noResults.
-const FALLBACK_TEXT: Record<string, { withSources: string; empty: string }> = {
+// in the DB and get read back verbatim later.
+//   notConfigured — no OPENROUTER_API_KEY set
+//   errored       — the AI call failed (rate limit, provider outage, timeout)
+//   empty         — fallback ran but nothing in the library matched
+const FALLBACK_TEXT: Record<
+  string,
+  { notConfigured: string; errored: string; empty: string }
+> = {
   en: {
-    withSources: "AI answers aren't configured yet — here's what matched your library.",
+    notConfigured: "AI answers aren't configured yet — here's what matched your library.",
+    errored:
+      "The AI service is temporarily unavailable — here's what matched your library. Try asking again in a moment.",
     empty: "Nothing in your library matches that yet.",
   },
   ja: {
-    withSources: "AIによる回答はまだ設定されていません — ライブラリから一致したものはこちらです。",
+    notConfigured:
+      "AIによる回答はまだ設定されていません — ライブラリから一致したものはこちらです。",
+    errored:
+      "AIサービスが一時的に利用できません — ライブラリから一致したものはこちらです。少し待ってからもう一度お試しください。",
     empty: "まだライブラリに一致するものがありません。",
   },
 };
@@ -71,7 +83,8 @@ async function runToolCallingAsk(
   userId: string,
   systemPrompt: string,
   priorMessages: { role: "user" | "assistant"; content: string }[],
-  question: string
+  question: string,
+  seedHits: SearchHit[] = []
 ): Promise<{ answerText: string; hits: SearchHit[] }> {
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
@@ -81,8 +94,11 @@ async function runToolCallingAsk(
     { role: "user", content: question },
   ];
 
-  const hits: SearchHit[] = [];
-  const seenIds = new Set<string>();
+  // The @-mentioned collection links occupy citation slots 1..N up front, so
+  // the numbers the model sees in the attached-sources block line up with the
+  // numbers formatSearchResults assigns to anything the tool returns after.
+  const hits: SearchHit[] = [...seedHits];
+  const seenIds = new Set<string>(seedHits.map((hit) => hit.id));
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const message = await createChatCompletion(messages, { tools: [SEARCH_SAVED_LINKS_TOOL] });
@@ -121,9 +137,14 @@ export async function runAskPipeline(params: {
   question: string;
   threadId?: string;
   answerLanguageOverride?: string;
+  /** Collections the user @-mentioned; their links are pinned into the prompt. */
+  collectionIds?: string[];
 }): Promise<AskResponseDTO> {
-  const { user, question, threadId, answerLanguageOverride } = params;
+  const { user, question, threadId, answerLanguageOverride, collectionIds } = params;
   const db = getDb();
+
+  const attached = await loadCollectionSources(user.id, collectionIds ?? []);
+  const attachedIds = new Set(attached.hits.map((hit) => hit.id));
 
   // A cheap upfront search — used only for target-language detection and as
   // the deterministic fallback (canned text + citations) when OpenRouter is
@@ -141,7 +162,7 @@ export async function runAskPipeline(params: {
   const readLaterQueue = await getReadLaterQueue(user.id);
   const targetLanguage = await resolveTargetLanguage(
     user.id,
-    fallbackHits[0]?.contentLanguage ?? null,
+    fallbackHits[0]?.contentLanguage ?? attached.hits[0]?.contentLanguage ?? null,
     answerLanguageOverride
   );
 
@@ -180,27 +201,43 @@ export async function runAskPipeline(params: {
   });
 
   const readingListBlock = buildReadingListBlock(readLaterQueue);
-  const systemPrompt = buildAskSystemPrompt(targetLanguage, readingListBlock);
+  const attachedSourcesBlock = buildAttachedSourcesBlock(attached.hits);
+  const systemPrompt = buildAskSystemPrompt(targetLanguage, readingListBlock, attachedSourcesBlock);
+
+  // Fallback source list = the pinned collection links first, then keyword
+  // matches that aren't already pinned.
+  const fallbackCitationHits: SearchHit[] = [
+    ...attached.hits,
+    ...fallbackHits.filter((hit) => !attachedIds.has(hit.id)),
+  ];
 
   let answerText: string;
   let usedFallback = false;
-  let citationHits: SearchHit[] = fallbackHits;
+  let citationHits: SearchHit[] = fallbackCitationHits;
 
   const fallbackText = FALLBACK_TEXT[targetLanguage] ?? FALLBACK_TEXT.en;
 
   if (!isOpenRouterConfigured()) {
     usedFallback = true;
-    answerText = fallbackHits.length > 0 ? fallbackText.withSources : fallbackText.empty;
+    answerText =
+      fallbackCitationHits.length > 0 ? fallbackText.notConfigured : fallbackText.empty;
   } else {
     try {
-      const result = await runToolCallingAsk(user.id, systemPrompt, priorMessages, question);
+      const result = await runToolCallingAsk(
+        user.id,
+        systemPrompt,
+        priorMessages,
+        question,
+        attached.hits
+      );
       answerText = result.answerText;
       citationHits = result.hits;
     } catch (error) {
       console.error("OpenRouter call failed, falling back:", error);
       usedFallback = true;
-      answerText = fallbackHits.length > 0 ? fallbackText.withSources : fallbackText.empty;
-      citationHits = fallbackHits;
+      answerText =
+        fallbackCitationHits.length > 0 ? fallbackText.errored : fallbackText.empty;
+      citationHits = fallbackCitationHits;
     }
   }
 

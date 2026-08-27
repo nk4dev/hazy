@@ -29,15 +29,17 @@ export function useAskThreadQuery(threadId: string | null) {
   });
 }
 
+export type AskInput = { question: string; collectionIds?: string[] };
+
 export function useAskMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (question: string) =>
+    mutationFn: async ({ question, collectionIds }: AskInput) =>
       unwrap<AskResponseDTO>(
         await fetch("/api/v1/ask", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify({ question, collectionIds }),
         })
       ),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ask", "threads"] }),
@@ -56,12 +58,12 @@ export function useDeleteAskThreadMutation() {
 export function useAskFollowUpMutation(threadId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (question: string) =>
+    mutationFn: async ({ question, collectionIds }: AskInput) =>
       unwrap<AskResponseDTO>(
         await fetch(`/api/v1/ask/threads/${threadId}/messages`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question }),
+          body: JSON.stringify({ question, collectionIds }),
         })
       ),
     onSuccess: () => {

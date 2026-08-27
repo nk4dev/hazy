@@ -28,9 +28,20 @@ export const GET = withApiErrors(
   }
 );
 
+/** Lowercase, trim, drop blanks/overlong entries, de-dupe, cap the list. */
+function normalizeTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  for (const raw of tags) {
+    const tag = raw.trim().toLowerCase();
+    if (tag && tag.length <= 50) seen.add(tag);
+  }
+  return [...seen].slice(0, 30);
+}
+
 const patchSchema = z.object({
   summary: z.string().max(4000).nullable().optional(),
   title: z.string().max(500).nullable().optional(),
+  tags: z.array(z.string()).max(100).optional(),
 });
 
 export const PATCH = withApiErrors(
@@ -38,11 +49,15 @@ export const PATCH = withApiErrors(
     const user = await requireUser();
     const { id } = await params;
     await loadOwnedItem(user.id, id);
-    const body = patchSchema.parse(await req.json());
+    const { tags, ...body } = patchSchema.parse(await req.json());
     const db = getDb();
     const [updated] = await db
       .update(savedUrls)
-      .set({ ...body, updatedAt: new Date() })
+      .set({
+        ...body,
+        ...(tags ? { tags: normalizeTags(tags) } : {}),
+        updatedAt: new Date(),
+      })
       .where(and(eq(savedUrls.id, id), eq(savedUrls.userId, user.id)))
       .returning();
     return ok(serializeSavedUrl(updated));

@@ -15,6 +15,7 @@ export type SavedUrlDTO = {
   faviconUrl: string | null;
   ogImageUrl: string | null;
   summary: string | null;
+  tags: string[];
   contentLanguage: string | null;
   estimatedReadMinutes: number | null;
   fetchStatus: "pending" | "success" | "error";
@@ -34,7 +35,12 @@ export type CollectionDTO = {
   name: string;
   description: string | null;
   color: string | null;
+  /** AI-generated overview of the whole collection; null until generated. */
+  summary: string | null;
+  summaryUpdatedAt: string | null;
   itemCount: number;
+  /** Up to 4 recent og:image URLs from the collection's items, for a preview thumbnail. */
+  previewImages: string[];
   createdAt: string;
 };
 

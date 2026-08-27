@@ -4,6 +4,7 @@ import { Loader2, MessageCircleQuestion, Search, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AttachedCollections, CollectionMentionField } from "@/components/ask/collection-mention";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAskMutation, useAskThreadsQuery, useDeleteAskThreadMutation } from "@/hooks/use-ask";
@@ -13,6 +14,7 @@ export function AskView() {
   const t = useTranslations("ask");
   const tCommon = useTranslations("common");
   const [question, setQuestion] = useState("");
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
   const ask = useAskMutation();
   const threads = useAskThreadsQuery();
   const deleteThread = useDeleteAskThreadMutation();
@@ -21,35 +23,48 @@ export function AskView() {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!question.trim()) return;
-    ask.mutate(question.trim(), {
-      onSuccess: (result) => router.push(`/ask/${result.thread.id}`),
-      onError: (error) =>
-        toast.error(error instanceof Error ? error.message : "Something went wrong."),
-    });
+    ask.mutate(
+      { question: question.trim(), collectionIds },
+      {
+        onSuccess: (result) => router.push(`/ask/${result.thread.id}`),
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Something went wrong."),
+      }
+    );
   }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-16">
       <form onSubmit={handleSubmit} className="mb-10">
         <div
-          className="flex items-center gap-3 rounded-lg bg-card px-4 py-3.5"
+          className="flex flex-col gap-2 rounded-lg bg-card px-4 py-3.5"
           style={{ boxShadow: "0 0 0 1px var(--primary)" }}
         >
-          <Search className="size-[18px] shrink-0 text-primary" />
-          <input
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder={t("placeholder")}
-            className="w-full bg-transparent text-[16px] outline-none placeholder:text-muted-foreground"
-            disabled={ask.isPending}
+          <AttachedCollections
+            selectedIds={collectionIds}
+            onRemove={(id) => setCollectionIds((ids) => ids.filter((x) => x !== id))}
           />
-          {ask.isPending ? (
-            <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-          ) : (
-            <Button type="submit" size="sm" disabled={!question.trim()}>
-              {t("newThread")}
-            </Button>
-          )}
+          <div className="flex items-center gap-3">
+            <Search className="size-[18px] shrink-0 text-primary" />
+            <CollectionMentionField
+              value={question}
+              onChange={setQuestion}
+              selectedIds={collectionIds}
+              onAdd={(id) => setCollectionIds((ids) => [...ids, id])}
+              placeholder={t("placeholder")}
+              className="flex-1"
+              inputClassName="text-[16px] placeholder:text-muted-foreground"
+              disabled={ask.isPending}
+            />
+            {ask.isPending ? (
+              <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+            ) : (
+              <Button type="submit" size="sm" disabled={!question.trim()}>
+                {t("newThread")}
+              </Button>
+            )}
+          </div>
+          <p className="text-[11px] text-muted-foreground">{t("mentionHint")}</p>
         </div>
       </form>
 

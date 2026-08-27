@@ -1,8 +1,9 @@
 "use client";
 
-import { FolderPlus, Layers } from "lucide-react";
+import { FolderPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { CollectionPreview } from "@/components/collections/collection-preview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCollectionsQuery, useCreateCollectionMutation } from "@/hooks/use-collections";
 import { Link } from "@/i18n/navigation";
+import type { CollectionDTO } from "@/types/api";
 
 export function CollectionsView() {
   const t = useTranslations("collections");
@@ -85,19 +87,32 @@ export function CollectionsView() {
         <p className="py-16 text-center text-sm text-muted-foreground">{t("empty")}</p>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {data?.items.map((collection) => (
-          <Link
-            key={collection.id}
-            href={`/collections/${collection.id}`}
-            className="flex flex-col gap-2 rounded-lg bg-card p-4 transition-colors hover:bg-secondary/60"
-          >
-            <Layers className="size-4 text-primary" />
-            <div className="text-sm font-medium">{collection.name}</div>
-            <div className="text-xs text-muted-foreground">{collection.itemCount}</div>
-          </Link>
-        ))}
-      </div>
+      {!isLoading && (data?.items.length ?? 0) > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {data?.items.map((collection) => (
+            <CollectionGridCard
+              key={collection.id}
+              collection={collection}
+              label={t("itemCount", { count: collection.itemCount })}
+            />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+function CollectionGridCard({ collection, label }: { collection: CollectionDTO; label: string }) {
+  return (
+    <Link
+      href={`/collections/${collection.id}`}
+      className="flex flex-col overflow-hidden rounded-lg bg-card transition-colors hover:bg-secondary/60"
+    >
+      <CollectionPreview images={collection.previewImages} name={collection.name} />
+      <div className="flex flex-col gap-1 p-3">
+        <div className="truncate text-sm font-medium">{collection.name}</div>
+        <div className="text-xs text-muted-foreground">{label}</div>
+      </div>
+    </Link>
   );
 }

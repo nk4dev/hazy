@@ -18,6 +18,27 @@ export function useItemQuery(id: string) {
   });
 }
 
+type ItemPatch = { title?: string | null; summary?: string | null; tags?: string[] };
+
+export function useUpdateItemMutation(id: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: ItemPatch) =>
+      unwrap<SavedUrlDTO>(
+        await fetch(`/api/v1/items/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        })
+      ),
+    onSuccess: (data) => {
+      queryClient.setQueryData(["item", id], data);
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["search"] });
+    },
+  });
+}
+
 export function useRefetchItemMutation(id: string) {
   const queryClient = useQueryClient();
   return useMutation({

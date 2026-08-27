@@ -22,7 +22,9 @@
     "delete": "削除",
     "close": "閉じる",
     "search": "検索",
-    "summarize": "要約"
+    "summarize": "要約",
+    "viewList": "リスト表示",
+    "viewGrid": "グリッド表示"
   },
   "setup": {
     "title": "設定が必要です",
@@ -39,9 +41,7 @@
     "empty": "まだ何も保存されていません。最初のリンクを保存してみましょう。",
     "sortOldest": "古い順",
     "sortNewest": "新しい順",
-    "itemCount": "{count}件",
-    "viewList": "リスト表示",
-    "viewGrid": "グリッド表示"
+    "itemCount": "{count}件"
   },
   "save": {
     "title": "リンクを保存",
@@ -55,7 +55,10 @@
     "addToCollection": "コレクションに追加",
     "readLater": "後で見るに追加",
     "summary": "要約",
-    "refetch": "情報を再取得"
+    "refetch": "情報を再取得",
+    "tags": "タグ",
+    "addTag": "タグを追加",
+    "removeTag": "タグ「{tag}」を削除"
   },
   "ask": {
     "placeholder": "保存したものについて聞いてみましょう…",
@@ -67,20 +70,33 @@
     "newThread": "新しい質問",
     "threads": "最近の質問",
     "aiUnavailable": "AIによる回答はまだ設定されていません — ライブラリから一致したものはこちらです。",
-    "noResults": "まだライブラリに一致するものがありません。"
+    "noResults": "まだライブラリに一致するものがありません。",
+    "mentionHint": "@ でコレクションのリンクを質問に添付できます",
+    "mentionItemCount": "{count}件",
+    "mentionRemove": "コレクションを外す",
+    "mentionPreviewTitle": "このコレクションのリンク",
+    "mentionPreviewLoading": "読み込み中…",
+    "mentionPreviewEmpty": "このコレクションにはまだリンクがありません。",
+    "mentionPreviewMore": "他 {count} 件"
   },
   "search": {
     "placeholder": "ライブラリを検索",
     "resultCount": "{count}件一致",
-    "noResults": "一致するものがありません。"
+    "noResults": "一致するものがありません。",
+    "filterHint": "domain:example.com や tag:research で絞り込めます"
   },
   "collections": {
     "title": "コレクション",
     "empty": "まだコレクションがありません。",
+    "itemCount": "{count}件",
     "create": "新しいコレクション",
     "namePlaceholder": "コレクション名",
     "remove": "コレクションから削除",
-    "removed": "コレクションから削除しました"
+    "removed": "コレクションから削除しました",
+    "aiSummary": "AI要約",
+    "aiSummarize": "AI要約",
+    "aiSummaryPending": "要約中…",
+    "aiSummaryError": "要約を生成できませんでした。"
   },
   "readLater": {
     "title": "後で見る",

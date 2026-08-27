@@ -36,6 +36,8 @@ export const GET = withApiErrors(
       name: collection.name,
       description: collection.description,
       color: collection.color,
+      summary: collection.summary,
+      summaryUpdatedAt: collection.summaryUpdatedAt?.toISOString() ?? null,
       items: rows
         .filter((r): r is typeof r & { savedUrl: NonNullable<typeof r.savedUrl> } =>
           Boolean(r.savedUrl)

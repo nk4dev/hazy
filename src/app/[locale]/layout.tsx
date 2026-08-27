@@ -25,6 +25,10 @@ const notoSansJP = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: "Hazy — a memory for the URLs you save",
   description: "Save links, ask questions about your own reading, and catch up later.",
+  icons: {
+    icon: "/hazy.ico",
+    shortcut: "/hazy.ico",
+  },
 };
 
 export function generateStaticParams() {

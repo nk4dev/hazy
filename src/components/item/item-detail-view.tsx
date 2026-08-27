@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Favicon } from "@/components/favicon";
 import { AddToCollectionButton } from "@/components/item/add-to-collection-button";
+import { ItemTagsEditor } from "@/components/item/item-tags-editor";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useItemQuery, useRefetchItemMutation } from "@/hooks/use-item";
@@ -52,7 +53,17 @@ export function ItemDetailView({ id }: { id: string }) {
     <div className="mx-auto flex w-full max-w-2xl flex-col px-6 py-10">
       <div className="mb-4 flex items-center gap-3">
         <Favicon src={item.faviconUrl} domain={item.domain} size={22} />
-        <span className="text-sm text-muted-foreground">{item.domain}</span>
+        {item.domain ? (
+          <button
+            type="button"
+            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
+            onClick={() =>
+              router.push(`/library?q=${encodeURIComponent(`domain:${item.domain}`)}`)
+            }
+          >
+            {item.domain}
+          </button>
+        ) : null}
         {item.estimatedReadMinutes && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="size-3" />
@@ -84,6 +95,8 @@ export function ItemDetailView({ id }: { id: string }) {
           {item.description}
         </p>
       )}
+
+      <ItemTagsEditor item={item} />
 
       <div className="flex flex-wrap gap-2">
         <Button asChild size="sm" className="gap-1.5">

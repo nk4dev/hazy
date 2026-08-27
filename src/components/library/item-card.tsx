@@ -25,6 +25,18 @@ export function ItemCard({ item }: { item: SavedUrlDTO }) {
           {item.estimatedReadMinutes ? ` · ${item.estimatedReadMinutes} min` : ""}
           {item.fetchStatus === "error" ? " · fetch failed" : ""}
         </div>
+        {item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {item.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="max-w-full truncate rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </Link>
   );

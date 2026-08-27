@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLocale } from "next-intl";
 import type { CollectionDTO, SavedUrlDTO } from "@/types/api";
 
 type ApiEnvelope<T> = { data: T } | { error: { code: string; message: string } };
@@ -62,6 +63,29 @@ export function useAddToCollectionMutation() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
+    },
+  });
+}
+
+export function useSummarizeCollectionMutation(id: string) {
+  const queryClient = useQueryClient();
+  const locale = useLocale();
+  return useMutation({
+    mutationFn: async () =>
+      unwrap<{ summary: string; summaryUpdatedAt: string }>(
+        await fetch(`/api/v1/collections/${id}/summarize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locale }),
+        })
+      ),
+    onSuccess: (data) => {
+      queryClient.setQueryData(
+        ["collections", id],
+        (prev: (CollectionDTO & { items: SavedUrlDTO[] }) | undefined) =>
+          prev ? { ...prev, ...data } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
   });
 }

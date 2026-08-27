@@ -9,16 +9,25 @@ export const runtime = "nodejs";
 const messageSchema = z.object({
   question: z.string().min(1).max(2000),
   answerLanguageOverride: z.enum(["en", "ja"]).optional(),
+  collectionIds: z.array(z.string().uuid()).max(5).optional(),
 });
 
 export const POST = withApiErrors(
   async (req: Request, { params }: { params: Promise<{ id: string }> }) => {
     const user = await requireUser();
     const { id: threadId } = await params;
-    const { question, answerLanguageOverride } = messageSchema.parse(await req.json());
+    const { question, answerLanguageOverride, collectionIds } = messageSchema.parse(
+      await req.json()
+    );
 
     try {
-      const result = await runAskPipeline({ user, question, threadId, answerLanguageOverride });
+      const result = await runAskPipeline({
+        user,
+        question,
+        threadId,
+        answerLanguageOverride,
+        collectionIds,
+      });
       return ok(result, { status: 201 });
     } catch (error) {
       if (error instanceof Error && error.message === "Thread not found") {

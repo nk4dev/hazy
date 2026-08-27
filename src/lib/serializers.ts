@@ -15,6 +15,7 @@ export function serializeSavedUrl(row: SavedUrlRow, readLater?: ReadLaterRow | n
     faviconUrl: row.faviconUrl,
     ogImageUrl: row.ogImageUrl,
     summary: row.summary,
+    tags: row.tags ?? [],
     contentLanguage: row.contentLanguage,
     estimatedReadMinutes: row.estimatedReadMinutes,
     fetchStatus: row.fetchStatus,
@@ -25,13 +26,20 @@ export function serializeSavedUrl(row: SavedUrlRow, readLater?: ReadLaterRow | n
   };
 }
 
-export function serializeCollection(row: CollectionRow, itemCount: number): CollectionDTO {
+export function serializeCollection(
+  row: CollectionRow,
+  itemCount: number,
+  previewImages: string[] = []
+): CollectionDTO {
   return {
     id: row.id,
     name: row.name,
     description: row.description,
     color: row.color,
+    summary: row.summary,
+    summaryUpdatedAt: row.summaryUpdatedAt?.toISOString() ?? null,
     itemCount,
+    previewImages,
     createdAt: row.createdAt.toISOString(),
   };
 }

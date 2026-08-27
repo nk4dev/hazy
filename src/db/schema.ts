@@ -66,6 +66,10 @@ export const savedUrls = pgTable(
     faviconUrl: text("favicon_url"),
     ogImageUrl: text("og_image_url"),
     summary: text("summary"),
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
     extractedText: text("extracted_text"),
     contentLanguage: varchar("content_language", { length: 8 }),
     estimatedReadMinutes: integer("estimated_read_minutes"),
@@ -79,6 +83,7 @@ export const savedUrls = pgTable(
     unique("saved_urls_user_normalized_unique").on(table.userId, table.normalizedUrl),
     index("saved_urls_user_id_idx").on(table.userId),
     index("saved_urls_search_vector_idx").using("gin", table.searchVector),
+    index("saved_urls_tags_idx").using("gin", table.tags),
   ]
 );
 
@@ -114,6 +119,8 @@ export const collections = pgTable(
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     color: varchar("color", { length: 32 }),
+    summary: text("summary"),
+    summaryUpdatedAt: timestamp("summary_updated_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -254,6 +261,7 @@ export const askMessageCitationsRelations = relations(askMessageCitations, ({ on
 // src/db/migrations/0001_search_vector.sql) — kept here so schema.ts stays
 // the single source of truth for column names the trigger references.
 export const searchVectorSourceColumns = sql`setweight(to_tsvector('simple', coalesce(title, '')), 'A') ||
+  setweight(to_tsvector('simple', array_to_string(coalesce(tags, ARRAY[]::text[]), ' ')), 'A') ||
   setweight(to_tsvector('simple', coalesce(description, '')), 'B') ||
   setweight(to_tsvector('simple', coalesce(summary, '')), 'B') ||
   setweight(to_tsvector('simple', coalesce(extracted_text, '')), 'C')`;

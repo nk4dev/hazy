@@ -22,7 +22,9 @@
     "delete": "Delete",
     "close": "Close",
     "search": "Search",
-    "summarize": "Summarize"
+    "summarize": "Summarize",
+    "viewList": "List view",
+    "viewGrid": "Grid view"
   },
   "setup": {
     "title": "Setup required",
@@ -39,9 +41,7 @@
     "empty": "Nothing saved yet. Save your first link to get started.",
     "sortOldest": "Oldest first",
     "sortNewest": "Newest first",
-    "itemCount": "{count, plural, one {# item} other {# items}}",
-    "viewList": "List view",
-    "viewGrid": "Grid view"
+    "itemCount": "{count, plural, one {# item} other {# items}}"
   },
   "save": {
     "title": "Save a link",
@@ -55,7 +55,10 @@
     "addToCollection": "Add to collection",
     "readLater": "Add to read later",
     "summary": "Summary",
-    "refetch": "Refetch metadata"
+    "refetch": "Refetch metadata",
+    "tags": "Tags",
+    "addTag": "Add tag",
+    "removeTag": "Remove tag {tag}"
   },
   "ask": {
     "placeholder": "Ask about something you saved…",
@@ -67,20 +70,33 @@
     "newThread": "New question",
     "threads": "Recent questions",
     "aiUnavailable": "AI answers aren't configured yet — here's what matched your library.",
-    "noResults": "Nothing in your library matches that yet."
+    "noResults": "Nothing in your library matches that yet.",
+    "mentionHint": "Type @ to attach a collection's links to your question",
+    "mentionItemCount": "{count, plural, one {# link} other {# links}}",
+    "mentionRemove": "Remove collection",
+    "mentionPreviewTitle": "Links in this collection",
+    "mentionPreviewLoading": "Loading…",
+    "mentionPreviewEmpty": "This collection has no links yet.",
+    "mentionPreviewMore": "+{count} more"
   },
   "search": {
     "placeholder": "Search your library",
     "resultCount": "{count, plural, one {# match} other {# matches}}",
-    "noResults": "No matches."
+    "noResults": "No matches.",
+    "filterHint": "Filter with domain:example.com or tag:research"
   },
   "collections": {
     "title": "Collections",
     "empty": "No collections yet.",
+    "itemCount": "{count, plural, one {# item} other {# items}}",
     "create": "New collection",
     "namePlaceholder": "Collection name",
     "remove": "Remove from collection",
-    "removed": "Removed from collection"
+    "removed": "Removed from collection",
+    "aiSummary": "AI summary",
+    "aiSummarize": "AI summary",
+    "aiSummaryPending": "Summarizing…",
+    "aiSummaryError": "Could not generate a summary."
   },
   "readLater": {
     "title": "Read later",

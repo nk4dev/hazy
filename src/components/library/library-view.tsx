@@ -1,44 +1,23 @@
 "use client";
 
-import { Inbox, LayoutGrid, List, Search, X } from "lucide-react";
+import { Inbox, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ItemCard } from "@/components/library/item-card";
 import { ItemRow } from "@/components/library/item-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
 import { useItemsQuery } from "@/hooks/use-items";
 import { useSearchQuery } from "@/hooks/use-search";
+import { useViewMode, type ViewMode } from "@/hooks/use-view-mode";
 import type { SavedUrlDTO } from "@/types/api";
-
-type ViewMode = "list" | "grid";
-const VIEW_MODE_STORAGE_KEY = "hazy:library-view-mode";
-
-function useViewMode() {
-  // Starts as "list" to match server-rendered HTML (no access to
-  // localStorage there), then syncs from the stored preference once
-  // mounted on the client — reading a browser-only external store on
-  // mount, not a state loop, so setState-in-effect is the right call here.
-  const [view, setView] = useState<ViewMode>("list");
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (stored === "grid") setView("grid");
-  }, []);
-
-  function updateView(next: ViewMode) {
-    setView(next);
-    window.localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
-  }
-
-  return [view, updateView] as const;
-}
 
 function ItemList({ items, view }: { items: SavedUrlDTO[]; view: ViewMode }) {
   if (view === "grid") {
     return (
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6">
         {items.map((item) => (
           <ItemCard key={item.id} item={item} />
         ))}
@@ -56,12 +35,12 @@ function ItemList({ items, view }: { items: SavedUrlDTO[]; view: ViewMode }) {
   );
 }
 
-export function LibraryView() {
+export function LibraryView({ initialQuery = "" }: { initialQuery?: string }) {
   const t = useTranslations("library");
   const tCommon = useTranslations("common");
   const tSearch = useTranslations("search");
-  const [query, setQuery] = useState("");
-  const [view, setView] = useViewMode();
+  const [query, setQuery] = useState(initialQuery);
+  const [view, setView] = useViewMode("hazy:library-view-mode");
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useItemsQuery("newest");
@@ -72,7 +51,11 @@ export function LibraryView() {
   const searchResults = search.data?.items ?? [];
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-6 py-8">
+    <div
+      className={`mx-auto flex w-full flex-1 flex-col px-4 py-6 transition-[max-width] duration-200 sm:px-6 ${
+        view === "grid" ? "max-w-[110rem] lg:px-8 xl:px-12 2xl:px-16" : "max-w-3xl"
+      }`}
+    >
       <div className="mb-5 flex items-center gap-3">
         <h1 className="text-2xl font-medium">{t("title")}</h1>
         {!isLoading && !isSearching && (
@@ -80,27 +63,8 @@ export function LibraryView() {
             {t("itemCount", { count: items.length })}
           </span>
         )}
-        <div className="ml-auto flex items-center gap-0.5 rounded-lg bg-secondary/60 p-0.5">
-          <Button
-            type="button"
-            variant={view === "list" ? "secondary" : "ghost"}
-            size="icon-sm"
-            aria-label={t("viewList")}
-            aria-pressed={view === "list"}
-            onClick={() => setView("list")}
-          >
-            <List className="size-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant={view === "grid" ? "secondary" : "ghost"}
-            size="icon-sm"
-            aria-label={t("viewGrid")}
-            aria-pressed={view === "grid"}
-            onClick={() => setView("grid")}
-          >
-            <LayoutGrid className="size-3.5" />
-          </Button>
+        <div className="ml-auto">
+          <ViewModeToggle view={view} onChange={setView} />
         </div>
       </div>
 
@@ -122,6 +86,7 @@ export function LibraryView() {
             <X className="size-4" />
           </button>
         )}
+        <p className="mt-1.5 px-1 text-[11px] text-muted-foreground">{tSearch("filterHint")}</p>
       </div>
 
       {isSearching ? (

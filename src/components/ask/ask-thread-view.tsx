@@ -4,8 +4,8 @@ import { ArrowUpRight, CornerDownRight, Loader2, Sparkle, Trash2 } from "lucide-
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { AttachedCollections, CollectionMentionField } from "@/components/ask/collection-mention";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAskFollowUpMutation,
@@ -72,6 +72,7 @@ export function AskThreadView({ threadId }: { threadId: string }) {
   const deleteThread = useDeleteAskThreadMutation();
   const router = useRouter();
   const [question, setQuestion] = useState("");
+  const [collectionIds, setCollectionIds] = useState<string[]>([]);
 
   function handleDelete() {
     deleteThread.mutate(threadId, {
@@ -84,11 +85,17 @@ export function AskThreadView({ threadId }: { threadId: string }) {
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!question.trim()) return;
-    followUp.mutate(question.trim(), {
-      onSuccess: () => setQuestion(""),
-      onError: (error) =>
-        toast.error(error instanceof Error ? error.message : "Something went wrong."),
-    });
+    followUp.mutate(
+      { question: question.trim(), collectionIds },
+      {
+        onSuccess: () => {
+          setQuestion("");
+          setCollectionIds([]);
+        },
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Something went wrong."),
+      }
+    );
   }
 
   if (isLoading) {
@@ -135,16 +142,27 @@ export function AskThreadView({ threadId }: { threadId: string }) {
         )
       )}
 
-      <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2">
-        <Input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          placeholder={t("followUp")}
-          disabled={followUp.isPending}
+      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2">
+        <AttachedCollections
+          selectedIds={collectionIds}
+          onRemove={(id) => setCollectionIds((ids) => ids.filter((x) => x !== id))}
         />
-        <Button type="submit" size="sm" disabled={followUp.isPending || !question.trim()}>
-          {followUp.isPending ? <Loader2 className="size-4 animate-spin" /> : t("followUp")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <CollectionMentionField
+            value={question}
+            onChange={setQuestion}
+            selectedIds={collectionIds}
+            onAdd={(id) => setCollectionIds((ids) => [...ids, id])}
+            placeholder={t("followUp")}
+            className="flex-1"
+            inputClassName="h-8 rounded-lg border border-input px-2.5 text-sm focus-visible:border-ring"
+            menuPlacement="top"
+            disabled={followUp.isPending}
+          />
+          <Button type="submit" size="sm" disabled={followUp.isPending || !question.trim()}>
+            {followUp.isPending ? <Loader2 className="size-4 animate-spin" /> : t("followUp")}
+          </Button>
+        </div>
       </form>
     </div>
   );
