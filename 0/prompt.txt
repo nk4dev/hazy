@@ -1,0 +1,50 @@
+<bash-stdout>Resolving dependencies
+Resolved, downloaded and extracted [28]
+Saved lockfile
+
+│
+●   claude-code_2-1-250_agent  Agent detected — installing non-interactively
+[?25l│
+◇  Source: https://github.com/vercel/turborepo.git
+[?25h[?25l│
+◒  Fetching skills…[1G[J◐  Fetching skills…[1G[J◓  Fetching skills…[1G[J◑  Fetching skills…[1G[J◒  Fetching skills…[1G[J◐  Fetching skills…[1G[J◓  Fetching skills…[1G[J◑  Fetching skills…[1G[J◒  Fetching skills….[1G[J◐  Fetching skills….[1G[J◓  Fetching skills….[1G[J◑  Fetching skills….[1G[J◒  Fetching skills….[1G[J◐  Fetching skills….[1G[J◓  Fetching skills….[1G[J◑  Fetching skills….[1G[J◒  Fetching skills…..[1G[J◇  Found 1 skill
+[?25h│
+●  Skill: turborepo
+│
+│  Turborepo monorepo build system guidance. Triggers on: turbo.json, task pipelines, dependsOn, caching, remote cache, the "turbo" CLI, --filter, --affected, CI optimization, environment variables, internal packages, monorepo structure/best practices, and boundaries. Use when user: configures tasks/workflows/pipelines, creates packages, sets up monorepo, shares code between apps, runs changed/affected packages, debugs cache, or has apps/packages directories.
+[?25l│
+[1G[J◇  77 agents
+[?25h│
+●  Installing to: Claude Code, Zed
+
+│
+◇  Installation Summary ────────────────────────────────────────────────╮
+│                                                                       │
+│  ~/_varius/hazy-repo/.agents/skills/turborepo                         │
+│    universal: Zed, Amp, Antigravity, Antigravity CLI, Cline +12 more  │
+│    symlink → Claude Code                                              │
+│                                                                       │
+├───────────────────────────────────────────────────────────────────────╯
+│
+◇  Security Risk Assessments ───────────────────────────────╮
+│                                                           │
+│             Gen               Socket            Snyk      │
+│  turborepo  Safe              0 alerts          Low Risk  │
+│                                                           │
+│  Details: https://skills.sh/vercel/turborepo              │
+│                                                           │
+├───────────────────────────────────────────────────────────╯
+[?25l│
+[1G[J◒  Installing skills…[1G[J◇  Installation complete
+[?25h
+│
+◇  Installed 1 skill ───────────────────────────────────────────────────╮
+│                                                                       │
+│  ✓ ~/_varius/hazy-repo/.agents/skills/turborepo                       │
+│    universal: Zed, Amp, Antigravity, Antigravity CLI, Cline +12 more  │
+│    symlinked: Claude Code                                             │
+│                                                                       │
+├───────────────────────────────────────────────────────────────────────╯
+
+│
+└  Done!  Review skills before use; they run with full agent permissions.</bash-stdout><bash-stderr></bash-stderr>
