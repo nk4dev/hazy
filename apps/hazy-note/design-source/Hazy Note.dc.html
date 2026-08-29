@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics><meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/nocturne-aef796ac-6a82-4627-884b-fa3fdfa153c7/styles.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap">
+<script src="_ds/nocturne-aef796ac-6a82-4627-884b-fa3fdfa153c7/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:var(--color-neutral-900);font-family:"Inter","Noto Sans JP",system-ui,sans-serif;color:var(--color-text)}
+a{color:var(--color-accent)}a:hover{color:var(--color-accent-300)}
+.sc{padding:40px 44px 34px;border-bottom:1px solid rgba(233,233,237,.08);scroll-margin-top:16px}
+.sc-hd{display:flex;align-items:baseline;gap:11px;margin:0 0 20px}
+.sc-id{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:var(--color-text);color:var(--color-bg);border-radius:4px;text-decoration:none}
+.sc-nm{font:500 13px/1.2 "Inter","Noto Sans JP",sans-serif}
+.sc-sub{font:400 12px/1.3 "Inter","Noto Sans JP",sans-serif;color:rgba(233,233,237,.5)}
+.frame{background:var(--color-bg);border-radius:10px;box-shadow:0 0 0 1px var(--color-neutral-800),0 18px 44px rgba(0,0,0,.5);overflow:hidden}
+.row{display:flex;flex-wrap:wrap;gap:26px;align-items:flex-start}
+@keyframes shimmer{0%{background-position:-220px 0}100%{background-position:340px 0}}
+.skel{border-radius:3px;background:linear-gradient(90deg,rgba(89,93,108,.25) 0%,rgba(145,132,217,.35) 45%,rgba(89,93,108,.25) 90%);background-size:340px 100%;animation:shimmer 1.4s linear infinite}
+@keyframes breathe{0%,100%{opacity:.5;transform:scale(.94)}50%{opacity:1;transform:scale(1.06)}}
+.pulse{animation:breathe 2.6s ease-in-out infinite}
+</style></helmet>
+
+<header style="padding:52px 44px 30px;display:flex;flex-direction:column;gap:14px;max-width:1000px">
+<div style="display:flex;align-items:center;gap:11px">
+<span style="width:28px;height:28px;border-radius:9px;background:radial-gradient(circle at 30% 25%,var(--color-accent-400),var(--color-accent-700));box-shadow:0 0 20px rgba(145,132,217,.5)"></span>
+<span style="font-size:20px;font-weight:500;letter-spacing:-.015em">hazy note</span>
+<span class="tag tag-outline" style="margin-left:6px">UIモック v1</span>
+</div>
+<h2 style="margin:0;letter-spacing:-.025em;max-width:22ch">URLの霧を、自分の言葉に落とすまで</h2>
+<p style="margin:0;font-size:14px;line-height:1.8;color:rgba(233,233,237,.62);max-width:70ch">個人のエンジニア・ブロガーが、読んだものを貯めるだけで終わらせないための道具。取り込み（<a href="#s2">s2</a>）→ 整理（<a href="#s1">s1</a>・<a href="#s5">s5</a>）→ 考えを書く（<a href="#s3">s3</a>・<a href="#s4">s4</a>）→ 外に出す（<a href="#s6">s6</a>）の一本道を、AIが本文の中で手伝う形に寄せています。モバイルは「取り込みと読む」に絞りました（<a href="#s7">s7</a>）。</p>
+<p style="margin:0;font-size:12px;line-height:1.7;color:rgba(233,233,237,.42);max-width:70ch">前提：Nocturne のトークンのみ使用（アクセントは線とグロー、面には流さない）。整理単位はプロジェクト／タグ／時系列フィード／グラフの4つを共存させ、サイドバーで切り替えます。画像はまだ入れていません — OG画像を出す想定なら差し込み口を用意します。</p>
+</header>
+
+<section class="sc" id="s1">
+<div class="sc-hd"><a class="sc-id" href="#s1">s1</a><span class="sc-nm">ライブラリ</span><span class="sc-sub">貼ったものが並ぶ場所。左に4つの整理単位、上にURL入力、右に「今日の霧」</span></div>
+<div class="frame" style="width:1240px">
+<div style="display:grid;grid-template-columns:214px 1fr;min-height:760px">
+
+<aside style="padding:18px 13px;background:var(--color-neutral-900);display:flex;flex-direction:column;gap:20px">
+<div style="display:flex;align-items:center;gap:9px;padding:0 7px">
+<span style="width:22px;height:22px;border-radius:7px;background:radial-gradient(circle at 30% 25%,var(--color-accent-400),var(--color-accent-700));box-shadow:0 0 14px rgba(145,132,217,.45)"></span>
+<span style="font-size:15px;font-weight:500;letter-spacing:-.01em">hazy note</span>
+<button class="btn btn-icon btn-ghost" style="margin-left:auto;width:26px;height:26px"><i class="ph ph-magnifying-glass" style="font-size:15px"></i></button>
+</div>
+<nav style="display:flex;flex-direction:column;gap:2px">
+<a href="#s1" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;text-decoration:none;color:var(--color-accent);background:rgba(145,132,217,.12)"><i class="ph ph-tray" style="font-size:16px"></i>受信箱<span style="margin-left:auto;font-size:11px;opacity:.75">12</span></a>
+<a href="#s1" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;text-decoration:none;color:var(--color-text)"><i class="ph ph-clock-counter-clockwise" style="font-size:16px"></i>時系列</a>
+<a href="#s3" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;text-decoration:none;color:var(--color-text)"><i class="ph ph-notebook" style="font-size:16px"></i>ノート<span style="margin-left:auto;font-size:11px;opacity:.45">38</span></a>
+<a href="#s5" style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;text-decoration:none;color:var(--color-text)"><i class="ph ph-graph" style="font-size:16px"></i>つながり</a>
+</nav>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.38);padding:0 10px">プロジェクト</div>
+<div style="display:flex;flex-direction:column;gap:1px">
+<a href="#s4" style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-text)"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-accent)"></span>同期の設計<span style="margin-left:auto;font-size:11px;opacity:.4">17</span></a>
+<a href="#s6" style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-text)"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-neutral-600)"></span>ブログ下書き<span style="margin-left:auto;font-size:11px;opacity:.4">6</span></a>
+<a href="#s1" style="display:flex;align-items:center;gap:9px;padding:6px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-text)"><span style="width:6px;height:6px;border-radius:50%;background:var(--color-neutral-600)"></span>読みたいだけ<span style="margin-left:auto;font-size:11px;opacity:.4">31</span></a>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.38);padding:0 10px">タグ</div>
+<div style="display:flex;flex-wrap:wrap;gap:5px;padding:0 10px">
+<span class="tag tag-accent">ローカルファースト</span>
+<span class="tag tag-neutral">CRDT</span>
+<span class="tag tag-neutral">同期</span>
+<span class="tag tag-neutral">設計</span>
+<span class="tag tag-outline">+14</span>
+</div>
+</div>
+<div style="margin-top:auto;padding:12px;border-radius:9px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900);display:flex;flex-direction:column;gap:7px">
+<div style="font-size:11px;color:rgba(233,233,237,.5)">今日の霧</div>
+<div style="font-size:12.5px;line-height:1.55">未整理が12件。3件は「同期の設計」に入りそうです。</div>
+<button class="btn btn-primary" style="font-size:12px;padding:5px 9px;align-self:flex-start"><i class="ph ph-sparkle"></i>まとめて振り分け</button>
+</div>
+</aside>
+
+<main style="padding:26px 30px 30px;display:flex;flex-direction:column;gap:20px">
+<header style="display:flex;align-items:flex-end;gap:16px">
+<div>
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.42);margin-bottom:5px">受信箱</div>
+<h3 style="margin:0;letter-spacing:-.02em">貼ったものが、形になるまで</h3>
+</div>
+<div style="margin-left:auto;display:flex;gap:8px">
+<div class="seg" style="align-self:center">
+<label class="seg-opt"><input type="radio" name="s1v" checked>カード</label>
+<label class="seg-opt"><input type="radio" name="s1v">リスト</label>
+</div>
+<button class="btn btn-secondary"><i class="ph ph-sliders-horizontal"></i>絞り込み</button>
+</div>
+</header>
+
+<div style="display:flex;gap:9px;padding:9px;border-radius:12px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-800),inset 0 0 44px rgba(145,132,217,.07)">
+<i class="ph ph-link" style="font-size:17px;color:var(--color-accent);align-self:center;margin-left:7px"></i>
+<div style="flex:1;align-self:center;font-size:14px;color:rgba(233,233,237,.4)">URLを貼る、またはファイルをドロップ — 記事・PDF・動画・スレッド</div>
+<button class="btn btn-primary"><i class="ph ph-arrow-right"></i>読み取って整理</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+
+<article class="card elev-sm" style="gap:9px">
+<div class="card-meta"><i class="ph ph-globe"></i>inkandswitch.com<span style="margin-left:auto">2分前</span></div>
+<div class="card-title">Local-first software — データの所有権をユーザーに戻す</div>
+<p class="card-body">同期の利便性を捨てずに所有権を取り戻すための7つの理想。CRDTが現実解になりうる根拠を実装例から示す。</p>
+<div style="display:flex;flex-direction:column;gap:5px;padding:9px;border-radius:6px;background:rgba(145,132,217,.08)">
+<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent)">抽出した論点</div>
+<div style="font-size:12px;line-height:1.6;opacity:.85">・所有権とコラボは両立しうる<br>・オフラインは機能ではなく前提<br>・移行コストは同期層に集中する</div>
+</div>
+<div style="display:flex;gap:5px;flex-wrap:wrap"><span class="tag tag-accent">ローカルファースト</span><span class="tag tag-neutral">CRDT</span></div>
+</article>
+
+<article class="card elev-sm" style="gap:9px;box-shadow:0 0 0 1px var(--color-accent-700)">
+<div class="card-meta"><i class="ph ph-file-pdf"></i>arxiv.org / PDF · 28p<span style="margin-left:auto;color:var(--color-accent)">読み取り中</span></div>
+<div class="card-title" style="filter:blur(3px);opacity:.7">Conflict-free Replicated Data Types の再訪</div>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div class="skel" style="height:9px"></div>
+<div class="skel" style="height:9px;width:88%"></div>
+<div class="skel" style="height:9px;width:62%"></div>
+</div>
+<div style="display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:6px;background:rgba(145,132,217,.08);font-size:12px;color:var(--color-accent-300)">
+<i class="ph ph-sparkle pulse" style="font-size:14px;color:var(--color-accent)"></i>本文から主要な主張を抜き出しています
+</div>
+<div style="display:flex;gap:5px"><span class="tag tag-outline">タグ推定中</span></div>
+</article>
+
+<article class="card elev-sm" style="gap:9px">
+<div class="card-meta"><i class="ph ph-globe"></i>overreacted.io<span style="margin-left:auto">今日</span></div>
+<div class="card-title">状態を持つUIの、境界の引き方</div>
+<p class="card-body">どこに状態を置くかは技術判断ではなく編集判断だという主張。3つの失敗例と共通する兆候。</p>
+<div style="display:flex;flex-direction:column;gap:5px;padding:9px;border-radius:6px;background:rgba(145,132,217,.08)">
+<div style="font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-accent)">抽出した論点</div>
+<div style="font-size:12px;line-height:1.6;opacity:.85">・境界は責務ではなく変更頻度で引く<br>・「共有された状態」の匂い</div>
+</div>
+<div style="display:flex;gap:5px;flex-wrap:wrap"><span class="tag tag-neutral">設計</span><span class="tag tag-neutral">UI</span></div>
+</article>
+
+<article class="card elev-sm" style="gap:9px">
+<div class="card-meta"><i class="ph ph-youtube-logo"></i>youtube.com · 42分<span style="margin-left:auto">昨日</span></div>
+<div class="card-title">同期を諦めた3年間について</div>
+<p class="card-body">章ごとの要点。19:40の「サーバは真実ではない」を引用候補に立てています。</p>
+<div style="display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:6px;background:rgba(233,233,237,.05);font-size:12px;opacity:.8">
+<i class="ph ph-quotes" style="color:var(--color-accent);font-size:14px"></i>引用候補 1件
+</div>
+<div style="display:flex;gap:5px;flex-wrap:wrap"><span class="tag tag-neutral">動画</span><span class="tag tag-neutral">同期</span></div>
+</article>
+
+<article class="card elev-sm" style="gap:9px">
+<div class="card-meta"><i class="ph ph-globe"></i>notes.andymatuschak.org<span style="margin-left:auto">3日前</span></div>
+<div class="card-title">evergreen notes は概念単位で書く</div>
+<p class="card-body">出典単位ではなく概念単位で切ると、後から結び直せるようになる。</p>
+<div style="display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:6px;background:rgba(233,233,237,.05);font-size:12px;opacity:.8">
+<i class="ph ph-link-simple" style="color:var(--color-accent);font-size:14px"></i>ノート「情報の切り方」と関連
+</div>
+<div style="display:flex;gap:5px;flex-wrap:wrap"><span class="tag tag-neutral">研究メモ</span></div>
+</article>
+
+<article class="card" style="gap:8px;background:transparent;box-shadow:inset 0 0 0 1px var(--color-neutral-900);justify-content:center;align-items:flex-start">
+<i class="ph ph-plus" style="font-size:20px;color:var(--color-accent)"></i>
+<div class="card-title" style="font-size:15px">ここにドロップ</div>
+<p class="card-body" style="font-size:12px">拡張機能・共有シート・メール転送からも入ります。</p>
+</article>
+
+</div>
+</main>
+</div>
+</div>
+</section>
+
+<section class="sc" id="s2">
+<div class="sc-hd"><a class="sc-id" href="#s2">s2</a><span class="sc-nm">取り込みの瞬間</span><span class="sc-sub">貼った直後の3コマ。読み取り → 要約とタグの提案 → 置き場所の決定</span></div>
+<div class="row">
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:400 11px/1.3 sans-serif;color:rgba(233,233,237,.5)">① 読み取り中（約4秒）</div>
+<div class="frame" style="width:392px">
+<div style="padding:22px;display:flex;flex-direction:column;gap:15px;min-height:330px;background:radial-gradient(120% 80% at 50% 0%,rgba(145,132,217,.1),transparent 60%)">
+<div style="display:flex;align-items:center;gap:9px;font-size:12px;color:rgba(233,233,237,.55)"><i class="ph ph-link"></i>inkandswitch.com/local-first</div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:26px 0 20px">
+<span class="pulse" style="width:52px;height:52px;border-radius:17px;background:radial-gradient(circle at 32% 26%,var(--color-accent-400),var(--color-accent-700));box-shadow:0 0 34px rgba(145,132,217,.55)"></span>
+<div style="font-size:14px;font-weight:500">霧を晴らしています</div>
+<div style="font-size:12px;color:rgba(233,233,237,.5)">本文 4,200語を読み込みました</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div class="skel" style="height:9px"></div>
+<div class="skel" style="height:9px;width:82%"></div>
+<div class="skel" style="height:9px;width:57%"></div>
+</div>
+<button class="btn btn-ghost" style="align-self:center;font-size:12px;margin-top:auto">あとで読む（要約だけ待つ）</button>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:400 11px/1.3 sans-serif;color:rgba(233,233,237,.5)">② 要約とタグの提案 — 全部あとで直せる</div>
+<div class="frame" style="width:392px">
+<div style="padding:20px;display:flex;flex-direction:column;gap:13px;min-height:330px">
+<div style="display:flex;align-items:center;gap:9px;font-size:12px;color:rgba(233,233,237,.55)"><i class="ph ph-globe"></i>inkandswitch.com<span style="margin-left:auto;color:var(--color-accent)">4.1秒</span></div>
+<div style="font-size:17px;font-weight:500;line-height:1.35;letter-spacing:-.01em">Local-first software — データの所有権をユーザーに戻す</div>
+<p style="margin:0;font-size:13px;line-height:1.7;opacity:.82">同期の利便性を捨てずに所有権を取り戻すための7つの理想。CRDTが現実解になりうる根拠を実装例から示す。</p>
+<div style="display:flex;flex-direction:column;gap:6px;padding:10px;border-radius:8px;background:rgba(145,132,217,.08);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-accent)">タグの提案</div>
+<div style="display:flex;flex-wrap:wrap;gap:5px">
+<span class="tag tag-accent">ローカルファースト <i class="ph ph-check" style="margin-left:5px;font-size:11px"></i></span>
+<span class="tag tag-accent">CRDT <i class="ph ph-check" style="margin-left:5px;font-size:11px"></i></span>
+<span class="tag tag-outline">分散システム <i class="ph ph-plus" style="margin-left:5px;font-size:11px"></i></span>
+<span class="tag tag-outline">同期 <i class="ph ph-plus" style="margin-left:5px;font-size:11px"></i></span>
+</div>
+</div>
+<div style="display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900);font-size:12.5px">
+<i class="ph ph-folder-open" style="color:var(--color-accent);font-size:15px"></i>「同期の設計」へ
+<button class="btn btn-ghost" style="margin-left:auto;font-size:12px">変更</button>
+</div>
+<div style="display:flex;gap:8px;margin-top:auto">
+<button class="btn btn-primary" style="flex:1"><i class="ph ph-check"></i>これで保存</button>
+<button class="btn btn-secondary"><i class="ph ph-arrow-clockwise"></i></button>
+</div>
+</div>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font:400 11px/1.3 sans-serif;color:rgba(233,233,237,.5)">③ 保存後 — 次の一手だけを出す</div>
+<div class="frame" style="width:392px">
+<div style="padding:20px;display:flex;flex-direction:column;gap:13px;min-height:330px">
+<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--color-accent)"><i class="ph ph-check-circle" style="font-size:16px"></i>「同期の設計」に保存しました</div>
+<div style="font-size:15px;font-weight:500;line-height:1.4">この出典は、既にある2つの主張と食い違っています。</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="padding:10px 11px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<div style="font-size:12px;font-weight:500;margin-bottom:3px">多人数編集の速さ</div>
+<div style="font-size:12px;line-height:1.55;opacity:.72">同期層次第 ↔ 中央集権が有利（2本）</div>
+</div>
+<div style="padding:10px 11px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<div style="font-size:12px;font-weight:500;margin-bottom:3px">移行コストの置き場所</div>
+<div style="font-size:12px;line-height:1.55;opacity:.72">同期層 ↔ クライアント（3本）</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px;margin-top:auto">
+<a href="#s4" class="btn btn-primary btn-block" style="margin:0"><i class="ph ph-columns"></i>比較ボードで見る</a>
+<a href="#s3" class="btn btn-secondary btn-block" style="margin:0"><i class="ph ph-notebook"></i>ノートに書き足す</a>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+
+<section class="sc" id="s3">
+<div class="sc-hd"><a class="sc-id" href="#s3">s3</a><span class="sc-nm">ノート編集</span><span class="sc-sub">AIは右のパネルではなく本文の中に現れる。提案は段落として差し込まれ、採るか消すかだけ</span></div>
+<div class="frame" style="width:1240px">
+<div style="display:grid;grid-template-columns:214px 1fr 250px;min-height:800px">
+
+<aside style="padding:18px 13px;background:var(--color-neutral-900);display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:9px;padding:0 7px">
+<span style="width:22px;height:22px;border-radius:7px;background:radial-gradient(circle at 30% 25%,var(--color-accent-400),var(--color-accent-700));box-shadow:0 0 14px rgba(145,132,217,.45)"></span>
+<span style="font-size:15px;font-weight:500">hazy note</span>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.38);padding:0 10px">同期の設計 — ノート</div>
+<div style="display:flex;flex-direction:column;gap:1px">
+<a href="#s3" style="padding:7px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-accent);background:rgba(145,132,217,.12)">所有権のある同期</a>
+<a href="#s3" style="padding:7px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-text);opacity:.85">情報の切り方</a>
+<a href="#s3" style="padding:7px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-text);opacity:.85">CRDTの体感遅延</a>
+<a href="#s3" style="padding:7px 10px;border-radius:7px;font-size:13px;text-decoration:none;color:var(--color-text);opacity:.85">まだ名前のない疑問</a>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.38);padding:0 10px">このノートの出典</div>
+<div style="display:flex;flex-direction:column;gap:4px;padding:0 10px">
+<div style="display:flex;gap:7px;font-size:12px;line-height:1.45;opacity:.75"><span style="color:var(--color-accent)">1</span>inkandswitch</div>
+<div style="display:flex;gap:7px;font-size:12px;line-height:1.45;opacity:.75"><span style="color:var(--color-accent)">2</span>講演（19:40）</div>
+<div style="display:flex;gap:7px;font-size:12px;line-height:1.45;opacity:.75"><span style="color:var(--color-accent)">3</span>arxiv / CRDT</div>
+<div style="display:flex;gap:7px;font-size:12px;line-height:1.45;opacity:.5"><span>4</span>overreacted</div>
+<div style="display:flex;gap:7px;font-size:12px;line-height:1.45;opacity:.5"><span>5</span>andymatuschak</div>
+</div>
+</div>
+<button class="btn btn-secondary" style="margin-top:auto;font-size:12px"><i class="ph ph-plus"></i>出典を足す</button>
+</aside>
+
+<main style="padding:28px 44px 34px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:center;gap:10px;font-size:12px;color:rgba(233,233,237,.45)">
+<i class="ph ph-notebook"></i>ノート<i class="ph ph-caret-right" style="font-size:11px"></i><span style="color:var(--color-text)">所有権のある同期</span>
+<div style="margin-left:auto;display:flex;align-items:center;gap:7px">
+<span style="font-size:11px">自動保存 · 1分前</span>
+<a href="#s6" class="btn btn-secondary" style="font-size:12px;padding:5px 9px"><i class="ph ph-export"></i>書き出す</a>
+</div>
+</div>
+
+<h2 style="margin:0;letter-spacing:-.025em">所有権のある同期</h2>
+<div style="display:flex;gap:6px;flex-wrap:wrap"><span class="tag tag-accent">ローカルファースト</span><span class="tag tag-neutral">CRDT</span><span class="tag tag-outline">未完</span></div>
+
+<div style="display:flex;flex-direction:column;gap:15px;font-size:15px;line-height:1.85;max-width:66ch">
+<p style="margin:0;opacity:.9">同期とは本来、複製の一致を保つ仕組みにすぎない。にもかかわらず「同期する」と言うとき、私たちはほぼ常に「サーバに預ける」を意味している。この置き換えがどこで起きたのかを追いたい。<sup style="color:var(--color-accent);font-size:11px">1</sup></p>
+
+<figure style="display:flex;flex-direction:column;gap:7px;padding:14px 16px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<blockquote style="margin:0;font-size:14.5px;line-height:1.7;opacity:.92">「サーバは信頼できる第三者ではなく、単に一番よく起きているレプリカだ。」</blockquote>
+<figcaption style="display:flex;align-items:center;gap:7px;margin:0"><i class="ph ph-youtube-logo" style="font-size:13px;color:var(--color-accent)"></i>講演 19:40<span style="opacity:.55">— inkandswitch の7理想と同趣旨</span></figcaption>
+</figure>
+
+<p style="margin:0;opacity:.9">この視点に立つと、オフライン対応は機能ではなく前提になる。実装コストは消えず、同期層に集中する<sup style="color:var(--color-accent);font-size:11px">1,2</sup>——ここが判断の分かれ目だ。</p>
+
+<sc-if value="{{ showInline }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;flex-direction:column;gap:10px;padding:15px 16px;border-radius:8px;background:rgba(145,132,217,.07);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-accent)"><i class="ph ph-sparkle" style="font-size:13px"></i>抜けている反論 — 段落の下書き</div>
+<p style="margin:0;font-size:14.5px;line-height:1.8;opacity:.72;font-style:normal">ただし、多人数が同時に触る文書では中央集権のほうが体感が速いという報告もある<sup style="font-size:11px">4</sup>。ここで比べられているのは収束の正しさではなく遅延であり、同じ条件で測った出典は手元にない。</p>
+<div style="display:flex;gap:7px;align-items:center">
+<button class="btn btn-primary" style="font-size:13px"><i class="ph ph-arrow-down-left"></i>本文に採る</button>
+<button class="btn btn-ghost" style="font-size:13px">言い換える</button>
+<button class="btn btn-ghost" style="font-size:13px;color:rgba(233,233,237,.45);margin-left:auto">消す</button>
+</div>
+</div>
+</sc-if>
+
+<p style="margin:0;position:relative">
+<span style="opacity:.9">CRDTは収束を保証するが、体感遅延については</span><span style="background:rgba(145,132,217,.16);box-shadow:0 1px 0 var(--color-accent);padding:1px 2px">まだ検証していない</span><span style="opacity:.9">。</span>
+</p>
+<div style="display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-800);align-self:flex-start;font-size:12.5px">
+<i class="ph ph-sparkle" style="color:var(--color-accent);font-size:14px"></i>選択範囲に
+<button class="btn btn-ghost" style="font-size:12px">出典を探す</button>
+<span style="opacity:.25">·</span>
+<button class="btn btn-ghost" style="font-size:12px">疑問として切り出す</button>
+<span style="opacity:.25">·</span>
+<button class="btn btn-ghost" style="font-size:12px">短くする</button>
+</div>
+
+<p style="margin:0;color:rgba(233,233,237,.32)">つづきを書く… <span style="font-size:12px">／ で AI、@ で出典</span></p>
+</div>
+</main>
+
+<aside style="background:var(--color-neutral-900);padding:18px 16px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;flex-direction:column;gap:9px">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.4)">このノートの状態</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;align-items:center;gap:8px;font-size:12.5px"><i class="ph ph-check-circle" style="color:var(--color-accent);font-size:15px"></i>出典5本すべて引用済み</div>
+<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;opacity:.8"><i class="ph ph-warning-circle" style="color:var(--color-accent-400);font-size:15px"></i>反論の節が未着手</div>
+<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;opacity:.8"><i class="ph ph-question" style="color:var(--color-neutral-600);font-size:15px"></i>未解決の疑問 2件</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.4)">つながるノート</div>
+<a href="#s5" style="display:flex;flex-direction:column;gap:3px;padding:10px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900);text-decoration:none;color:var(--color-text)">
+<span style="font-size:12.5px;font-weight:500">情報の切り方</span>
+<span style="font-size:11px;opacity:.6">概念単位という同じ論法</span>
+</a>
+<a href="#s5" style="display:flex;flex-direction:column;gap:3px;padding:10px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900);text-decoration:none;color:var(--color-text)">
+<span style="font-size:12.5px;font-weight:500">CRDTの体感遅延</span>
+<span style="font-size:11px;opacity:.6">この節の続きになりうる</span>
+</a>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:9px;background:rgba(145,132,217,.07);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="font-size:12px;line-height:1.6">ここまでで記事1本ぶんの材料があります。</div>
+<a href="#s6" class="btn btn-primary" style="font-size:12px;padding:5px 9px;align-self:flex-start"><i class="ph ph-article"></i>下書きを起こす</a>
+</div>
+</aside>
+</div>
+</div>
+</section>
+
+<section class="sc" id="s4">
+<div class="sc-hd"><a class="sc-id" href="#s4">s4</a><span class="sc-nm">比較ボード</span><span class="sc-sub">出典を行ではなく列に置き、軸で横断する。食い違いだけがアクセントで光る</span></div>
+<div class="frame" style="width:1240px">
+<div style="padding:28px 32px 32px;display:flex;flex-direction:column;gap:20px;min-height:640px">
+<header style="display:flex;align-items:flex-end;gap:16px">
+<div>
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.42);margin-bottom:5px">比較ボード · 同期の設計</div>
+<h3 style="margin:0;letter-spacing:-.02em">出典5本 × 軸4つ</h3>
+</div>
+<div style="margin-left:auto;display:flex;gap:8px">
+<button class="btn btn-secondary"><i class="ph ph-plus"></i>軸を追加</button>
+<button class="btn btn-primary"><i class="ph ph-sparkle"></i>差分をまとめる</button>
+</div>
+</header>
+
+<table class="table" style="font-size:13px">
+<thead><tr>
+<th style="width:160px">軸</th>
+<th>inkandswitch</th>
+<th>overreacted</th>
+<th>arxiv / CRDT</th>
+<th>講演（動画）</th>
+<th>andymatuschak</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="font-weight:500">所有権の扱い</td>
+<td>ユーザー側に置く</td>
+<td style="opacity:.35">記述なし</td>
+<td>前提としてローカル複製</td>
+<td>「サーバは真実ではない」</td>
+<td style="opacity:.35">記述なし</td>
+</tr>
+<tr>
+<td style="font-weight:500">多人数編集の速さ</td>
+<td>同期層次第</td>
+<td style="color:var(--color-accent-300)">中央集権が有利</td>
+<td>収束は保証、体感は未検証</td>
+<td style="color:var(--color-accent-300)">中央集権が有利</td>
+<td style="opacity:.35">記述なし</td>
+</tr>
+<tr>
+<td style="font-weight:500">移行コストの置き場所</td>
+<td>同期層に集中</td>
+<td>クライアント</td>
+<td>クライアント</td>
+<td>同期層に集中</td>
+<td style="opacity:.35">記述なし</td>
+</tr>
+<tr>
+<td style="font-weight:500">オフラインの位置づけ</td>
+<td>前提</td>
+<td>機能</td>
+<td>前提</td>
+<td>前提</td>
+<td>言及のみ</td>
+</tr>
+</tbody>
+</table>
+
+<sc-if value="{{ showConfidence }}" hint-placeholder-val="{{ true }}">
+<div style="display:flex;align-items:center;gap:16px;font-size:11px;color:rgba(233,233,237,.5)">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--color-accent)"></span>本文から直接抽出</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--color-accent-700)"></span>要約からの推定</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--color-neutral-600)"></span>記述なし</span>
+<span style="margin-left:auto">セルをクリックすると原文の該当箇所が開きます</span>
+</div>
+</sc-if>
+
+<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-top:2px">
+<div style="display:flex;flex-direction:column;gap:9px;padding:16px 18px;border-radius:10px;background:rgba(145,132,217,.07);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="display:flex;align-items:center;gap:7px;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-accent)"><i class="ph ph-sparkle" style="font-size:13px"></i>差分のまとめ</div>
+<p style="margin:0;font-size:14.5px;line-height:1.8;opacity:.9">4本は「オフラインは前提」で一致しますが、<strong style="font-weight:500">多人数編集の速さ</strong>で二分されます。分岐の原因は測定対象の違い（収束の正しさ vs 体感遅延）で、同じ条件で比べた出典はまだありません。</p>
+<div style="display:flex;gap:7px;margin-top:2px">
+<a href="#s3" class="btn btn-primary" style="font-size:13px"><i class="ph ph-arrow-down-left"></i>ノートの反論節にする</a>
+<button class="btn btn-ghost" style="font-size:13px">足りない出典を探す</button>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px;padding:16px 18px;border-radius:10px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.42)">追加できそうな軸</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<button class="btn btn-secondary" style="justify-content:flex-start;font-size:13px"><i class="ph ph-plus"></i>実装の複雑さ</button>
+<button class="btn btn-secondary" style="justify-content:flex-start;font-size:13px"><i class="ph ph-plus"></i>想定チーム規模</button>
+<button class="btn btn-secondary" style="justify-content:flex-start;font-size:13px"><i class="ph ph-plus"></i>公開年</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="sc" id="s5">
+<div class="sc-hd"><a class="sc-id" href="#s5">s5</a><span class="sc-nm">つながり</span><span class="sc-sub">タグでもフォルダでも掴めない関係を見る。線はAIが引いた根拠つきの仮説</span></div>
+<div class="frame" style="width:1240px">
+<div style="display:grid;grid-template-columns:1fr 288px;min-height:620px">
+<div style="position:relative;background:radial-gradient(90% 70% at 42% 45%,rgba(145,132,217,.09),transparent 70%)">
+<svg viewBox="0 0 900 600" style="width:100%;height:100%;display:block">
+<g stroke="var(--color-accent-700)" stroke-width="1" opacity=".55">
+<line x1="420" y1="290" x2="205" y2="150"></line>
+<line x1="420" y1="290" x2="215" y2="415"></line>
+<line x1="420" y1="290" x2="640" y2="180"></line>
+<line x1="420" y1="290" x2="660" y2="400"></line>
+<line x1="205" y1="150" x2="215" y2="415"></line>
+</g>
+<g stroke="var(--color-neutral-800)" stroke-width="1" stroke-dasharray="3 5" opacity=".8">
+<line x1="640" y1="180" x2="790" y2="105"></line>
+<line x1="660" y1="400" x2="800" y2="480"></line>
+<line x1="215" y1="415" x2="120" y2="520"></line>
+</g>
+<circle cx="420" cy="290" r="46" fill="var(--color-accent-900)" stroke="var(--color-accent)" stroke-width="1.5"></circle>
+<circle cx="420" cy="290" r="66" fill="none" stroke="var(--color-accent)" stroke-width="1" opacity=".18"></circle>
+<text x="420" y="286" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="13" font-weight="500">所有権のある</text>
+<text x="420" y="303" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="13" font-weight="500">同期</text>
+<circle cx="205" cy="150" r="34" fill="var(--color-surface)" stroke="var(--color-neutral-700)" stroke-width="1"></circle>
+<text x="205" y="155" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="12">情報の切り方</text>
+<circle cx="215" cy="415" r="34" fill="var(--color-surface)" stroke="var(--color-neutral-700)" stroke-width="1"></circle>
+<text x="215" y="413" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="12">CRDTの</text>
+<text x="215" y="428" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="12">体感遅延</text>
+<circle cx="640" cy="180" r="30" fill="var(--color-surface)" stroke="var(--color-neutral-700)" stroke-width="1"></circle>
+<text x="640" y="185" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="12">7つの理想</text>
+<circle cx="660" cy="400" r="30" fill="var(--color-surface)" stroke="var(--color-neutral-700)" stroke-width="1"></circle>
+<text x="660" y="405" text-anchor="middle" fill="var(--color-text)" font-family="Inter, Noto Sans JP, sans-serif" font-size="12">移行コスト</text>
+<circle cx="790" cy="105" r="19" fill="var(--color-surface)" stroke="var(--color-neutral-800)" stroke-width="1"></circle>
+<circle cx="800" cy="480" r="19" fill="var(--color-surface)" stroke="var(--color-neutral-800)" stroke-width="1"></circle>
+<circle cx="120" cy="520" r="19" fill="var(--color-surface)" stroke="var(--color-neutral-800)" stroke-width="1"></circle>
+<text x="790" y="142" text-anchor="middle" fill="var(--color-neutral-600)" font-family="Inter, sans-serif" font-size="10">未読 3</text>
+<text x="800" y="517" text-anchor="middle" fill="var(--color-neutral-600)" font-family="Inter, sans-serif" font-size="10">未読 2</text>
+<text x="120" y="557" text-anchor="middle" fill="var(--color-neutral-600)" font-family="Inter, sans-serif" font-size="10">未読 1</text>
+</svg>
+<div style="position:absolute;left:20px;top:20px;display:flex;gap:7px">
+<div class="seg">
+<label class="seg-opt"><input type="radio" name="s5v" checked>ノート</label>
+<label class="seg-opt"><input type="radio" name="s5v">タグ</label>
+<label class="seg-opt"><input type="radio" name="s5v">出典</label>
+</div>
+</div>
+<div style="position:absolute;left:20px;bottom:20px;display:flex;align-items:center;gap:14px;font-size:11px;color:rgba(233,233,237,.5)">
+<span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:1px;background:var(--color-accent)"></span>引用でつながる</span>
+<span style="display:flex;align-items:center;gap:6px"><span style="width:16px;height:1px;background:repeating-linear-gradient(90deg,var(--color-neutral-600) 0 3px,transparent 3px 6px)"></span>AIの仮説</span>
+</div>
+</div>
+<aside style="background:var(--color-neutral-900);padding:20px 18px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-direction:column;gap:5px">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.4)">選択中の線</div>
+<div style="font-size:14px;font-weight:500;line-height:1.4">所有権のある同期 ↔ CRDTの体感遅延</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:9px;background:rgba(145,132,217,.07);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-accent)">なぜ結んだか</div>
+<p style="margin:0;font-size:12.5px;line-height:1.7;opacity:.85">前者の未解決の疑問「体感はどうか」が、後者の主題そのものです。出典は2本が共通しています。</p>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px">
+<button class="btn btn-primary" style="font-size:13px"><i class="ph ph-arrows-merge"></i>ノートを統合する</button>
+<button class="btn btn-secondary" style="font-size:13px">線を残して別々にする</button>
+<button class="btn btn-ghost" style="font-size:13px;color:rgba(233,233,237,.5)">この仮説を消す</button>
+</div>
+<div style="margin-top:auto;display:flex;flex-direction:column;gap:7px">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.4)">孤立しているノート 3件</div>
+<div style="font-size:12px;line-height:1.7;opacity:.7">まだ名前のない疑問<br>ブラウザの寿命について<br>read-it-later をやめた話</div>
+</div>
+</aside>
+</div>
+</div>
+</section>
+
+<section class="sc" id="s6">
+<div class="sc-hd"><a class="sc-id" href="#s6">s6</a><span class="sc-nm">書き出す</span><span class="sc-sub">ノートから記事の下書きへ。左が生成物、右がどこから来たかの対応表</span></div>
+<div class="frame" style="width:1240px">
+<div style="display:grid;grid-template-columns:1fr 320px;min-height:720px">
+<main style="padding:28px 44px 34px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px">
+<div class="seg">
+<label class="seg-opt"><input type="radio" name="s6v" checked>ブログ記事</label>
+<label class="seg-opt"><input type="radio" name="s6v">社内共有メモ</label>
+<label class="seg-opt"><input type="radio" name="s6v">要点だけ</label>
+</div>
+<div style="margin-left:auto;display:flex;gap:8px">
+<button class="btn btn-secondary" style="font-size:13px"><i class="ph ph-markdown-logo"></i>Markdown</button>
+<button class="btn btn-primary" style="font-size:13px"><i class="ph ph-export"></i>書き出す</button>
+</div>
+</div>
+<div style="height:1px;background:linear-gradient(to right,transparent,rgba(233,233,237,.16) 48px,rgba(233,233,237,.16) calc(100% - 48px),transparent)"></div>
+
+<div style="display:flex;flex-direction:column;gap:16px;max-width:62ch">
+<div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,233,237,.42)">下書き · 約1,800字 · 読了6分</div>
+<h2 style="margin:0;letter-spacing:-.025em">「同期する」と言うとき、私たちは何を預けているのか</h2>
+<p style="margin:0;font-size:15px;line-height:1.9;opacity:.88">同期とは複製の一致を保つ仕組みにすぎない。それでも「同期する」という言葉は、ほぼ常に「サーバに預ける」を意味してしまう。この記事では、その置き換えがどこで起きたのかを5本の出典から辿り、そのうえで自分の設計判断を書く。</p>
+<h4 style="margin:8px 0 0">サーバは真実ではない</h4>
+<p style="margin:0;font-size:15px;line-height:1.9;opacity:.88">ある講演でこう言われていた——サーバは信頼できる第三者ではなく、単に一番よく起きているレプリカだ。この一文を受け入れると、オフライン対応は機能ではなく前提になる。</p>
+<h4 style="margin:8px 0 0">それでも中央集権が速い場面</h4>
+<p style="margin:0;font-size:15px;line-height:1.9;opacity:.55">［反論の節。ノートでまだ書きかけです — <a href="#s3">先に埋める</a>］</p>
+<div style="display:flex;align-items:center;gap:9px;padding:11px 13px;border-radius:8px;background:rgba(145,132,217,.07);box-shadow:0 0 0 1px var(--color-accent-800);font-size:13px;line-height:1.6">
+<i class="ph ph-warning-circle" style="color:var(--color-accent-400);font-size:16px"></i>ノート側の未着手が1か所あります。埋めずに書き出すと結論が片側に寄ります。
+</div>
+</div>
+</main>
+<aside style="background:var(--color-neutral-900);padding:22px 18px;display:flex;flex-direction:column;gap:16px">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.4)">どこから来たか</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;flex-direction:column;gap:4px;padding:11px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<div style="font-size:11px;color:var(--color-accent)">導入</div>
+<div style="font-size:12.5px;line-height:1.55;opacity:.85">ノート「所有権のある同期」第1段落 — ほぼそのまま</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;padding:11px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<div style="font-size:11px;color:var(--color-accent)">サーバは真実ではない</div>
+<div style="font-size:12.5px;line-height:1.55;opacity:.85">講演 19:40 の引用 + あなたの解釈</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:4px;padding:11px;border-radius:8px;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-900)">
+<div style="font-size:11px;color:rgba(233,233,237,.5)">反論の節</div>
+<div style="font-size:12.5px;line-height:1.55;opacity:.6">出典4のみ — 本文が未執筆</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px;margin-top:6px">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:rgba(233,233,237,.4)">出典表を付ける</div>
+<label class="radio"><input type="radio" name="s6r" checked><span class="dot"></span>末尾にリンク一覧</label>
+<label class="radio"><input type="radio" name="s6r"><span class="dot"></span>脚注として本文中に</label>
+<label class="radio"><input type="radio" name="s6r"><span class="dot"></span>付けない</label>
+</div>
+<div style="margin-top:auto;font-size:11.5px;line-height:1.7;color:rgba(233,233,237,.45)">生成文はすべて出典に紐づいています。紐づかない文は書き出し前に灰色で示されます。</div>
+</aside>
+</div>
+</div>
+</section>
+
+<section class="sc" id="s7" style="border-bottom:none">
+<div class="sc-hd"><a class="sc-id" href="#s7">s7</a><span class="sc-nm">モバイル</span><span class="sc-sub">スマホでは書かない。共有シートから投げる／通勤中に読む、の2つに絞る</span></div>
+<div class="row" style="gap:38px">
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:400 11px/1.3 sans-serif;color:rgba(233,233,237,.5)">共有シートから投げる — 3タップで終わる</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="393px,852px">
+<div style="height:100%;background:var(--color-bg);color:var(--color-text);display:flex;flex-direction:column;justify-content:flex-end;font-family:'Inter','Noto Sans JP',sans-serif">
+<div style="flex:1;background:linear-gradient(var(--color-bg),var(--color-surface));opacity:.55"></div>
+<div style="border-radius:20px 20px 0 0;background:var(--color-surface);box-shadow:0 0 0 1px var(--color-neutral-800);padding:18px 18px 30px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:9px">
+<span style="width:24px;height:24px;border-radius:8px;background:radial-gradient(circle at 30% 25%,var(--color-accent-400),var(--color-accent-700));box-shadow:0 0 14px rgba(145,132,217,.45)"></span>
+<span style="font-size:15px;font-weight:500">hazy note に追加</span>
+<button class="btn btn-icon btn-ghost" style="margin-left:auto;width:28px;height:28px"><i class="ph ph-x" style="font-size:15px"></i></button>
+</div>
+<div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:10px;background:var(--color-surface)">
+<div style="font-size:11px;color:rgba(233,233,237,.5)">inkandswitch.com</div>
+<div style="font-size:14px;font-weight:500;line-height:1.4">Local-first software — データの所有権をユーザーに戻す</div>
+<div style="display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--color-accent-300);margin-top:2px"><i class="ph ph-sparkle pulse" style="font-size:13px;color:var(--color-accent)"></i>要約とタグを生成中</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(233,233,237,.42)">置き場所</div>
+<div style="display:flex;flex-wrap:wrap;gap:6px">
+<span class="tag tag-accent" style="padding:7px 12px;font-size:12px">同期の設計 <i class="ph ph-check" style="margin-left:5px"></i></span>
+<span class="tag tag-outline" style="padding:7px 12px;font-size:12px">ブログ下書き</span>
+<span class="tag tag-outline" style="padding:7px 12px;font-size:12px">読みたいだけ</span>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:7px;padding:11px 12px;border-radius:10px;background:rgba(145,132,217,.08);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="font-size:12px;line-height:1.6">ひとことメモを残す？（あとで本文に引き継がれます）</div>
+<div style="font-size:12.5px;color:rgba(233,233,237,.4)">例：7理想のうち3つは自分のアプリで無理そう</div>
+</div>
+<button class="btn btn-primary btn-block" style="min-height:44px;font-size:15px;margin:0"><i class="ph ph-check"></i>保存</button>
+</div>
+</div>
+</x-import>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:10px">
+<div style="font:400 11px/1.3 sans-serif;color:rgba(233,233,237,.5)">通勤中に読む — 要約 → 全文、AIは末尾に1つだけ</div>
+<x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" dark="{{ true }}" hint-size="393px,852px">
+<div style="height:100%;background:var(--color-bg);color:var(--color-text);display:flex;flex-direction:column;font-family:'Inter','Noto Sans JP',sans-serif">
+<div style="padding:10px 16px;display:flex;align-items:center;gap:10px;background:var(--color-neutral-900)">
+<i class="ph ph-caret-left" style="font-size:18px;color:var(--color-accent)"></i>
+<span style="font-size:13px;color:rgba(233,233,237,.6)">同期の設計</span>
+<i class="ph ph-dots-three" style="margin-left:auto;font-size:18px;opacity:.6"></i>
+</div>
+<div style="flex:1;overflow:hidden;padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+<div style="font-size:11px;color:rgba(233,233,237,.5);display:flex;align-items:center;gap:7px"><i class="ph ph-globe"></i>inkandswitch.com · 12分</div>
+<div style="font-size:20px;font-weight:500;line-height:1.35;letter-spacing:-.015em">Local-first software — データの所有権をユーザーに戻す</div>
+<div style="display:flex;gap:5px;flex-wrap:wrap"><span class="tag tag-accent">ローカルファースト</span><span class="tag tag-neutral">CRDT</span></div>
+<div style="display:flex;flex-direction:column;gap:8px;padding:13px;border-radius:10px;background:rgba(145,132,217,.08);box-shadow:0 0 0 1px var(--color-accent-800)">
+<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--color-accent)">3行の要約</div>
+<div style="font-size:13.5px;line-height:1.75;opacity:.88">・所有権とコラボは両立しうる<br>・オフラインは機能ではなく前提<br>・移行コストは同期層に集中する</div>
+</div>
+<div style="font-size:14px;line-height:1.9;opacity:.8">同期の利便性を捨てずに、所有権と可用性を取り戻せるか。この記事は7つの理想を掲げ、CRDTを使った実装例で一つずつ検証していく。まず前提として…</div>
+<div style="height:1px;background:linear-gradient(to right,transparent,rgba(233,233,237,.14) 30px,rgba(233,233,237,.14) calc(100% - 30px),transparent)"></div>
+<div style="display:flex;align-items:center;gap:9px;font-size:13px;color:var(--color-accent-300)">
+<i class="ph ph-warning-circle" style="font-size:16px;color:var(--color-accent-400)"></i>手元の2本と食い違う点があります
+</div>
+</div>
+<div style="padding:12px 16px 26px;display:flex;gap:9px;background:var(--color-neutral-900)">
+<button class="btn btn-secondary" style="flex:1;min-height:44px"><i class="ph ph-bookmark-simple"></i>あとで</button>
+<button class="btn btn-primary" style="flex:1.4;min-height:44px"><i class="ph ph-notebook"></i>ノートに送る</button>
+</div>
+</div>
+</x-import>
+</div>
+
+</div>
+<p style="margin:26px 0 0;font:12px/1.7 sans-serif;color:rgba(233,233,237,.5);max-width:74ch">次にやれること：「<a href="#s3">s3</a> のインライン提案をもっと控えめに（余白に小さく出す案）」／「<a href="#s2">s2</a> を1画面のオーバーレイに畳む」／「空の状態と初回オンボーディングを追加」／「OG画像を入れたカード表示に差し替え」</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showInline&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;AIの見せ方&quot;},&quot;showConfidence&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;AIの見せ方&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showInline: this.props.showInline ?? true,
+      showConfidence: this.props.showConfidence ?? true,
+    };
+  }
+}
+</script>
+</body>
+</html>
