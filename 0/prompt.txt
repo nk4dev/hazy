@@ -1,0 +1,1 @@
+<bash-input>bunx skills add vercel/turborepo</bash-input>
