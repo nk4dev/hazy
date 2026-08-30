@@ -4,6 +4,21 @@
 compare → export. See `README.md`. (`/graph` "つながり" was removed — the
 `graph_snapshots` table stays in `@repo/db` but nothing reads it.)
 
+# UI: hand-rolled Nocturne + shadcn/ui
+
+The app's own look is the **Nocturne** design system — the `@theme` tokens
+(`--color-accent` etc.) and `.btn` / `.card` / `.tag` component classes in
+`app/globals.css`, plus `components/ui.tsx` (`Button` / `Tag` / `Seg`). That is
+what every existing screen uses; keep using it.
+
+**shadcn/ui** is also set up (preset `base-lyra`, `@base-ui/react`, hugeicons):
+`components.json`, `components/ui/*`, `lib/utils.ts` `cn()`. `bunx shadcn add
+<name>` for new primitives. Its token layer (`@theme inline` + `.dark` in
+globals.css) is namespaced (`--background`, `--primary`, …) and does **not**
+touch Nocturne's `--color-accent` / `--radius-{sm,md,lg}`. `<html class="dark">`
+keeps shadcn components on their dark palette. `components/ui/**` +
+`lib/utils.ts` are excluded from Biome (shadcn's own formatting).
+
 # Backend
 
 Unlike `apps/hazy`, this app **still has its own `/app/api/*` route handlers**

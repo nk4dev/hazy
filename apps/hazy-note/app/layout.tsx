@@ -30,7 +30,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
-      <html lang="ja" className={`${inter.variable} ${notoJP.variable}`}>
+      {/* `dark` keeps shadcn/ui components on their dark palette (Nocturne is
+          always dark). */}
+      <html lang="ja" className={`dark ${inter.variable} ${notoJP.variable}`}>
         <body>{children}</body>
       </html>
     </ClerkProvider>
