@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CiteBox, type CiteTarget } from "@/components/cite-box";
 import { Icon } from "@/components/icon";
 import { Loading, Spinner } from "@/components/loading";
+import { NoteEditor, type CiteTarget, type NoteEditorHandle } from "@/components/note-editor";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
-import type { Note, NoteBlock } from "@/lib/types";
+import type { DeltaOp } from "@/lib/note-delta";
+import type { Note } from "@/lib/types";
 
 const BLANK: Note = {
   id: "",
@@ -17,7 +18,8 @@ const BLANK: Note = {
   tags: [],
   status: "draft",
   updatedLabel: "まだ保存していません",
-  blocks: [],
+  body: [],
+  suggestions: [],
   sources: [],
   links: [],
   flags: [],
@@ -29,11 +31,11 @@ export function NoteClient({ id }: { id?: string }) {
   const router = useRouter();
   const [noteId, setNoteId] = useState<string | undefined>(id);
   const [note, setNote] = useState<Note | null>(id ? null : BLANK);
-  const [showInline, setShowInline] = useState(true);
-  const [draft, setDraft] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
   const isDraft = !noteId;
+
+  const editorRef = useRef<NoteEditorHandle>(null);
 
   // The authoritative note / id, updated synchronously so rapid edits chain
   // correctly instead of building off a stale render.
@@ -47,7 +49,10 @@ export function NoteClient({ id }: { id?: string }) {
 
   const load = useCallback(() => {
     if (!noteId) return;
-    api.note(noteId).then(adopt).catch(() => setNotFound(true));
+    api
+      .note(noteId)
+      .then(adopt)
+      .catch(() => setNotFound(true));
   }, [noteId]);
   useEffect(() => {
     load();
@@ -72,22 +77,22 @@ export function NoteClient({ id }: { id?: string }) {
   }
 
   /**
-   * Apply an edit. The local state changes immediately; the write is queued so
+   * Apply an edit. Local state changes immediately; the write is queued so
    * overlapping edits never race (each write replaces the whole note). On a
-   * `/notes/new` draft the first edit is what creates the row — after that it's
-   * a PATCH and the URL is swapped in place (no navigation, no lost focus).
+   * `/notes/new` draft the first edit creates the row — after that it's a PATCH
+   * and the URL is swapped in place (no navigation, no lost focus).
    */
   function mutate(patch: Partial<Note>) {
     const base = noteRef.current;
     if (!base) return;
-    const next = { ...base, ...patch };
-    adopt(next);
+    adopt({ ...base, ...patch });
     enqueue(async () => {
       const cur = noteRef.current;
       if (!cur) return;
       const payload = {
         title: cur.title,
-        blocks: cur.blocks,
+        body: cur.body,
+        suggestions: cur.suggestions,
         tags: cur.tags,
         status: cur.status,
         sources: cur.sources,
@@ -101,16 +106,22 @@ export function NoteClient({ id }: { id?: string }) {
         idRef.current = created.id;
         setNoteId(created.id);
         window.history.replaceState(null, "", `/notes/${created.id}`);
-        noteRef.current = { ...noteRef.current!, id: created.id, updatedLabel: created.updatedLabel };
+        noteRef.current = {
+          ...noteRef.current!,
+          id: created.id,
+          updatedLabel: created.updatedLabel,
+        };
         setNote(noteRef.current);
       }
     });
   }
 
-  function act(i: number, action: "accept" | "dismiss") {
+  const saveBody = (ops: DeltaOp[]) => mutate({ body: ops });
+
+  function act(suggestionId: string, action: "accept" | "dismiss") {
     if (!idRef.current) return; // suggestions only exist on saved notes
     enqueue(async () => {
-      adopt(await api.suggestion(idRef.current as string, i, action));
+      adopt(await api.suggestion(idRef.current as string, suggestionId, action));
     });
   }
 
@@ -122,29 +133,6 @@ export function NoteClient({ id }: { id?: string }) {
     if (base.sources.some((s) => s.url === t.url || s.label === label)) return;
     const n = base.sources.reduce((m, s) => Math.max(m, s.n), 0) + 1;
     mutate({ sources: [...base.sources, { n, label, cited: true, url: t.url }] });
-  }
-
-  function editBlockText(i: number, text: string) {
-    const b = noteRef.current;
-    if (!b) return;
-    const current = b.blocks[i];
-    if (!current || !("text" in current) || current.text === text) return;
-    if (!text.trim()) return deleteBlock(i);
-    mutate({ blocks: b.blocks.map((x, j) => (j === i ? { ...x, text } : x)) });
-  }
-
-  function deleteBlock(i: number) {
-    const b = noteRef.current;
-    if (!b) return;
-    mutate({ blocks: b.blocks.filter((_, j) => j !== i) });
-  }
-
-  function addParagraph() {
-    const text = draft.trim();
-    const b = noteRef.current;
-    if (!text || !b) return;
-    setDraft("");
-    mutate({ blocks: [...b.blocks, { type: "p", text }] });
   }
 
   function addTag() {
@@ -198,10 +186,15 @@ export function NoteClient({ id }: { id?: string }) {
               {saving && <Spinner className="size-[11px] text-accent" />}
               {saving ? "保存中…" : note.updatedLabel}
             </span>
-            <button onClick={renameNote} className="btn btn-ghost px-[9px] py-[5px] text-[12px]">
+            <button
+              type="button"
+              onClick={renameNote}
+              className="btn btn-ghost px-[9px] py-[5px] text-[12px]"
+            >
               <Icon name="pencil-simple" /> 改名
             </button>
             <button
+              type="button"
               onClick={removeNote}
               className="btn btn-ghost px-[9px] py-[5px] text-[12px] text-text/45"
             >
@@ -221,6 +214,7 @@ export function NoteClient({ id }: { id?: string }) {
         <div className="flex items-center gap-[10px]">
           <h2 className="tracking-[-0.025em]">{note.title}</h2>
           <button
+            type="button"
             onClick={toggleStatus}
             className={`tag ${note.status === "done" ? "tag-accent" : "tag-outline"}`}
             title="下書き / 完了 を切り替え"
@@ -233,6 +227,7 @@ export function NoteClient({ id }: { id?: string }) {
         <div className="flex flex-wrap items-center gap-[6px]">
           {note.tags.map((t) => (
             <button
+              type="button"
               key={t.label}
               onClick={() => removeTag(t.label)}
               className={`tag ${t.tone === "accent" ? "tag-accent" : t.tone === "outline" ? "tag-outline" : "tag-neutral"} hover:line-through`}
@@ -242,47 +237,26 @@ export function NoteClient({ id }: { id?: string }) {
               <Icon name="x" size={10} className="ml-[4px] opacity-60" />
             </button>
           ))}
-          <button onClick={addTag} className="tag tag-outline text-text/60">
+          <button type="button" onClick={addTag} className="tag tag-outline text-text/60">
             <Icon name="plus" size={10} className="mr-[3px]" /> タグ
           </button>
-          <label className="ml-auto flex items-center gap-[6px] text-[12px] text-text/55">
-            <input
-              type="checkbox"
-              checked={showInline}
-              onChange={(e) => setShowInline(e.target.checked)}
-            />
-            AIの提案を本文に表示
-          </label>
         </div>
 
-        <div className="flex max-w-[66ch] flex-col gap-[15px] text-[15px] leading-[1.85]">
-          {note.blocks.map((b, i) => (
-            <Block
-              key={i}
-              block={b}
-              show={showInline}
-              onAccept={() => act(i, "accept")}
-              onDismiss={() => act(i, "dismiss")}
-              onEditText={(text) => editBlockText(i, text)}
-              onDelete={() => deleteBlock(i)}
-            />
-          ))}
-
-          <CiteBox
-            value={draft}
-            onChange={setDraft}
-            onSubmit={addParagraph}
+        <div className="max-w-[66ch]">
+          <NoteEditor
+            key={id ?? "draft"}
+            ref={editorRef}
+            value={note.body}
+            onChange={saveBody}
             onCite={cite}
-            placeholder="つづきを書く…  @ でURLを引用、Enter で段落を追加"
+            placeholder="ここに書く…  選択でツールバー、@ でURLを引用"
           />
         </div>
       </main>
 
       <aside className="flex flex-col gap-[18px] bg-neutral-900 p-[18px_16px]">
         <Panel title="このノートの状態">
-          {note.flags.length === 0 && (
-            <div className="text-[12px] text-text/40">特にありません</div>
-          )}
+          {note.flags.length === 0 && <div className="text-[12px] text-text/40">特にありません</div>}
           {note.flags.map((f) => (
             <div key={f.text} className="flex items-center gap-2 text-[12.5px] opacity-90">
               <Icon
@@ -300,6 +274,45 @@ export function NoteClient({ id }: { id?: string }) {
             </div>
           ))}
         </Panel>
+
+        {note.suggestions.length > 0 && (
+          <Panel title="AIの提案">
+            {note.suggestions.map((s) => (
+              <div
+                key={s.id}
+                className="flex flex-col gap-[9px] rounded-lg bg-accent/[0.07] px-3 py-[12px] shadow-[0_0_0_1px_var(--color-accent-800)]"
+              >
+                <div className="flex items-center gap-[6px] text-[10px] uppercase tracking-[0.08em] text-accent">
+                  <Icon name="sparkle" size={12} />
+                  {s.kind}
+                </div>
+                <p className="m-0 text-[13px] leading-[1.75] opacity-80">
+                  {s.text}
+                  {s.ref && <sup className="ml-[2px] text-[10px]">{s.ref}</sup>}
+                </p>
+                <div className="flex items-center gap-[6px]">
+                  <Button
+                    variant="primary"
+                    className="text-[12px]"
+                    onClick={() => {
+                      editorRef.current?.insertTextAtCursor(s.text);
+                      act(s.id, "accept");
+                    }}
+                  >
+                    <Icon name="arrow-down-left" /> 本文に採る
+                  </Button>
+                  <button
+                    type="button"
+                    className="btn btn-ghost ml-auto text-[12px] text-text/45"
+                    onClick={() => act(s.id, "dismiss")}
+                  >
+                    消す
+                  </button>
+                </div>
+              </div>
+            ))}
+          </Panel>
+        )}
 
         <Panel title="このノートの出典">
           {note.sources.length === 0 && (
@@ -350,9 +363,7 @@ export function NoteClient({ id }: { id?: string }) {
 
         <div className="mt-auto flex flex-col gap-2 rounded-[9px] bg-accent/[0.07] p-3 shadow-[0_0_0_1px_var(--color-accent-800)]">
           <div className="text-[12px] leading-[1.6]">
-            {isDraft
-              ? "書き始めると保存されます"
-              : `${note.blocks.filter((b) => b.type === "p").length}段落 · ${note.sources.length}出典`}
+            {isDraft ? "書き始めると保存されます" : `${note.sources.length}出典`}
           </div>
           {!isDraft && (
             <Link
@@ -373,178 +384,6 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
     <div className="flex flex-col gap-2">
       <div className="text-[10px] uppercase tracking-[0.09em] text-text/40">{title}</div>
       {children}
-    </div>
-  );
-}
-
-const LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
-
-/** Render `[title](https://…)` markdown links as clickable titles (new tab). */
-function RichText({ text }: { text: string }) {
-  const out: React.ReactNode[] = [];
-  let last = 0;
-  for (const m of text.matchAll(LINK_RE)) {
-    const i = m.index ?? 0;
-    if (i > last) out.push(text.slice(last, i));
-    out.push(
-      <a
-        key={`${i}-${m[2]}`}
-        href={m[2]}
-        target="_blank"
-        rel="noreferrer"
-        onClick={(e) => e.stopPropagation()}
-        className="text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent"
-      >
-        {m[1]}
-      </a>,
-    );
-    last = i + m[0].length;
-  }
-  if (last < text.length) out.push(text.slice(last));
-  return <>{out}</>;
-}
-
-function DeleteHandle({ onDelete }: { onDelete: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onDelete();
-      }}
-      title="このブロックを削除"
-      className="absolute right-1 top-1 hidden rounded-md bg-neutral-900/90 p-[5px] text-text/45 shadow-[0_0_0_1px_var(--color-neutral-800)] hover:text-text group-hover:block"
-    >
-      <Icon name="trash" size={13} />
-    </button>
-  );
-}
-
-function Block({
-  block,
-  show,
-  onAccept,
-  onDismiss,
-  onEditText,
-  onDelete,
-}: {
-  block: NoteBlock;
-  show: boolean;
-  onAccept: () => void;
-  onDismiss: () => void;
-  onEditText: (text: string) => void;
-  onDelete: () => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState("");
-  const taRef = useRef<HTMLTextAreaElement>(null);
-
-  const startEdit = () => {
-    setValue(block.type === "p" ? block.text : "");
-    setEditing(true);
-  };
-
-  // Grow the textarea to fit its content so it reads as inline text, not a box.
-  useEffect(() => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [value]);
-
-  useEffect(() => {
-    if (editing) taRef.current?.focus();
-  }, [editing]);
-
-  if (block.type === "p") {
-    if (editing) {
-      return (
-        <textarea
-          ref={taRef}
-          rows={1}
-          className="m-0 w-full resize-none overflow-hidden border-0 bg-transparent p-0 text-[15px] leading-[1.85] text-text opacity-90 caret-accent outline-none focus:outline-none"
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={() => {
-            setEditing(false);
-            onEditText(value);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) e.currentTarget.blur();
-            if (e.key === "Escape") setEditing(false);
-          }}
-        />
-      );
-    }
-    return (
-      // biome-ignore lint/a11y/useSemanticElements: click-to-edit text region; a real <button> can't wrap the <sup>/delete-handle button
-      <div
-        className="group relative m-0 cursor-text rounded opacity-90 outline-none hover:bg-white/[0.02] focus-visible:bg-white/[0.04]"
-        role="button"
-        tabIndex={0}
-        title="クリックで編集"
-        onClick={startEdit}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            startEdit();
-          }
-        }}
-      >
-        <DeleteHandle onDelete={onDelete} />
-        <RichText text={block.text} />
-        {block.refs && <sup className="ml-[2px] text-[11px] text-accent">{block.refs}</sup>}
-      </div>
-    );
-  }
-
-  if (block.type === "quote")
-    return (
-      <figure className="group relative m-0 flex flex-col gap-[7px] rounded-lg bg-surface px-4 py-[14px] shadow-[0_0_0_1px_var(--color-neutral-900)]">
-        <DeleteHandle onDelete={onDelete} />
-        <blockquote className="m-0 text-[14.5px] leading-[1.7] opacity-90">
-          <RichText text={block.text} />
-        </blockquote>
-        <figcaption className="m-0 flex items-center gap-[7px] text-[12px]">
-          <Icon name="quotes" size={13} className="text-accent" />
-          {block.cite}
-          {block.note && <span className="opacity-55">{block.note}</span>}
-        </figcaption>
-      </figure>
-    );
-
-  if (block.type === "highlight")
-    return (
-      <p className="group relative m-0">
-        <DeleteHandle onDelete={onDelete} />
-        <span className="opacity-90">{block.before}</span>
-        <span className="bg-accent/[0.16] px-[2px] py-px shadow-[0_1px_0_var(--color-accent)]">
-          {block.mark}
-        </span>
-        <span className="opacity-90">{block.after}</span>
-      </p>
-    );
-
-  // suggestion
-  if (!show) return null;
-  return (
-    <div className="flex flex-col gap-[10px] rounded-lg bg-accent/[0.07] px-4 py-[15px] shadow-[0_0_0_1px_var(--color-accent-800)]">
-      <div className="flex items-center gap-[7px] text-[10px] uppercase tracking-[0.09em] text-accent">
-        <Icon name="sparkle" size={13} />
-        {block.kind}
-      </div>
-      <p className="m-0 text-[14.5px] leading-[1.8] opacity-70">
-        {block.text}
-        {block.ref && <sup className="ml-[2px] text-[11px]">{block.ref}</sup>}
-      </p>
-      <div className="flex items-center gap-[7px]">
-        <Button variant="primary" className="text-[13px]" onClick={onAccept}>
-          <Icon name="arrow-down-left" /> 本文に採る
-        </Button>
-        <button className="btn btn-ghost ml-auto text-[13px] text-text/45" onClick={onDismiss}>
-          消す
-        </button>
-      </div>
     </div>
   );
 }

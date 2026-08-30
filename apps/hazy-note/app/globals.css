@@ -434,3 +434,89 @@
 .no-scrollbar {
   scrollbar-width: none;
 }
+
+/* ── Quill (bubble theme) note editor ─────────────────────────
+   Overrides quill/dist/quill.bubble.css (imported in components/note-editor.tsx)
+   for the Nocturne dark palette. Scoped to .note-editor for specificity. */
+.note-editor .ql-container {
+  font-family: inherit;
+  font-size: 15px;
+}
+.note-editor .ql-editor {
+  padding: 0;
+  line-height: 1.85;
+  color: color-mix(in srgb, var(--color-text) 90%, transparent);
+  caret-color: var(--color-accent);
+}
+.note-editor .ql-editor > * {
+  margin: 0 0 15px;
+}
+.note-editor .ql-editor > *:last-child {
+  margin-bottom: 0;
+}
+.note-editor .ql-editor.ql-blank::before {
+  left: 0;
+  right: 0;
+  font-style: normal;
+  color: color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+.note-editor .ql-editor h2 {
+  font-size: 1.3em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.note-editor .ql-editor h3 {
+  font-size: 1.12em;
+  font-weight: 600;
+}
+.note-editor .ql-editor blockquote {
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-surface);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  color: color-mix(in srgb, var(--color-text) 88%, transparent);
+}
+.note-editor .ql-editor a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+  text-underline-offset: 2px;
+}
+.note-editor .ql-editor ul,
+.note-editor .ql-editor ol {
+  padding-left: 1.4em;
+}
+
+/* Floating bubble toolbar */
+.ql-bubble .ql-tooltip {
+  background: var(--color-neutral-900);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--color-neutral-800), 0 14px 36px rgba(0, 0, 0, 0.5);
+}
+.ql-bubble .ql-tooltip-arrow {
+  border-bottom-color: var(--color-neutral-900) !important;
+}
+.ql-bubble .ql-tooltip.ql-flip .ql-tooltip-arrow {
+  border-top-color: var(--color-neutral-900) !important;
+}
+.ql-bubble .ql-toolbar button .ql-stroke,
+.ql-bubble .ql-toolbar .ql-picker {
+  stroke: color-mix(in srgb, var(--color-text) 62%, transparent);
+  color: color-mix(in srgb, var(--color-text) 62%, transparent);
+}
+.ql-bubble .ql-toolbar button .ql-fill {
+  fill: color-mix(in srgb, var(--color-text) 62%, transparent);
+}
+.ql-bubble .ql-toolbar button:hover .ql-stroke,
+.ql-bubble .ql-toolbar button.ql-active .ql-stroke {
+  stroke: var(--color-accent);
+}
+.ql-bubble .ql-toolbar button:hover .ql-fill,
+.ql-bubble .ql-toolbar button.ql-active .ql-fill {
+  fill: var(--color-accent);
+}
+.ql-bubble .ql-tooltip.ql-editing input[type="text"] {
+  background: var(--color-bg);
+  color: var(--color-text);
+  border-radius: var(--radius-sm);
+}

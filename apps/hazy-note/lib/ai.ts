@@ -3,7 +3,7 @@
 // stand-in built from the same input so the app never hard-fails on AI.
 
 import { chatJSON, LLMError, llmConfigured } from "./llm";
-import type { CompareAxis, ExportDraft, ExportFormat, GraphEdge, NoteBlock } from "./types";
+import type { CompareAxis, ExportDraft, ExportFormat, GraphEdge } from "./types";
 
 /** Coerce a model's field to a clean string[] no matter what it actually sent. */
 function arr(v: unknown): string[] {
@@ -207,30 +207,23 @@ export async function suggestConnections(
 // ── Export draft ─────────────────────────────────────────────
 export async function rewriteForExport(input: {
   title: string;
-  blocks: NoteBlock[];
+  /** The note body, already flattened to Markdown (see lib/note-delta.ts). */
+  markdown: string;
   format: ExportFormat;
 }): Promise<Pick<ExportDraft, "title" | "blocks" | "provenance" | "warning">> {
-  const plain = input.blocks
-    .map((b) => {
-      if (b.type === "p") return b.text;
-      if (b.type === "quote") return `「${b.text}」（${b.cite}）`;
-      if (b.type === "highlight") return `${b.before}${b.mark}${b.after}`;
-      if (b.type === "suggestion") return `[未確定: ${b.text}]`;
-      return "";
-    })
-    .filter(Boolean)
-    .join("\n\n");
-  const hasDraft = input.blocks.some((b) => b.type === "suggestion");
+  const plain = input.markdown.trim();
 
   const passthrough = {
     title: input.title,
-    blocks: input.blocks
-      .filter((b): b is Extract<NoteBlock, { type: "p" }> => b.type === "p")
-      .map((b) => ({ type: "p" as const, text: b.text })),
+    blocks: plain
+      .split(/\n{2,}/)
+      .map((para) => para.replace(/^\s*(#{1,6}|>|[-*]|\d+\.)\s+/, "").trim())
+      .filter(Boolean)
+      .map((text) => ({ type: "p" as const, text })),
     provenance: [
       { heading: "全体", from: `ノート「${input.title}」から`, tone: "accent" as const },
     ],
-    warning: hasDraft ? "未確定の下書きブロックがあります。" : undefined,
+    warning: undefined,
   };
   if (!llmConfigured() || !plain) return passthrough;
 
@@ -262,7 +255,7 @@ export async function rewriteForExport(input: {
         0,
         4
       ),
-      warning: out.warning || (hasDraft ? "未確定の下書きがあります。" : undefined),
+      warning: out.warning || undefined,
     };
   } catch (e) {
     if (!(e instanceof LLMError)) throw e;

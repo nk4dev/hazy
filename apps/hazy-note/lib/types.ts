@@ -1,5 +1,7 @@
 // Domain model for hazy note. Mirrors the 7 sections of the design doc.
 
+import type { DeltaOp } from "@repo/db";
+
 export type SourceKind = "article" | "pdf" | "video" | "thread" | "note";
 export type ItemStatus = "reading" | "ready";
 
@@ -38,6 +40,10 @@ export interface Tag {
 
 export type NoteStatus = "draft" | "done";
 
+/**
+ * Legacy hand-rolled block model. New notes store a Quill Delta in `Note.body`;
+ * this type only survives for `legacyBlocksToDelta` (lib/note-delta.ts).
+ */
 export type NoteBlock =
   | { type: "p"; text: string; refs?: string }
   | { type: "quote"; text: string; cite: string; note?: string }
@@ -48,6 +54,14 @@ export type NoteBlock =
       text: string;
       ref?: string;
     };
+
+/** An AI-drafted suggestion, shown in the note's right sidebar. */
+export interface NoteSuggestion {
+  id: string;
+  kind: string;
+  text: string;
+  ref?: string;
+}
 
 export interface NoteSourceRef {
   n: number;
@@ -69,7 +83,9 @@ export interface Note {
   tags: { label: string; tone: "accent" | "neutral" | "outline" }[];
   status: NoteStatus;
   updatedLabel: string;
-  blocks: NoteBlock[];
+  /** The note body as a Quill Delta (`ops` array). */
+  body: DeltaOp[];
+  suggestions: NoteSuggestion[];
   sources: NoteSourceRef[];
   links: NoteLink[];
   flags: { icon: string; tone: string; text: string }[];

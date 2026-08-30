@@ -52,7 +52,8 @@ export const api = {
       title?: string;
       projectId?: string;
       text?: string;
-      blocks?: Note["blocks"];
+      body?: Note["body"];
+      suggestions?: Note["suggestions"];
       tags?: Note["tags"];
       status?: Note["status"];
       sources?: Note["sources"];
@@ -63,8 +64,8 @@ export const api = {
   deleteNote: (id: string) => fetch(`/api/notes/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
   appendParagraph: (id: string, text: string) =>
     fetch(`/api/notes/${id}`, opts("PATCH", { text })).then(j<Note>),
-  suggestion: (id: string, blockIndex: number, action: "accept" | "dismiss") =>
-    fetch(`/api/notes/${id}/suggestion`, opts("POST", { blockIndex, action })).then(j<Note>),
+  suggestion: (id: string, suggestionId: string, action: "accept" | "dismiss") =>
+    fetch(`/api/notes/${id}/suggestion`, opts("POST", { id: suggestionId, action })).then(j<Note>),
 
   compare: () => fetch("/api/compare", { cache: "no-store" }).then(j<CompareBoard>),
   rebuildCompare: (projectId?: string) =>

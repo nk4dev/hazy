@@ -7,6 +7,13 @@ import {
   synthesiseCompare,
 } from "@/lib/ai";
 import { fetchAndExtract } from "@/lib/extract";
+import {
+  type DeltaOp,
+  deltaToMarkdown,
+  deltaToPlainText,
+  isDelta,
+  legacyBlocksToDelta,
+} from "@/lib/note-delta";
 import type {
   CompareBoard,
   Digest,
@@ -15,7 +22,7 @@ import type {
   GraphData,
   Item,
   Note,
-  NoteBlock,
+  NoteSuggestion,
   Project,
   SourceKind,
   Tag,
@@ -474,6 +481,13 @@ export async function getDigest(userId: string): Promise<Digest> {
 
 // ── Notes ──────────────────────────────────────────────────
 function toNote(row: typeof schema.notes.$inferSelect): Note {
+  // Notes written before the Quill editor only have `blocks`; convert on read
+  // (persisted back to `body` / `suggestions` on the next save).
+  const rowBody = row.body as DeltaOp[];
+  const rowSug = row.suggestions as NoteSuggestion[];
+  const hasBody = isDelta(rowBody) && rowBody.length > 0;
+  const hasSug = rowSug.length > 0;
+  const legacy = hasBody && hasSug ? null : legacyBlocksToDelta(row.blocks);
   return {
     id: row.id,
     title: row.title,
@@ -481,7 +495,8 @@ function toNote(row: typeof schema.notes.$inferSelect): Note {
     tags: row.tags as Note["tags"],
     status: row.status,
     updatedLabel: `自動保存 · ${relativeLabel(row.updatedAt)}`,
-    blocks: row.blocks as NoteBlock[],
+    body: hasBody ? rowBody : (legacy?.body ?? []),
+    suggestions: hasSug ? rowSug : (legacy?.suggestions ?? []),
     sources: row.sources as Note["sources"],
     links: row.links as Note["links"],
     flags: row.flags as Note["flags"],
@@ -507,14 +522,15 @@ export async function createNote(
     title?: string;
     projectId?: string | null;
     text?: string;
-    blocks?: NoteBlock[];
+    body?: DeltaOp[];
+    suggestions?: NoteSuggestion[];
     tags?: Note["tags"];
     status?: Note["status"];
     sources?: Note["sources"];
   } = {}
 ): Promise<Note> {
-  const blocks: NoteBlock[] =
-    input.blocks ?? (input.text?.trim() ? [{ type: "p", text: input.text.trim() }] : []);
+  const body: DeltaOp[] =
+    input.body ?? (input.text?.trim() ? [{ insert: `${input.text.trim()}\n` }] : []);
   const [row] = await db
     .insert(schema.notes)
     .values({
@@ -523,7 +539,9 @@ export async function createNote(
       title: input.title?.trim() || "無題のノート",
       status: input.status ?? "draft",
       tags: input.tags ?? [],
-      blocks,
+      blocks: [],
+      body,
+      suggestions: input.suggestions ?? [],
       sources: input.sources ?? [],
       links: [],
       flags: [],
@@ -535,7 +553,9 @@ export async function createNote(
 export async function updateNote(
   userId: string,
   id: string,
-  patch: Partial<Pick<Note, "title" | "status" | "projectId" | "blocks" | "tags" | "sources">>
+  patch: Partial<
+    Pick<Note, "title" | "status" | "projectId" | "body" | "suggestions" | "tags" | "sources">
+  >
 ): Promise<Note | undefined> {
   const row = await getNoteRow(userId, id);
   if (!row) return undefined;
@@ -545,7 +565,8 @@ export async function updateNote(
   if (patch.title !== undefined) set.title = patch.title.trim() || "無題のノート";
   if (patch.status !== undefined) set.status = patch.status;
   if (patch.projectId !== undefined) set.collectionId = patch.projectId || null;
-  if (patch.blocks !== undefined) set.blocks = patch.blocks;
+  if (patch.body !== undefined) set.body = patch.body;
+  if (patch.suggestions !== undefined) set.suggestions = patch.suggestions;
   if (patch.tags !== undefined) set.tags = patch.tags;
   if (patch.sources !== undefined) set.sources = patch.sources;
   await db.update(schema.notes).set(set).where(eq(schema.notes.id, id));
@@ -575,44 +596,43 @@ async function getNoteRow(userId: string, id: string) {
   });
 }
 
+/**
+ * Accept a sidebar suggestion: the client has already inserted its text into
+ * the Quill body (and that save is in flight), so here we just drop it from the
+ * list and clear any "未着手 / 未執筆 / 下書き" flag.
+ */
 export async function acceptSuggestion(
   userId: string,
   noteId: string,
-  blockIndex: number
+  suggestionId: string
 ): Promise<Note | undefined> {
   const row = await getNoteRow(userId, noteId);
   if (!row) return undefined;
-  const blocks = row.blocks as NoteBlock[];
-  const block = blocks[blockIndex];
-  if (block && block.type === "suggestion") {
-    blocks[blockIndex] = { type: "p", text: block.text, refs: block.ref };
-    // Drop any "未着手 / 未執筆 / 下書き" style flag now that the block is filled.
-    const flags = (row.flags as Note["flags"]).filter(
-      (f) => !/未着手|未執筆|下書き|未完/.test(f.text)
-    );
-    await db
-      .update(schema.notes)
-      .set({ blocks, flags, updatedAt: new Date() })
-      .where(eq(schema.notes.id, noteId));
-  }
+  const current = toNote(row).suggestions;
+  if (!current.some((s) => s.id === suggestionId)) return toNote(row);
+  const suggestions = current.filter((s) => s.id !== suggestionId);
+  const flags = (row.flags as Note["flags"]).filter(
+    (f) => !/未着手|未執筆|下書き|未完/.test(f.text)
+  );
+  await db
+    .update(schema.notes)
+    .set({ suggestions, flags, updatedAt: new Date() })
+    .where(eq(schema.notes.id, noteId));
   return getNote(userId, noteId);
 }
 
 export async function dismissSuggestion(
   userId: string,
   noteId: string,
-  blockIndex: number
+  suggestionId: string
 ): Promise<Note | undefined> {
   const row = await getNoteRow(userId, noteId);
   if (!row) return undefined;
-  const blocks = row.blocks as NoteBlock[];
-  if (blocks[blockIndex]?.type === "suggestion") {
-    blocks.splice(blockIndex, 1);
-    await db
-      .update(schema.notes)
-      .set({ blocks, updatedAt: new Date() })
-      .where(eq(schema.notes.id, noteId));
-  }
+  const suggestions = toNote(row).suggestions.filter((s) => s.id !== suggestionId);
+  await db
+    .update(schema.notes)
+    .set({ suggestions, updatedAt: new Date() })
+    .where(eq(schema.notes.id, noteId));
   return getNote(userId, noteId);
 }
 
@@ -623,10 +643,11 @@ export async function appendParagraph(
 ): Promise<Note | undefined> {
   const row = await getNoteRow(userId, noteId);
   if (!row) return undefined;
-  const blocks = [...(row.blocks as NoteBlock[]), { type: "p" as const, text }];
+  const body = [...toNote(row).body];
+  body.push({ insert: body.length ? `\n${text}\n` : `${text}\n` });
   await db
     .update(schema.notes)
-    .set({ blocks, updatedAt: new Date() })
+    .set({ body, updatedAt: new Date() })
     .where(eq(schema.notes.id, noteId));
   return getNote(userId, noteId);
 }
@@ -771,7 +792,7 @@ export async function buildGraph(userId: string): Promise<GraphData> {
     ...notes.map((n) => ({
       id: n.id,
       label: n.title,
-      text: n.blocks.map((b) => ("text" in b ? b.text : "")).join(" "),
+      text: deltaToPlainText(n.body),
     })),
     ...sources.map((s) => ({ id: s.id, label: s.title, text: s.summary.join(" ") })),
   ]);
@@ -842,7 +863,7 @@ export async function buildExport(
 
   const draft = await rewriteForExport({
     title: note.title,
-    blocks: note.blocks,
+    markdown: deltaToMarkdown(note.body),
     format,
   });
   const chars = countChars(draft.blocks);

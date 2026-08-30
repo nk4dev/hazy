@@ -6,20 +6,20 @@ export const dynamic = "force-dynamic";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-/** body: { blockIndex: number, action: "accept" | "dismiss" } */
+/** body: { id: string, action: "accept" | "dismiss" } */
 export async function POST(req: NextRequest, { params }: Ctx) {
   const user = await requireAppUser();
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const blockIndex = Number(body.blockIndex);
+  const suggestionId = typeof body.id === "string" ? body.id : "";
   const action = body.action;
-  if (!Number.isInteger(blockIndex) || (action !== "accept" && action !== "dismiss")) {
+  if (!suggestionId || (action !== "accept" && action !== "dismiss")) {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
   const note =
     action === "accept"
-      ? await acceptSuggestion(user.id, id, blockIndex)
-      : await dismissSuggestion(user.id, id, blockIndex);
+      ? await acceptSuggestion(user.id, id, suggestionId)
+      : await dismissSuggestion(user.id, id, suggestionId);
   if (!note) return NextResponse.json({ error: "not found" }, { status: 404 });
   return NextResponse.json(note);
 }

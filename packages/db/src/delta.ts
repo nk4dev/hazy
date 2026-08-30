@@ -6,6 +6,8 @@
 export type DeltaOp = {
   insert?: string | Record<string, unknown>;
   attributes?: Record<string, unknown>;
-  retain?: number;
+  // `retain` carries an attribute map when a retain also changes formatting —
+  // matches quill-delta's `Op` so `quill.getContents().ops` assigns cleanly.
+  retain?: number | Record<string, unknown>;
   delete?: number;
 };

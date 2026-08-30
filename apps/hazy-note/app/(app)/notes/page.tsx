@@ -6,6 +6,7 @@ import { Icon } from "@/components/icon";
 import { SkeletonCards } from "@/components/loading";
 import { Tag } from "@/components/ui";
 import { api } from "@/lib/api";
+import { deltaExcerpt, paragraphCount } from "@/lib/note-delta";
 import type { Note } from "@/lib/types";
 
 export default function NotesPage() {
@@ -53,16 +54,11 @@ export default function NotesPage() {
               />
               {n.updatedLabel}
               <span className="ml-auto">
-                {n.blocks.filter((b) => b.type === "p").length}段落 · {n.sources.length}出典
+                {paragraphCount(n.body)}段落 · {n.sources.length}出典
               </span>
             </div>
             <div className="card-title text-text">{n.title}</div>
-            <p className="card-body">
-              {(() => {
-                const p = n.blocks.find((b) => b.type === "p");
-                return p && "text" in p ? p.text : "…";
-              })()}
-            </p>
+            <p className="card-body">{deltaExcerpt(n.body, 140)}</p>
             <div className="flex flex-wrap gap-[5px]">
               {n.tags.map((t) => (
                 <Tag key={t.label} tone={t.tone === "outline" ? "outline" : t.tone}>
