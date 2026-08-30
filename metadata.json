@@ -1,0 +1,31 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M186E3Z34RPHM56A7N3V7KWM",
+  "strategy": "manual-commit",
+  "branch": "dev",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/api/README.md",
+    "apps/hazy-note/README.md",
+    "apps/hazy/README.md",
+    "apps/hazy/wrangler.jsonc",
+    "packages/db/README.md"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 50,
+    "cache_creation_tokens": 25634,
+    "cache_read_tokens": 12039744,
+    "output_tokens": 16602,
+    "api_call_count": 25
+  }
+}
