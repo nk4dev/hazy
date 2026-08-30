@@ -228,7 +228,7 @@ function ItemCard({
         <span className="ml-auto">{item.addedLabel}</span>
       </div>
       <Link
-        href={item.relatedNoteId ? `/notes/${item.relatedNoteId}` : "/capture"}
+        href={`/library/${item.id}`}
         className="card-title text-text no-underline hover:text-accent-300"
       >
         {item.title}
