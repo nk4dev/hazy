@@ -79,8 +79,8 @@ export default function ComparePage() {
   }
 
   return (
-    <main className="flex min-h-[640px] flex-col gap-5 p-[28px_32px_32px]">
-      <header className="flex items-end gap-4">
+    <main className="flex min-h-[640px] flex-col gap-5 p-4 pb-8 sm:p-[28px_32px_32px]">
+      <header className="flex flex-wrap items-end gap-3">
         <div>
           <div className="mb-[5px] text-[11px] uppercase tracking-[0.1em] text-text/[0.42]">
             比較ボード · {projectName}
@@ -89,7 +89,7 @@ export default function ComparePage() {
             出典{board.sources.length}本 × 軸{axes.length}つ
           </h3>
         </div>
-        <div className="ml-auto flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {!empty && (
             <Button onClick={() => addAxis(`新しい軸 ${extraAxes.length + 1}`)}>
               <Icon name="plus" /> 軸を追加
@@ -109,7 +109,7 @@ export default function ComparePage() {
           受信箱でいくつか取り込んでから「比較を作る」を押してください。
         </div>
       ) : (
-        <table className="table text-[13px]">
+        <div className="-mx-1 overflow-x-auto px-1"><table className="table w-full min-w-[520px] text-[13px]">
           <thead>
             <tr>
               <th className="w-[160px]">軸</th>
@@ -139,7 +139,7 @@ export default function ComparePage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       )}
 
       {!empty && (

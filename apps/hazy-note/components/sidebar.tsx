@@ -18,7 +18,13 @@ const NAV = [
   { href: "/export", icon: "export", label: "書き出す" },
 ];
 
-export function Sidebar() {
+export function Sidebar({
+  open = false,
+  onNavigate,
+}: {
+  open?: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -47,11 +53,16 @@ export function Sidebar() {
 
   return (
     <>
-    <aside className="sticky top-0 flex h-screen w-[220px] shrink-0 flex-col gap-5 overflow-y-auto border-r border-white/[0.06] bg-neutral-900 p-[18px_13px]">
+    <aside
+      className={`fixed inset-y-0 left-0 z-40 flex w-[248px] max-w-[82vw] flex-col gap-5 overflow-y-auto border-r border-white/[0.06] bg-neutral-900 p-[18px_13px] transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[220px] lg:max-w-none lg:shrink-0 lg:translate-x-0 lg:transition-none ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       <div className="flex items-center gap-[9px] px-[7px]">
         <Link
           href="/notes"
           target="_self"
+          onClick={onNavigate}
           className="flex flex-1 items-center gap-[9px] no-underline"
         >
           <span className="h-[22px] w-[22px] rounded-[7px] bg-[radial-gradient(circle_at_30%_25%,var(--color-accent-400),var(--color-accent-700))] shadow-[0_0_14px_rgba(145,132,217,0.45)]" />
@@ -66,6 +77,7 @@ export function Sidebar() {
           <Link
             href="/notes"
             target="_self"
+            onClick={onNavigate}
             className={`flex flex-1 items-center gap-[10px] rounded-lg px-[11px] py-[9px] text-[13.5px] font-medium no-underline text-accent-100 shadow-[0_0_18px_rgba(145,132,217,0.4)] transition ${
               pathname === "/notes" || pathname.startsWith("/notes/")
                 ? "bg-accent"
@@ -79,6 +91,7 @@ export function Sidebar() {
             href="/notes/new"
             target="_self"
             title="新しいノート"
+            onClick={onNavigate}
             className="flex items-center rounded-lg bg-accent/90 px-[10px] text-accent-100 no-underline shadow-[0_0_18px_rgba(145,132,217,0.4)] transition hover:bg-accent"
           >
             <Icon name="plus" size={14} />
@@ -91,6 +104,7 @@ export function Sidebar() {
               key={n.href}
               href={n.href}
               target="_self"
+              onClick={onNavigate}
               className={`flex items-center gap-[10px] rounded-lg px-[10px] py-[7px] text-[13px] no-underline ${
                 active ? "bg-accent/[0.12] text-accent" : "text-text hover:bg-white/[0.04]"
               }`}
@@ -112,6 +126,7 @@ export function Sidebar() {
               key={p.id}
               href={`/projects/${p.id}`}
               target="_self"
+              onClick={onNavigate}
               className="flex items-center gap-[9px] rounded-[7px] px-[10px] py-[6px] text-[13px] text-text no-underline hover:bg-white/[0.04]"
             >
               <span
@@ -144,6 +159,7 @@ export function Sidebar() {
               key={t.id}
               href={`/library?tag=${encodeURIComponent(t.label)}`}
               target="_self"
+              onClick={onNavigate}
             >
               <Tag tone={t.tone === "accent" ? "accent" : "neutral"}>{t.label}</Tag>
             </Link>

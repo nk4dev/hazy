@@ -108,7 +108,7 @@ export function ProjectClient({ id }: { id: string }) {
   if (!detail) return <Loading label="プロジェクトを開いています" />;
 
   return (
-    <main className="mx-auto flex w-full max-w-[720px] flex-col gap-6 p-[26px_30px_48px]">
+    <main className="mx-auto flex w-full max-w-[720px] flex-col gap-6 p-4 pb-12 sm:p-[26px_30px_48px]">
       <div className="flex items-center gap-[10px] text-[12px] text-text/45">
         <Icon name="folder-open" />
         プロジェクト

@@ -90,15 +90,15 @@ export function LibraryClient() {
   }
 
   return (
-    <main className="flex flex-col gap-5 p-[26px_30px_40px]">
-      <header className="flex items-end gap-4">
+    <main className="flex flex-col gap-5 p-4 pb-10 sm:p-[26px_30px_40px]">
+      <header className="flex flex-wrap items-end gap-3">
         <div>
           <div className="mb-[5px] text-[11px] uppercase tracking-[0.1em] text-text/[0.42]">
             {projectFilter || tagFilter ? "フィルタ中" : "受信箱"}
           </div>
           <h3 className="tracking-[-0.02em]">{heading}</h3>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {projectFilter && (
             <Link href={`/projects/${projectFilter}`} className="btn btn-secondary text-[12px]">
               <Icon name="folder-open" /> プロジェクトを開く
@@ -125,7 +125,7 @@ export function LibraryClient() {
         </div>
       </header>
 
-      <div className="flex gap-[9px] rounded-xl bg-surface p-[9px] shadow-[0_0_0_1px_var(--color-neutral-800),inset_0_0_44px_rgba(145,132,217,0.07)]">
+      <div className="flex flex-wrap gap-[9px] rounded-xl bg-surface p-[9px] shadow-[0_0_0_1px_var(--color-neutral-800),inset_0_0_44px_rgba(145,132,217,0.07)]">
         <Icon name="link" size={17} className="ml-[7px] self-center text-accent" />
         <input
           className="flex-1 self-center bg-transparent text-[14px] text-text outline-none placeholder:text-text/40"

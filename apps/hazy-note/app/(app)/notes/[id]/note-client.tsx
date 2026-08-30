@@ -181,13 +181,13 @@ export function NoteClient({ id }: { id?: string }) {
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1fr_260px]">
-      <main className="flex flex-col gap-4 p-[28px_44px_34px]">
-        <div className="flex items-center gap-[10px] text-[12px] text-text/45">
+      <main className="flex flex-col gap-4 p-4 pb-8 sm:p-[28px_44px_34px]">
+        <div className="flex flex-wrap items-center gap-[10px] text-[12px] text-text/45">
           <Icon name="notebook" />
           ノート
           <Icon name="caret-right" size={11} />
           <span className="text-text">{note.title}</span>
-          <div className="ml-auto flex items-center gap-[7px]">
+          <div className="flex flex-wrap items-center gap-[7px] sm:ml-auto">
             <span className="flex items-center gap-[5px] text-[11px]">
               {saving && <Spinner className="size-[11px] text-accent" />}
               {saving ? "保存中…" : note.updatedLabel}

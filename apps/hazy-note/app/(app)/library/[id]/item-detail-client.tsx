@@ -81,7 +81,7 @@ export function ItemDetailClient({ id }: { id: string }) {
   const unread = item.summary.length === 0 && item.points.length === 0;
 
   return (
-    <main className="mx-auto flex w-full max-w-[680px] flex-col gap-5 p-[26px_30px_44px]">
+    <main className="mx-auto flex w-full max-w-[680px] flex-col gap-5 p-4 pb-10 sm:p-[26px_30px_44px]">
       <Link href="/library" className="btn btn-ghost self-start text-[12px] text-text/50">
         <Icon name="arrow-left" /> 受信箱
       </Link>
