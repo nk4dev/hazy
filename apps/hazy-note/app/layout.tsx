@@ -21,6 +21,10 @@ const notoJP = Noto_Sans_JP({
 export const metadata: Metadata = {
   title: "hazy note",
   description: "URLの霧を、自分の言葉に落とすまで",
+  icons: {
+    icon: "/hazy.ico",
+    shortcut: "/hazy.ico",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

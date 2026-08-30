@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import type { Project, Tag as TagT } from "@/lib/types";
 import { Icon } from "./icon";
+import { NewProjectDialog } from "./new-project-dialog";
 import { Tag } from "./ui";
 
 // ノートが主役。残りは「素材をノートに集める」ための補助メニュー。
@@ -22,6 +23,7 @@ export function Sidebar() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [tags, setTags] = useState<TagT[]>([]);
+  const [newOpen, setNewOpen] = useState(false);
 
   const load = () => {
     api
@@ -35,16 +37,16 @@ export function Sidebar() {
   };
   useEffect(load, []);
 
-  async function addProject() {
-    const name = window.prompt("プロジェクト名（あとで変更できます）");
-    if (!name?.trim()) return;
-    const created = await api.addProject(name.trim());
+  async function createProject(name: string, description: string) {
+    const created = await api.addProject(name, description ? { description } : {});
+    setNewOpen(false);
     load();
     router.push(`/projects/${created.id}`);
   }
 
 
   return (
+    <>
     <aside className="sticky top-0 flex h-screen w-[220px] shrink-0 flex-col gap-5 overflow-y-auto border-r border-white/[0.06] bg-neutral-900 p-[18px_13px]">
       <div className="flex items-center gap-[9px] px-[7px]">
         <Link
@@ -124,7 +126,7 @@ export function Sidebar() {
         </div>
         <button
           type="button"
-          onClick={addProject}
+          onClick={() => setNewOpen(true)}
           className="mt-[3px] flex items-center justify-center gap-[6px] rounded-lg border border-accent/45 bg-accent/[0.08] px-[10px] py-[8px] text-[12.5px] font-medium text-accent-100 shadow-[0_0_14px_rgba(145,132,217,0.25)] transition hover:border-accent hover:bg-accent/[0.16]"
         >
           <Icon name="plus" size={13} />
@@ -150,5 +152,11 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+    <NewProjectDialog
+      open={newOpen}
+      onClose={() => setNewOpen(false)}
+      onCreate={createProject}
+    />
+    </>
   );
 }
