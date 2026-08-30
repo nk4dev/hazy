@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M18DGE6T11822TN68KA4VVGR",
+  "strategy": "manual-commit",
+  "branch": "dev",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/hazy-note/README.md",
+    "apps/hazy-note/package.json",
+    "apps/hazy-note/scripts/sync-from-neon.sh",
+    "package.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 16,
+    "cache_creation_tokens": 4479,
+    "cache_read_tokens": 4513311,
+    "output_tokens": 3600,
+    "api_call_count": 8
+  }
+}
