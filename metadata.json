@@ -1,0 +1,29 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M18NFKTXE4M64Q9N3YMTRHRX",
+  "strategy": "manual-commit",
+  "branch": "dev",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "apps/hazy-note/CLAUDE.md",
+    "apps/hazy-note/app/globals.css",
+    "apps/hazy-note/app/layout.tsx",
+    "apps/hazy-note/biome.json"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 62,
+    "cache_creation_tokens": 28868,
+    "cache_read_tokens": 26087710,
+    "output_tokens": 17127,
+    "api_call_count": 31
+  }
+}

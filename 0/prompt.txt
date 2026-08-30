@@ -1,0 +1,2 @@
+このコマンドをもとにshadcnを導入して
+bunx --bun shadcn@latest init --preset b38UYBH4y --template next
