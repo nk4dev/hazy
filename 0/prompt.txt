@@ -1,0 +1,2 @@
+再取得を繰り返すなら apps/hazy-note/scripts/sync-from-neon.sh（Neon URL は env 変数で渡す形）を追加できます。要りますか?
+この実装を実行
