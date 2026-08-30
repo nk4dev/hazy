@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>hazy — an AI-built reading & writing tool</title>
+<meta name="description" content="hazy and hazy-note: save URLs, ask questions about your own reading, turn it into your own writing. Designed and written end-to-end by an AI agent." />
+<meta property="og:title" content="hazy — an AI-built reading & writing tool" />
+<meta property="og:description" content="Two web apps, one shared backend on Cloudflare — every line authored by Claude Code, verified by an AI driving a real browser." />
+<link rel="icon" href="https://hz.nknighta.me/hazy.ico" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#161826; --surface:#232532; --panel:#1d1f2e;
+    --text:#e9e9ed; --muted:#9397ab; --faint:#6b6f82;
+    --accent:#9184d9; --accent-2:#b5abfc; --accent-dim:#423a6a;
+    --line:rgba(233,233,237,.09);
+    --radius:14px;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+    --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+    font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;
+    background-image:radial-gradient(900px 500px at 78% -8%,rgba(145,132,217,.16),transparent 60%),
+                     radial-gradient(700px 420px at 0% 0%,rgba(145,132,217,.08),transparent 55%);
+  }
+  a{color:var(--accent-2);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:960px;margin:0 auto;padding:0 22px}
+  section{padding:64px 0;border-top:1px solid var(--line)}
+  h1,h2,h3{line-height:1.15;letter-spacing:-.02em;margin:0}
+  h2{font-size:26px;margin-bottom:8px}
+  h3{font-size:17px}
+  .kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:600}
+  .lead{color:var(--muted);max-width:62ch}
+
+  /* hero */
+  header{padding:82px 0 60px;text-align:left}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:26px}
+  .mark{width:34px;height:34px;border-radius:10px;
+    background:radial-gradient(circle at 30% 25%,var(--accent-2),#5d5294);
+    box-shadow:0 0 26px rgba(145,132,217,.5)}
+  .logo b{font-size:19px;font-weight:600}
+  header h1{font-size:clamp(34px,6vw,54px);max-width:16ch}
+  header .lead{font-size:clamp(16px,2.4vw,19px);margin-top:18px}
+  .badges{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+  .badge{display:inline-flex;align-items:center;gap:7px;font-size:13px;color:var(--text);
+    background:rgba(145,132,217,.1);border:1px solid var(--accent-dim);
+    border-radius:999px;padding:6px 13px}
+  .badge .dot{width:7px;height:7px;border-radius:999px;background:var(--accent)}
+  .cta{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:500;
+    border-radius:10px;padding:10px 16px;border:1px solid var(--accent-dim)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent);
+    box-shadow:0 0 20px rgba(145,132,217,.4)}
+  .btn.primary:hover{text-decoration:none;filter:brightness(1.08)}
+  .btn.ghost{color:var(--text)}
+  .btn.ghost:hover{text-decoration:none;background:rgba(255,255,255,.04)}
+
+  .grid{display:grid;gap:16px}
+  @media(min-width:680px){.grid.two{grid-template-columns:1fr 1fr}.grid.three{grid-template-columns:repeat(3,1fr)}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .card h3{margin-bottom:6px}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .card .tag{display:inline-block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:10px}
+  .card a.more{font-size:13px;display:inline-block;margin-top:12px}
+
+  ul.clean{list-style:none;padding:0;margin:14px 0 0}
+  ul.clean li{padding:9px 0;border-bottom:1px solid var(--line);color:var(--muted);font-size:14.5px}
+  ul.clean li:last-child{border:0}
+  ul.clean li b{color:var(--text);font-weight:600}
+  code{font-family:var(--mono);font-size:.86em;background:rgba(255,255,255,.06);
+    padding:2px 6px;border-radius:5px;color:var(--accent-2)}
+
+  .diagram{font-family:var(--mono);font-size:12.5px;color:var(--muted);
+    background:#12131e;border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;overflow-x:auto;white-space:pre;line-height:1.5;margin-top:18px}
+  .diagram b{color:var(--accent-2)}
+
+  footer{border-top:1px solid var(--line);padding:40px 0 60px;color:var(--faint);font-size:13.5px}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo"><span class="mark"></span><b>hazy</b></div>
+    <h1>Save the URL now. Turn it into your own writing later.</h1>
+    <p class="lead">
+      <b style="color:var(--text)">hazy</b> is a memory for the links you save — search your reading,
+      ask questions about it, keep a read-later digest. <b style="color:var(--text)">hazy&nbsp;note</b>
+      takes that raw material and helps you build it into notes, comparisons and drafts.
+      Two apps, one shared backend.
+    </p>
+    <div class="badges">
+      <span class="badge"><span class="dot"></span>Designed &amp; written by an AI agent</span>
+      <span class="badge"><span class="dot"></span>3 Cloudflare Workers</span>
+      <span class="badge"><span class="dot"></span>Next 16 · Hono · Drizzle · Neon</span>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="https://hz.nknighta.me">Open hazy →</a>
+      <a class="btn ghost" href="https://note.hz.nknighta.me">Open hazy note</a>
+      <a class="btn ghost" href="https://github.com/nk4dev/hazy">Source on GitHub</a>
+    </div>
+  </div>
+</header>
+
+<section id="ai">
+  <div class="wrap">
+    <div class="kicker">The point of this project</div>
+    <h2>Every line is agent-authored</h2>
+    <p class="lead">
+      This repository is a working demonstration of AI-native software development. A human sets the
+      direction in a sentence or two; an AI agent — <b style="color:var(--text)">Claude&nbsp;Code</b>
+      (Anthropic's Sonnet) — does the exploration, the architecture, the code, the migrations, the
+      deploys and the docs. Every commit carries a
+      <code>Co-Authored-By: Claude</code> trailer and a link back to the session that produced it.
+    </p>
+    <div class="grid three" style="margin-top:22px">
+      <div class="card">
+        <span class="tag">plan</span>
+        <h3>Plan before code</h3>
+        <p>The agent explores the codebase, writes a plan, and gets sign-off before touching a file — the same plan files live in the history.</p>
+      </div>
+      <div class="card">
+        <span class="tag">build</span>
+        <h3>Types · lint · build gate</h3>
+        <p>Nothing is committed until <code>tsc</code>, Biome and <code>next build</code> pass across every package in the monorepo.</p>
+      </div>
+      <div class="card">
+        <span class="tag">verify</span>
+        <h3>It checks its own work</h3>
+        <p>The agent drives a real Chrome to look at the pages it just changed — accessibility snapshots, not screenshots-and-hope.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tooling">
+  <div class="wrap">
+    <div class="kicker">AI-native toolchain</div>
+    <h2>Tools built for agents, not just for people</h2>
+    <p class="lead">The interesting parts of the stack are the ones that assume an AI is in the loop.</p>
+    <div class="grid two" style="margin-top:22px">
+      <div class="card">
+        <span class="tag">Vercel Labs</span>
+        <h3>agent-browser</h3>
+        <p>A browser-automation CLI made for agents. It returns the page as an
+          accessibility tree with stable element refs (<code>@e1</code>, <code>@e2</code>…) instead of
+          raw HTML or brittle selectors — so the agent can open a route, snapshot it, click, type and
+          re-snapshot with a fraction of the context a normal browser tool would burn. Used here to
+          verify UI changes against the running dev servers.</p>
+        <a class="more" href="https://github.com/vercel-labs/agent-browser">github.com/vercel-labs/agent-browser →</a>
+      </div>
+      <div class="card">
+        <span class="tag">Entire</span>
+        <h3>Session tracking</h3>
+        <p>Records the full agent session — prompts, tool calls, decisions — and syncs checkpoint refs
+          alongside every <code>git push</code>. The trailer on each commit
+          (<code>Claude-Session: …</code>) points back to the exact run, so any change in this repo is
+          traceable to the conversation that made it.</p>
+        <a class="more" href="https://entire.io">entire.io →</a>
+      </div>
+      <div class="card">
+        <span class="tag">Anthropic</span>
+        <h3>Claude Code</h3>
+        <p>The agent itself. Runs in the terminal with the repo, a shell, the database and
+          <code>wrangler</code> in hand — it did the Turborepo migration, extracted the API into its
+          own Worker, wrote the Quill editor, and shipped all three services to Cloudflare.</p>
+        <a class="more" href="https://claude.com/claude-code">claude.com/claude-code →</a>
+      </div>
+      <div class="card">
+        <span class="tag">Registry / skills</span>
+        <h3>shadcn · skills.sh</h3>
+        <p>UI primitives come from a shadcn preset; agent capabilities (agent-browser, Turborepo) are
+          installed as <em>skills</em> — version-matched instruction packs the agent loads on demand
+          rather than guessing from stale training data.</p>
+        <a class="more" href="https://skills.sh">skills.sh →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="apps">
+  <div class="wrap">
+    <div class="kicker">The product</div>
+    <h2>Two views of one workflow</h2>
+    <div class="grid two" style="margin-top:22px">
+      <div class="card">
+        <span class="tag">hz.nknighta.me</span>
+        <h3>hazy</h3>
+        <p>Drop a link and forget it. Later: full-text search over everything you've saved,
+          an "Ask" that answers from <em>your</em> reading (RAG over your own library), collections,
+          and a read-later digest that buckets by how long things take.</p>
+        <ul class="clean">
+          <li><b>Frontend only</b> — Next 16, React Compiler, next-intl (en/ja)</li>
+          <li>Talks to the API over a Clerk bearer token + CORS</li>
+        </ul>
+      </div>
+      <div class="card">
+        <span class="tag">note.hz.nknighta.me</span>
+        <h3>hazy note</h3>
+        <p>Capture sources → gather them into a <em>project</em> (a space to develop one idea) →
+          write notes in a Quill rich-text editor with <code>@</code>-cite → compare sources on a
+          board → export to a blog post, memo or bullets.</p>
+        <ul class="clean">
+          <li><b>Quill editor</b> — the note body is a Delta stored in Postgres</li>
+          <li>Its own <code>/api/*</code> handlers over the shared schema</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="arch">
+  <div class="wrap">
+    <div class="kicker">Architecture</div>
+    <h2>Three Workers, one database, one contract</h2>
+    <p class="lead">
+      Same Clerk tenant → same <code>users.id</code> → <code>hazy</code> and <code>hazy note</code>
+      share <code>saved_urls</code> and <code>collections</code>. A URL saved in one shows up in the other.
+    </p>
+    <div class="diagram">  browser ──▶ <b>hz.nknighta.me</b>            (hazy — Next / OpenNext Worker, no backend)
+                 │  Authorization: Bearer &lt;clerk jwt&gt;
+                 ▼
+             <b>api.hz.nknighta.me</b>           (hazy-api — a Hono Worker, /v1/**)
+                 │
+  browser ──▶ <b>note.hz.nknighta.me</b>  ───────┤   (hazy note — Next / OpenNext Worker + its own /api/*)
+                                          ▼
+                                   <b>@repo/db</b>  ──▶  Neon Postgres
+                                   (one Drizzle schema, dual-driver client)
+
+  @repo/api-client   the typed wire contract shared by the frontend and any future native client
+</div>
+    <div class="grid three" style="margin-top:18px">
+      <div class="card"><span class="tag">packages/db</span><h3>@repo/db</h3><p>One schema, migrations, the search-vector trigger. <code>getDb()</code> picks postgres.js locally, Neon's HTTP driver on Workers.</p></div>
+      <div class="card"><span class="tag">packages/api-client</span><h3>@repo/api-client</h3><p>The DTO contract + a typed client (<code>useHazyClient()</code>). Single source of truth for the API shape.</p></div>
+      <div class="card"><span class="tag">turbo · bun</span><h3>Monorepo</h3><p>bun workspaces, Turborepo tasks, Biome. Each app deploys independently via <code>wrangler</code> / OpenNext.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>
+      <b style="color:var(--text)">hazy</b> — built in public, by an agent.
+      &nbsp;·&nbsp; <a href="https://github.com/nk4dev/hazy">github.com/nk4dev/hazy</a>
+      &nbsp;·&nbsp; <a href="https://hz.nknighta.me">hazy</a>
+      &nbsp;·&nbsp; <a href="https://note.hz.nknighta.me">hazy note</a>
+    </p>
+    <p style="margin-top:6px">Human direction: <a href="https://github.com/nk4dev">@nk4dev</a>. Code: Claude Code (Anthropic).</p>
+  </div>
+</footer>
+
+</body>
+</html>
