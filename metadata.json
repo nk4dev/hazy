@@ -1,0 +1,34 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M18GR4B94VCFMRJ1CSKBBCBY",
+  "strategy": "manual-commit",
+  "branch": "dev",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "README.md",
+    "apps/hazy-note/CLAUDE.md",
+    "apps/hazy-note/README.md",
+    "apps/hazy-note/components/sidebar.tsx",
+    "apps/hazy-note/lib/ai.ts",
+    "apps/hazy-note/lib/api.ts",
+    "apps/hazy-note/lib/db/repo.ts",
+    "apps/hazy-note/lib/llm.ts",
+    "apps/hazy-note/lib/types.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 60,
+    "cache_creation_tokens": 23526,
+    "cache_read_tokens": 18404127,
+    "output_tokens": 10009,
+    "api_call_count": 30
+  }
+}
