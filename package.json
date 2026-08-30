@@ -13,6 +13,7 @@
     "db:push": "turbo run db:push",
     "db:trigger": "turbo run db:trigger",
     "db:studio": "turbo run db:studio",
+    "db:sync-from-neon": "bash apps/hazy-note/scripts/sync-from-neon.sh",
     "cf:build": "turbo run cf:build",
     "cf:deploy": "turbo run cf:deploy",
     "cf:preview": "turbo run cf:preview",

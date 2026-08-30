@@ -4,7 +4,8 @@
 # schema (run the migrations first). The local DB is TRUNCATEd.
 #
 #   NEON_DATABASE_URL='postgresql://…neon.tech/neondb?sslmode=require' \
-#     scripts/sync-from-neon.sh [-y]
+#     bun run db:sync-from-neon           # from the repo root or apps/hazy-note/
+#   bun run db:sync-from-neon -y          # skip the prompt
 #
 # NEON_DATABASE_URL   required (or a `…neon.tech…` line in packages/db/.env.local)
 # LOCAL_DATABASE_URL  default postgresql://hazy@127.0.0.1:5433/hazy
@@ -42,7 +43,7 @@ echo "  into : $LOCAL_DATABASE_URL  ($(count "$LOCAL_DATABASE_URL" "select count
 
 if [ "${1:-}" != "-y" ]; then
   read -r -p "TRUNCATE the local DB and load Neon's data? [y/N] " ans
-  [ "$ans" = "y" ] || [ "$ans" = "Y" ] || { echo "aborted"; exit 1; }
+  [ "$ans" = "y" ] || [ "$ans" = "Y" ] || { echo "aborted"; exit 0; }
 fi
 
 DUMP="$(mktemp -t hazy-neon-XXXXXX.sql)"
