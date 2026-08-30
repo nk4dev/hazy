@@ -3,6 +3,10 @@
 Turborepo for **hazy** and **hazy-note** — two views of one product, one Clerk
 tenant, one database, one API.
 
+**Overview / showcase:** https://apps.nknighta.me/hazy/ (`docs/`, GitHub Pages) —
+what it is, the architecture, and the AI-native toolchain it's built with.
+Every commit here is agent-authored.
+
 | | |
 |---|---|
 | `apps/hazy` | Save URLs, search your reading, ask questions about it, read-later digest. Pure frontend (Next 16, Turbopack, next-intl en/ja) — talks to `apps/api`. |
