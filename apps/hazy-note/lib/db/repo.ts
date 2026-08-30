@@ -76,11 +76,9 @@ function normalizeUrl(url: string): string {
 }
 
 // ── Items ──────────────────────────────────────────────────
-type SavedUrlWithLinks = typeof schema.savedUrls.$inferSelect & {
-  collectionItems: { collectionId: string }[];
-};
+type SavedUrlRow = typeof schema.savedUrls.$inferSelect;
 
-function toItem(row: SavedUrlWithLinks): Item {
+function toItem(row: SavedUrlRow): Item {
   const site = row.kind === "note" ? (row.domain ?? "メモ") : (row.domain ?? siteFromUrl(row.url));
   return {
     id: row.id,
@@ -97,7 +95,7 @@ function toItem(row: SavedUrlWithLinks): Item {
     points: row.points,
     suggestedTags: row.suggestedTags,
     tags: row.tags,
-    projectId: row.collectionItems[0]?.collectionId ?? null,
+    projectId: row.projectId ?? null,
     quoteCandidates: row.quoteCandidates,
     relatedNoteId: row.relatedNoteId ?? undefined,
   };
@@ -106,7 +104,6 @@ function toItem(row: SavedUrlWithLinks): Item {
 export async function listItems(userId: string): Promise<Item[]> {
   const rows = await db.query.savedUrls.findMany({
     where: (t, { eq }) => eq(t.userId, userId),
-    with: { collectionItems: true },
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
   return rows.map(toItem);
@@ -126,7 +123,6 @@ export async function listItems(userId: string): Promise<Item[]> {
 export async function listImportable(userId: string): Promise<Item[]> {
   const rows = await db.query.savedUrls.findMany({
     where: (t, { and, eq, ne }) => and(eq(t.userId, userId), ne(t.kind, "note")),
-    with: { collectionItems: true },
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
   const items = rows.map(toItem);
@@ -138,7 +134,6 @@ export async function getItem(userId: string, id: string): Promise<Item | undefi
   if (!isUuid(id)) return undefined;
   const row = await db.query.savedUrls.findFirst({
     where: (t, { and, eq }) => and(eq(t.id, id), eq(t.userId, userId)),
-    with: { collectionItems: true },
   });
   return row ? toItem(row) : undefined;
 }
@@ -318,12 +313,10 @@ export async function updateItem(
   }
 
   if ("projectId" in patch) {
-    await db.delete(schema.collectionItems).where(eq(schema.collectionItems.savedUrlId, id));
-    if (patch.projectId) {
-      await db
-        .insert(schema.collectionItems)
-        .values({ collectionId: patch.projectId, savedUrlId: id });
-    }
+    await db
+      .update(schema.savedUrls)
+      .set({ projectId: patch.projectId || null, updatedAt: new Date() })
+      .where(eq(schema.savedUrls.id, id));
   }
 
   return getItem(userId, id);
@@ -338,9 +331,10 @@ export async function deleteItem(userId: string, id: string): Promise<boolean> {
 }
 
 // ── Projects & Tags ───────────────────────────────────────────
-// A "project" is a `collections` row — a space the user creates deliberately to
-// develop an idea (`description`), gather sources into (`collection_items`) and
-// file notes under (`notes.collection_id`). `tone` is now just a colour.
+// A "project" (hazy-note's own `projects` table — separate from hazy's
+// `collections`) is a space the user creates deliberately to develop an idea:
+// `description`, the sources filed under it (`saved_urls.project_id`) and the
+// notes under it (`notes.project_id`). `tone` is just a colour.
 
 function toProjectRow(r: {
   id: string;
@@ -361,20 +355,17 @@ function toProjectRow(r: {
 export async function listProjects(userId: string): Promise<Project[]> {
   const rows = await db
     .select({
-      id: schema.collections.id,
-      name: schema.collections.name,
-      description: schema.collections.description,
-      tone: schema.collections.tone,
-      count: sql<number>`count(${schema.collectionItems.id})::int`,
+      id: schema.projects.id,
+      name: schema.projects.name,
+      description: schema.projects.description,
+      tone: schema.projects.tone,
+      count: sql<number>`count(${schema.savedUrls.id})::int`,
     })
-    .from(schema.collections)
-    .leftJoin(
-      schema.collectionItems,
-      eq(schema.collectionItems.collectionId, schema.collections.id)
-    )
-    .where(eq(schema.collections.userId, userId))
-    .groupBy(schema.collections.id)
-    .orderBy(schema.collections.createdAt);
+    .from(schema.projects)
+    .leftJoin(schema.savedUrls, eq(schema.savedUrls.projectId, schema.projects.id))
+    .where(eq(schema.projects.userId, userId))
+    .groupBy(schema.projects.id)
+    .orderBy(schema.projects.createdAt);
   return rows.map(toProjectRow);
 }
 
@@ -388,16 +379,13 @@ export async function getProject(
   if (!project) return undefined;
 
   const sourceRows = await db.query.savedUrls.findMany({
-    where: (t, { eq }) => eq(t.userId, userId),
-    with: { collectionItems: true },
+    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.projectId, id)),
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
-  const sources = sourceRows
-    .map(toItem)
-    .filter((it) => it.projectId === id);
+  const sources = sourceRows.map(toItem);
 
   const noteRows = await db.query.notes.findMany({
-    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.collectionId, id)),
+    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.projectId, id)),
     orderBy: (t, { desc }) => [desc(t.updatedAt)],
   });
   const notes = noteRows.map((n) => ({
@@ -416,7 +404,7 @@ export async function createProject(
   opts: { tone?: "accent" | "neutral"; description?: string } = {}
 ): Promise<Project> {
   const [row] = await db
-    .insert(schema.collections)
+    .insert(schema.projects)
     .values({
       userId,
       name: name.trim() || "無題のプロジェクト",
@@ -432,25 +420,25 @@ export async function updateProject(
   id: string,
   patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" }
 ): Promise<Project | undefined> {
-  const set: Partial<typeof schema.collections.$inferInsert> = {};
+  const set: Partial<typeof schema.projects.$inferInsert> = {};
   if (patch.name !== undefined) set.name = patch.name.trim() || "無題のプロジェクト";
   if (patch.description !== undefined) set.description = patch.description?.trim() || null;
   if (patch.tone !== undefined) set.tone = patch.tone;
   if (Object.keys(set).length) {
     set.updatedAt = new Date();
     await db
-      .update(schema.collections)
+      .update(schema.projects)
       .set(set)
-      .where(and(eq(schema.collections.id, id), eq(schema.collections.userId, userId)));
+      .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)));
   }
   return (await listProjects(userId)).find((p) => p.id === id);
 }
 
 export async function deleteProject(userId: string, id: string): Promise<boolean> {
   const deleted = await db
-    .delete(schema.collections)
-    .where(and(eq(schema.collections.id, id), eq(schema.collections.userId, userId)))
-    .returning({ id: schema.collections.id });
+    .delete(schema.projects)
+    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
+    .returning({ id: schema.projects.id });
   return deleted.length > 0;
 }
 
@@ -487,7 +475,7 @@ function toNote(row: typeof schema.notes.$inferSelect): Note {
   return {
     id: row.id,
     title: row.title,
-    projectId: row.collectionId ?? "",
+    projectId: row.projectId ?? "",
     tags: row.tags as Note["tags"],
     status: row.status,
     updatedLabel: `自動保存 · ${relativeLabel(row.updatedAt)}`,
@@ -531,7 +519,7 @@ export async function createNote(
     .insert(schema.notes)
     .values({
       userId,
-      collectionId: input.projectId || null,
+      projectId: input.projectId || null,
       title: input.title?.trim() || "無題のノート",
       status: input.status ?? "draft",
       tags: input.tags ?? [],
@@ -560,7 +548,7 @@ export async function updateNote(
   };
   if (patch.title !== undefined) set.title = patch.title.trim() || "無題のノート";
   if (patch.status !== undefined) set.status = patch.status;
-  if (patch.projectId !== undefined) set.collectionId = patch.projectId || null;
+  if (patch.projectId !== undefined) set.projectId = patch.projectId || null;
   if (patch.body !== undefined) set.body = patch.body;
   if (patch.suggestions !== undefined) set.suggestions = patch.suggestions;
   if (patch.tags !== undefined) set.tags = patch.tags;
@@ -652,7 +640,7 @@ export async function appendParagraph(
 function toCompare(row: typeof schema.compareBoards.$inferSelect): CompareBoard {
   return {
     id: row.id,
-    projectId: row.collectionId ?? "",
+    projectId: row.projectId ?? "",
     sources: row.sources,
     axes: row.axes as CompareBoard["axes"],
     summary: row.summary,
@@ -675,7 +663,6 @@ export async function getCompare(userId: string): Promise<CompareBoard | undefin
 export async function buildCompareBoard(userId: string, projectId?: string): Promise<CompareBoard> {
   const rows = await db.query.savedUrls.findMany({
     where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.fetchStatus, "success")),
-    with: { collectionItems: true },
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
   const items = rows
@@ -694,15 +681,15 @@ export async function buildCompareBoard(userId: string, projectId?: string): Pro
       and(
         eq(schema.compareBoards.userId, userId),
         projectId
-          ? eq(schema.compareBoards.collectionId, projectId)
-          : isNull(schema.compareBoards.collectionId)
+          ? eq(schema.compareBoards.projectId, projectId)
+          : isNull(schema.compareBoards.projectId)
       )
     );
   const [row] = await db
     .insert(schema.compareBoards)
     .values({
       userId,
-      collectionId: projectId ?? null,
+      projectId: projectId ?? null,
       sources: items.map((it) => it.title),
       axes: synth.axes,
       summary: synth.summary,

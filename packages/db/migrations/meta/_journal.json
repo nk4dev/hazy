@@ -43,6 +43,13 @@
       "when": 1788050787530,
       "tag": "0005_useful_jack_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788069570954,
+      "tag": "0006_modern_nekra",
+      "breakpoints": true
     }
   ]
 }

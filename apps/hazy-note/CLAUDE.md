@@ -13,12 +13,13 @@ follow-up — for now, edit the routes + `repo.ts` here.
 
 # Projects
 
-A "プロジェクト" is a `collections` row the user **creates deliberately** as a
-workspace to develop an idea — `/projects/[id]` shows its `description` (the
-idea), the sources filed under it (`collection_items`, via
-`updateItem(_, { projectId })`) and the notes under it (`notes.collectionId`).
-There is **no** tag-based auto-creation or auto-sort (removed), and no digest.
-`collections.tone` is now just a colour.
+A "プロジェクト" lives in hazy-note's **own `projects` table** (`@repo/db`) —
+separate from hazy's `collections`. The user creates one deliberately as a
+workspace to develop an idea: `/projects/[id]` shows its `description`, the
+sources filed under it (`saved_urls.project_id`, set via
+`updateItem(_, { projectId })`) and the notes under it (`notes.project_id`).
+There is **no** tag-based auto-creation, auto-sort or digest (all removed).
+`notes.collection_id` / `compare_boards.collection_id` are dead columns.
 
 # The note editor
 

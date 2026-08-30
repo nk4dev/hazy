@@ -116,6 +116,10 @@ export const savedUrls = pgTable(
     relatedNoteId: uuid("related_note_id").references((): AnyPgColumn => notes.id, {
       onDelete: "set null",
     }),
+    // hazy-note only: the project this URL is filed under (≤1).
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
+      onDelete: "set null",
+    }),
     // A short bullet list — distinct from the free-text `summary` above.
     summaryLines: text("summary_lines")
       .array()
@@ -164,7 +168,7 @@ export const collections = pgTable(
     color: varchar("color", { length: 32 }),
     summary: text("summary"),
     summaryUpdatedAt: timestamp("summary_updated_at", { withTimezone: true }),
-    // hazy-note addition: Project.tone ("accent" is its digest/auto-sort target).
+    // Legacy hazy-note column — hazy-note now uses its own `projects` table.
     tone: varchar("tone", { length: 16 }).notNull().default("neutral"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -187,6 +191,28 @@ export const collectionItems = pgTable(
   (table) => [
     unique("collection_items_collection_saved_url_unique").on(table.collectionId, table.savedUrlId),
   ]
+);
+
+/**
+ * hazy-note only. A "project" is a workspace the user creates deliberately to
+ * develop an idea — separate from hazy's `collections`. A saved URL is in at
+ * most one project (`saved_urls.project_id`); notes and compare boards file
+ * under one (`notes.project_id`, `compare_boards.project_id`).
+ */
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    tone: varchar("tone", { length: 16 }).notNull().default("neutral"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("projects_user_id_idx").on(table.userId)]
 );
 
 export const askThreads = pgTable(
@@ -248,7 +274,12 @@ export const notes = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Deprecated — hazy-note moved to its own `projects` table. Left in place
+    // so the schema diff stays additive; nothing writes it any more.
     collectionId: uuid("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
       onDelete: "set null",
     }),
     title: text("title").notNull(),
@@ -285,6 +316,7 @@ export const notes = pgTable(
   (table) => [
     index("notes_user_id_idx").on(table.userId),
     index("notes_collection_id_idx").on(table.collectionId),
+    index("notes_project_id_idx").on(table.projectId),
   ]
 );
 
@@ -295,7 +327,11 @@ export const compareBoards = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Deprecated — see notes.collectionId.
     collectionId: uuid("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
       onDelete: "set null",
     }),
     sources: text("sources")
@@ -354,6 +390,10 @@ export const savedUrlsRelations = relations(savedUrls, ({ one, many }) => ({
     fields: [savedUrls.relatedNoteId],
     references: [notes.id],
   }),
+  project: one(projects, {
+    fields: [savedUrls.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const readLaterStateRelations = relations(readLaterState, ({ one }) => ({
@@ -367,6 +407,11 @@ export const readLaterStateRelations = relations(readLaterState, ({ one }) => ({
 export const collectionsRelations = relations(collections, ({ one, many }) => ({
   user: one(users, { fields: [collections.userId], references: [users.id] }),
   items: many(collectionItems),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  user: one(users, { fields: [projects.userId], references: [users.id] }),
+  savedUrls: many(savedUrls),
   notes: many(notes),
   compareBoards: many(compareBoards),
 }));
@@ -408,17 +453,17 @@ export const askMessageCitationsRelations = relations(askMessageCitations, ({ on
 
 export const notesRelations = relations(notes, ({ one }) => ({
   user: one(users, { fields: [notes.userId], references: [users.id] }),
-  collection: one(collections, {
-    fields: [notes.collectionId],
-    references: [collections.id],
+  project: one(projects, {
+    fields: [notes.projectId],
+    references: [projects.id],
   }),
 }));
 
 export const compareBoardsRelations = relations(compareBoards, ({ one }) => ({
   user: one(users, { fields: [compareBoards.userId], references: [users.id] }),
-  collection: one(collections, {
-    fields: [compareBoards.collectionId],
-    references: [collections.id],
+  project: one(projects, {
+    fields: [compareBoards.projectId],
+    references: [projects.id],
   }),
 }));
 
