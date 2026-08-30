@@ -101,20 +101,10 @@ export function Sidebar() {
       </nav>
 
       <div className="flex flex-col gap-[7px]">
-        <div className="flex items-center px-[10px] text-[10px] uppercase tracking-[0.1em] text-text/[0.38]">
+        <div className="px-[10px] text-[10px] uppercase tracking-[0.1em] text-text/[0.38]">
           プロジェクト
-          <button
-            onClick={addProject}
-            className="ml-auto text-text/50 hover:text-text"
-            title="プロジェクトを追加"
-          >
-            <Icon name="plus" size={12} />
-          </button>
         </div>
         <div className="flex flex-col gap-px">
-          {projects.length === 0 && (
-            <div className="px-[10px] py-1 text-[11px] text-text/35">まだありません</div>
-          )}
           {projects.map((p) => (
             <Link
               key={p.id}
@@ -132,6 +122,14 @@ export function Sidebar() {
             </Link>
           ))}
         </div>
+        <button
+          type="button"
+          onClick={addProject}
+          className="mt-[3px] flex items-center justify-center gap-[6px] rounded-lg border border-accent/45 bg-accent/[0.08] px-[10px] py-[8px] text-[12.5px] font-medium text-accent-100 shadow-[0_0_14px_rgba(145,132,217,0.25)] transition hover:border-accent hover:bg-accent/[0.16]"
+        >
+          <Icon name="plus" size={13} />
+          {projects.length === 0 ? "最初のプロジェクトを作る" : "プロジェクトを作成"}
+        </button>
       </div>
 
       <div className="mt-auto flex flex-col gap-2">
