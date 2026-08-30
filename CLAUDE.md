@@ -31,3 +31,19 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
 `localhost` / `127.0.0.1`, Neon's HTTP driver otherwise (Workers has no raw TCP).
 Local dev DB: `apps/hazy-note/scripts/localdb.sh` (user-owned PG 18 on
 `127.0.0.1:5433`). The Neon database is the production one — all three apps share it.
+
+## Browser testing — `agent-browser`
+
+`agent-browser` (vercel-labs, a root devDep) drives a real Chrome for verifying
+the UIs. The skill (`.agents/skills/agent-browser`, installed via
+`bunx skills add vercel-labs/agent-browser`) has the full guide. Config:
+`agent-browser.json` at the root (`--no-sandbox` — required here). Typical loop:
+
+```bash
+bunx agent-browser batch "open http://localhost:3000/notes" "snapshot -i"
+bunx agent-browser click @e3
+bunx agent-browser screenshot /tmp/x.png
+```
+
+Chrome lives in `~/.agent-browser/` (not the repo). Use it to check a page after
+a UI change instead of only `curl`-ing status codes.

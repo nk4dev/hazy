@@ -21,6 +21,10 @@
     "preview": "turbo run preview"
   },
   "devDependencies": {
+    "agent-browser": "^0.35.1",
     "turbo": "^2"
-  }
+  },
+  "trustedDependencies": [
+    "agent-browser"
+  ]
 }

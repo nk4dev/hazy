@@ -5,6 +5,7 @@
     "": {
       "name": "hazy-repo",
       "devDependencies": {
+        "agent-browser": "^0.35.1",
         "turbo": "^2",
       },
     },
@@ -138,6 +139,9 @@
       },
     },
   },
+  "trustedDependencies": [
+    "agent-browser",
+  ],
   "packages": {
     "@alloc/quick-lru": ["@alloc/quick-lru@5.2.0", "", {}, "sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw=="],
 
@@ -904,6 +908,8 @@
     "accepts": ["accepts@2.0.0", "", { "dependencies": { "mime-types": "^3.0.0", "negotiator": "^1.0.0" } }, "sha512-5cvg6CtKwfgdmVqY1WIiXKc3Q1bkRqGLi+2W/6ao+6Y7gu/RCwRuAhGEzh5B4KlszSuTLgZYuqFqo5bImjNKng=="],
 
     "acorn": ["acorn@8.18.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-lGq+9yr1/GuAWaVYIHRjvvySG5/4VfKIvC8EWxStPdcDh/Ka7FG3twP6v4d5BkravUilhIAsG4Qj83t02LWUPQ=="],
+
+    "agent-browser": ["agent-browser@0.35.1", "", { "bin": { "agent-browser": "./bin/agent-browser.js" } }, "sha512-lbVEtcKvZcQQLSKhcH2G0oEGMT04MKj6CBLdM7koGRSs6DqsFO9UVKZuYTpikskJoAklnvtDjbtgCfSbW/yZjQ=="],
 
     "agentkeepalive": ["agentkeepalive@4.6.0", "", { "dependencies": { "humanize-ms": "^1.2.1" } }, "sha512-kja8j7PjmncONqaTsB8fQ+wE2mSU2DJ9D4XKoJ5PFWIdRMa6SLSN1ff4mOr4jCbfRSsxR4keIiySJU0N9T5hIQ=="],
 

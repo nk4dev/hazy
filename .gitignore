@@ -33,6 +33,10 @@ next-env.d.ts
 .agents/
 skills-lock.json
 /.claude/skills/
+
+# agent-browser daemon state (Chrome lives in ~/.agent-browser)
+.agent-browser/
+browser-data/
 **/.claude/settings.local.json
 
 # misc
