@@ -1,0 +1,1 @@
+ALTER TABLE "saved_urls" ADD COLUMN "summary_lines" text[] DEFAULT ARRAY[]::text[] NOT NULL;

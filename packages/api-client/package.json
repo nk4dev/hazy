@@ -1,0 +1,29 @@
+{
+  "name": "@repo/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./react": "./src/react.ts",
+    "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@clerk/nextjs": ">=7",
+    "react": ">=19"
+  },
+  "peerDependenciesMeta": {
+    "@clerk/nextjs": { "optional": true },
+    "react": { "optional": true }
+  },
+  "devDependencies": {
+    "@clerk/nextjs": "^7.8.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "react": "19.2.8",
+    "typescript": "^5"
+  }
+}

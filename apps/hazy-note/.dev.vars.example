@@ -1,0 +1,14 @@
+# Copy to .dev.vars for `opennextjs-cloudflare preview` / `wrangler dev`.
+# `next dev` uses .env.local instead — keep the two in sync.
+DATABASE_URL=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL=/notes
+NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL=/notes
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL_ID=
+OPENROUTER_SITE_URL=
+OPENROUTER_APP_NAME=Hazy Note
+NEXT_PUBLIC_APP_URL=http://localhost:3000

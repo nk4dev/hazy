@@ -1,0 +1,6 @@
+# Flat node_modules (npm/yarn-style), not bun's default isolated `.bun/` store.
+# OpenNext's esbuild pass bundles the Cloudflare Worker by walking node_modules
+# from the traced files, and can't resolve sibling packages (e.g. `postgres`
+# from `drizzle-orm/postgres-js`) under the isolated layout.
+[install]
+linker = "hoisted"

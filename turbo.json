@@ -1,0 +1,51 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "globalDependencies": ["tsconfig.base.json"],
+  "globalEnv": [
+    "DATABASE_URL",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_MODEL_ID",
+    "OPENROUTER_SITE_URL",
+    "OPENROUTER_APP_NAME",
+    "CLERK_SECRET_KEY",
+    "CLERK_WEBHOOK_SIGNING_SECRET",
+    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY",
+    "NEXT_PUBLIC_CLERK_SIGN_IN_URL",
+    "NEXT_PUBLIC_CLERK_SIGN_UP_URL",
+    "NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL",
+    "NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL",
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_HAZY_NOTE_URL",
+    "NEXT_PUBLIC_API_URL",
+    "CORS_ALLOWED_ORIGINS"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "!.next/dev/**"],
+      "inputs": ["$TURBO_DEFAULT$", ".env", ".env.*"]
+    },
+    "check-types": {
+      "dependsOn": ["^build"]
+    },
+    "lint": {},
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "db:generate": { "cache": false },
+    "db:migrate": { "cache": false },
+    "db:push": { "cache": false },
+    "db:trigger": { "cache": false },
+    "db:studio": { "cache": false, "persistent": true },
+    "cf:build": {
+      "dependsOn": ["^build"],
+      "outputs": [".open-next/**"],
+      "inputs": ["$TURBO_DEFAULT$", ".env", ".env.*"]
+    },
+    "cf:deploy": { "cache": false, "dependsOn": ["cf:build"] },
+    "cf:preview": { "cache": false, "dependsOn": ["cf:build"] },
+    "deploy": { "cache": false, "dependsOn": ["check-types"] },
+    "preview": { "cache": false, "persistent": true }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "hazy",
+  "compatibility_date": "2026-08-14",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "vars": {
+    // NEXT_PUBLIC_* are inlined at build time (opennextjs-cloudflare build reads
+    // apps/hazy/.env.local) — keep these in sync there. The Clerk keys are
+    // Worker secrets (`wrangler secret put`).
+    "NEXT_PUBLIC_API_URL": "https://api.hz.nknighta.me",
+    "NEXT_PUBLIC_APP_URL": "https://hz.nknighta.me",
+    "NEXT_PUBLIC_HAZY_NOTE_URL": "https://note.hz.nknighta.me"
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference service binding, the service name must match the worker name
+      // see https://opennext.js.org/cloudflare/caching
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "hazy"
+    }
+  ],
+  "images": {
+    // Enable image optimization
+    // see https://opennext.js.org/cloudflare/howtos/image
+    "binding": "IMAGES"
+  }
+}
