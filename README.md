@@ -44,17 +44,25 @@ Local Postgres for development: `apps/hazy-note/scripts/localdb.sh start`
 
 ## Deploy
 
-Three independent Cloudflare Workers:
+Three independent Cloudflare Workers, each on its own custom domain:
 
-- **`apps/api`** — a plain Hono Worker (`wrangler.jsonc`, no OpenNext). Custom
-  domain `api.hz.nknighta.me`. `bun run deploy --filter=api`, then
-  `wrangler secret put …` from `apps/api/` for `DATABASE_URL`, `CLERK_SECRET_KEY`,
+| Worker | Domain | |
+|---|---|---|
+| `hazy-api` (`apps/api`) | `api.hz.nknighta.me` | plain Hono, no OpenNext |
+| `hazy` (`apps/hazy`) | `hz.nknighta.me` | OpenNext |
+| `hazy-note` (`apps/hazy-note`) | `note.hz.nknighta.me` | OpenNext |
+
+- **`apps/api`** — `bun run deploy --filter=api`, then `wrangler secret put …`
+  from `apps/api/` for `DATABASE_URL`, `CLERK_SECRET_KEY`,
   `CLERK_WEBHOOK_SIGNING_SECRET`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`,
-  `OPENROUTER_API_KEY`. Point the Clerk dashboard webhook at
+  `OPENROUTER_API_KEY`. Clerk dashboard webhook →
   `https://api.hz.nknighta.me/v1/webhooks/clerk`.
-- **`apps/hazy`** / **`apps/hazy-note`** — OpenNext (`open-next.config.ts`).
-  `bun run cf:deploy --filter=<app>`. hazy needs
-  `NEXT_PUBLIC_API_URL=https://api.hz.nknighta.me` as a Worker var.
+- **`apps/hazy`** / **`apps/hazy-note`** — `bun run cf:deploy --filter=<app>`,
+  then `wrangler secret put …` for `DATABASE_URL` (hazy-note only),
+  `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `OPENROUTER_API_KEY`
+  (hazy-note only). `NEXT_PUBLIC_*` (incl. hazy's `NEXT_PUBLIC_API_URL`) are
+  inlined at build from `apps/<app>/.env.local` — the `wrangler.jsonc` `vars`
+  mirror them for reference / server-side reads.
 
 `apps/api` and hazy-note reach the database over `@repo/db`'s Neon HTTP driver
 (Workers has no raw TCP). Locally, a `127.0.0.1` `DATABASE_URL` transparently

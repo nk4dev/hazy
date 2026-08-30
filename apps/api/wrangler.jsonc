@@ -17,7 +17,7 @@
     "OPENROUTER_SITE_URL": "https://hz.nknighta.me",
     "OPENROUTER_APP_NAME": "Hazy"
   }
-  // Secrets (set via `wrangler secret put` from apps/api/):
+  // Secrets (set via `wrangler secret put` from apps/api/) — never commit these:
   //   DATABASE_URL, CLERK_SECRET_KEY, CLERK_WEBHOOK_SIGNING_SECRET,
   //   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, OPENROUTER_API_KEY
 }

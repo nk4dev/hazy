@@ -4,6 +4,8 @@
   "name": "hazy-note",
   "compatibility_date": "2026-08-14",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "routes": [{ "pattern": "note.hz.nknighta.me", "custom_domain": true }],
+  "observability": { "enabled": true },
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
@@ -18,5 +20,14 @@
   ],
   "images": {
     "binding": "IMAGES"
+  },
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://note.hz.nknighta.me",
+    "OPENROUTER_MODEL_ID": "mistralai/mistral-small-2603",
+    "OPENROUTER_SITE_URL": "https://note.hz.nknighta.me",
+    "OPENROUTER_APP_NAME": "Hazy Note"
   }
+  // Secrets (set via `wrangler secret put` from apps/hazy-note/) — never commit:
+  //   DATABASE_URL (Neon), CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
+  //   OPENROUTER_API_KEY
 }
