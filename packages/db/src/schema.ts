@@ -7,6 +7,7 @@
 // second schema file to keep in sync any more.
 
 import { relations, sql } from "drizzle-orm";
+import type { DeltaOp } from "./delta";
 import {
   type AnyPgColumn,
   boolean,
@@ -256,9 +257,18 @@ export const notes = pgTable(
       .$type<{ label: string; tone: string }[]>()
       .notNull()
       .default([]),
+    // Legacy hand-rolled block model. Kept for notes not yet re-saved through
+    // the Quill editor — `repo.ts` converts these to `body` on read.
     blocks: jsonb("blocks").$type<unknown[]>().notNull().default([]),
+    // The note body as a Quill Delta (the bare `ops` array).
+    body: jsonb("body").$type<DeltaOp[]>().notNull().default([]),
+    // AI-drafted suggestions, shown in the note's right sidebar.
+    suggestions: jsonb("suggestions")
+      .$type<{ id: string; kind: string; text: string; ref?: string }[]>()
+      .notNull()
+      .default([]),
     sources: jsonb("sources")
-      .$type<{ n: number; label: string; cited: boolean }[]>()
+      .$type<{ n: number; label: string; cited: boolean; url?: string }[]>()
       .notNull()
       .default([]),
     links: jsonb("links")

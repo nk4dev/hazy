@@ -5,11 +5,12 @@ import { api } from "@/lib/api";
 import type { Item } from "@/lib/types";
 import { Icon } from "./icon";
 
+export type CiteTarget = { title: string; site: string; url: string };
+
 /**
  * The "つづきを書く" box. Auto-grows, submits on Enter, and — when you type `@` —
- * pops a predictive list of your saved URLs. Picking one inserts `[n]` and calls
- * `onCite`, which registers the URL as a source of the note and returns its
- * citation number.
+ * pops a predictive list of your saved URLs. Picking one inserts a
+ * `[title](url)` link and calls `onCite` so the note records it as a source.
  */
 export function CiteBox({
   value,
@@ -21,7 +22,7 @@ export function CiteBox({
   value: string;
   onChange: (v: string) => void;
   onSubmit: () => void;
-  onCite: (label: string, url: string) => number;
+  onCite: (target: CiteTarget) => void;
   placeholder?: string;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
@@ -49,15 +50,22 @@ export function CiteBox({
     const q = query.toLowerCase();
     return items
       .filter((it) => !q || `${it.title} ${it.site} ${it.url}`.toLowerCase().includes(q))
-      .slice(0, 6);
+      .slice(0, 8);
   }, [items, query]);
 
-  /** Look for an `@token` immediately before the caret. */
+  // An `@token` at the caret: after a space or line start, so `foo@bar.com`
+  // and `@decorator` mid-word don't trigger it. `pick` uses the same match so
+  // the two never disagree about which `@` to replace.
+  const TRIGGER = /(?:^|\s)@([^\s@[\]]*)$/;
+
+  /** Reads the live DOM value, not the `value` prop (which lags a render
+   * behind a keystroke). */
   function scan() {
     const el = ref.current;
     if (!el) return;
-    const caret = el.selectionStart ?? value.length;
-    const m = value.slice(0, caret).match(/(?:^|\s)@([^\s@[\]]*)$/);
+    const text = el.value;
+    const caret = el.selectionStart ?? text.length;
+    const m = text.slice(0, caret).match(TRIGGER);
     if (m) {
       setQuery(m[1]);
       setSel(0);
@@ -69,13 +77,15 @@ export function CiteBox({
   function pick(it: Item) {
     const el = ref.current;
     if (!el) return;
-    const caret = el.selectionStart ?? value.length;
-    const before = value.slice(0, caret);
-    const at = before.lastIndexOf("@");
-    if (at < 0) return;
-    const n = onCite(`${it.title} — ${it.site}`, it.url);
-    const token = `[${n}] `;
-    const next = before.slice(0, at) + token + value.slice(caret);
+    const text = el.value;
+    const caret = el.selectionStart ?? text.length;
+    const m = text.slice(0, caret).match(TRIGGER);
+    if (!m) return;
+    const at = caret - m[0].length + m[0].indexOf("@"); // the trigger `@`, not any earlier one
+    onCite({ title: it.title, site: it.site, url: it.url });
+    // Inline markdown link — rendered as a clickable title, editable as text.
+    const token = `[${it.title}](${it.url}) `;
+    const next = text.slice(0, at) + token + text.slice(caret);
     onChange(next);
     setQuery(null);
     requestAnimationFrame(() => {
@@ -97,11 +107,11 @@ export function CiteBox({
         value={value}
         onChange={(e) => {
           onChange(e.target.value);
-          // let state settle, then read caret
-          requestAnimationFrame(scan);
+          scan();
         }}
         onClick={scan}
         onKeyUp={(e) => {
+          // caret-only keys — value-changing keys are covered by onChange
           if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) scan();
         }}
         onKeyDown={(e) => {
@@ -118,7 +128,7 @@ export function CiteBox({
             }
             if (e.key === "Enter" || e.key === "Tab") {
               e.preventDefault();
-              pick(results[sel]);
+              if (results[sel]) pick(results[sel]);
               return;
             }
             if (e.key === "Escape") {

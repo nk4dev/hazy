@@ -13,7 +13,7 @@ import {
   useDeleteAskThreadMutation,
 } from "@/hooks/use-ask";
 import { Link, useRouter } from "@/i18n/navigation";
-import type { AskCitationDTO, AskMessageDTO } from "@/types/api";
+import type { AskCitationDTO, AskMessageDTO } from "@repo/api-client";
 
 function CitationCard({ citation }: { citation: AskCitationDTO }) {
   return (

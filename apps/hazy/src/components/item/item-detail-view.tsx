@@ -1,6 +1,5 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Clock, ExternalLink, Loader2, NotebookPen, RefreshCw, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -11,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useItemQuery, useRefetchItemMutation } from "@/hooks/use-item";
 import { useDeleteItemMutation } from "@/hooks/use-items";
+import { useSetReadLaterStatus } from "@/hooks/use-read-later";
 import { useRouter } from "@/i18n/navigation";
 
 export function ItemDetailView({ id }: { id: string }) {
@@ -19,23 +19,16 @@ export function ItemDetailView({ id }: { id: string }) {
   const refetch = useRefetchItemMutation(id);
   const del = useDeleteItemMutation();
   const router = useRouter();
-  const queryClient = useQueryClient();
 
-  const readLaterMutation = useMutation({
-    mutationFn: async (status: "inbox" | "archived") => {
-      const res = await fetch(`/api/v1/read-later/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (!res.ok) throw new Error("Failed to update read later");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["read-later"] });
-      toast.success(t("readLater"));
-    },
-  });
+  const setReadLaterStatus = useSetReadLaterStatus();
+  const readLaterMutation = {
+    mutate: (status: "inbox" | "archived") =>
+      setReadLaterStatus.mutate(
+        { itemId: id, status },
+        { onSuccess: () => toast.success(t("readLater")) }
+      ),
+    isPending: setReadLaterStatus.isPending,
+  };
 
   if (isLoading) {
     return (

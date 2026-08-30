@@ -1,48 +1,25 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useHazyClient } from "@repo/api-client/react";
+import type { MeDTO, UserPreferencesDTO } from "@repo/api-client";
 
-type Preferences = {
-  interfaceLocale: "en" | "ja";
-  answerLanguageMode: "interface" | "source";
-  notifyReadLaterDigest: boolean;
-  notifyWeeklyStats: boolean;
-};
-
-type Me = {
-  id: string;
-  email: string | null;
-  displayName: string | null;
-  avatarUrl: string | null;
-  preferences: Preferences;
-};
-
-type ApiEnvelope<T> = { data: T } | { error: { code: string; message: string } };
-
-async function unwrap<T>(res: Response): Promise<T> {
-  const body: ApiEnvelope<T> = await res.json();
-  if ("error" in body) throw new Error(body.error.message);
-  return body.data;
-}
+export type Preferences = UserPreferencesDTO;
+export type Me = MeDTO;
 
 export function useMeQuery() {
+  const client = useHazyClient();
   return useQuery({
     queryKey: ["me"],
-    queryFn: async () => unwrap<Me>(await fetch("/api/v1/me")),
+    queryFn: () => client.me.get(),
   });
 }
 
 export function useUpdatePreferencesMutation() {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (patch: Partial<Preferences>) =>
-      unwrap(
-        await fetch("/api/v1/me", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(patch),
-        })
-      ),
+    mutationFn: (patch: Partial<Preferences>) => client.me.updatePreferences(patch),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["me"] }),
   });
 }

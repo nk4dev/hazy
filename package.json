@@ -15,7 +15,9 @@
     "db:studio": "turbo run db:studio",
     "cf:build": "turbo run cf:build",
     "cf:deploy": "turbo run cf:deploy",
-    "cf:preview": "turbo run cf:preview"
+    "cf:preview": "turbo run cf:preview",
+    "deploy": "turbo run deploy",
+    "preview": "turbo run preview"
   },
   "devDependencies": {
     "turbo": "^2"

@@ -1,71 +1,50 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AskMessageDTO, AskResponseDTO, AskThreadDTO } from "@/types/api";
+import { useHazyClient } from "@repo/api-client/react";
 
-type ApiEnvelope<T> = { data: T } | { error: { code: string; message: string } };
-
-async function unwrap<T>(res: Response): Promise<T> {
-  const body: ApiEnvelope<T> = await res.json();
-  if ("error" in body) throw new Error(body.error.message);
-  return body.data;
-}
+export type AskInput = { question: string; collectionIds?: string[] };
 
 export function useAskThreadsQuery() {
+  const client = useHazyClient();
   return useQuery({
     queryKey: ["ask", "threads"],
-    queryFn: async () => unwrap<{ items: AskThreadDTO[] }>(await fetch("/api/v1/ask/threads")),
+    queryFn: () => client.ask.threads(),
   });
 }
 
 export function useAskThreadQuery(threadId: string | null) {
+  const client = useHazyClient();
   return useQuery({
     queryKey: ["ask", "threads", threadId],
-    queryFn: async () =>
-      unwrap<{ thread: AskThreadDTO; messages: AskMessageDTO[] }>(
-        await fetch(`/api/v1/ask/threads/${threadId}`)
-      ),
+    queryFn: ({ signal }) => client.ask.thread(threadId as string, signal),
     enabled: Boolean(threadId),
   });
 }
 
-export type AskInput = { question: string; collectionIds?: string[] };
-
 export function useAskMutation() {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ question, collectionIds }: AskInput) =>
-      unwrap<AskResponseDTO>(
-        await fetch("/api/v1/ask", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, collectionIds }),
-        })
-      ),
+    mutationFn: (input: AskInput) => client.ask.ask(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ask", "threads"] }),
   });
 }
 
 export function useDeleteAskThreadMutation() {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (threadId: string) =>
-      unwrap<{ id: string }>(await fetch(`/api/v1/ask/threads/${threadId}`, { method: "DELETE" })),
+    mutationFn: (threadId: string) => client.ask.deleteThread(threadId),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ask", "threads"] }),
   });
 }
 
 export function useAskFollowUpMutation(threadId: string) {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ question, collectionIds }: AskInput) =>
-      unwrap<AskResponseDTO>(
-        await fetch(`/api/v1/ask/threads/${threadId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question, collectionIds }),
-        })
-      ),
+    mutationFn: (input: AskInput) => client.ask.followUp(threadId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ask", "threads", threadId] });
       queryClient.invalidateQueries({ queryKey: ["ask", "threads"] });

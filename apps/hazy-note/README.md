@@ -7,7 +7,7 @@ URLの霧を、自分の言葉に落とすまでの一本道 — 取り込み �
 
 ## 技術構成
 
-- **Next.js 15** (App Router) + **React 19** + **TypeScript**
+- **Next.js 16** (App Router, Turbopack) + **React 19** + **TypeScript**
 - **Tailwind CSS v4** — Nocturne デザイントークンを `app/globals.css` の `@theme` に移植。
   DS のコンポーネントクラス (`.btn` / `.card` / `.tag` / `.seg` / `.table` …) は
   トークンベースのまま `@layer components` にポート。

@@ -53,6 +53,7 @@ export interface NoteSourceRef {
   n: number;
   label: string;
   cited: boolean;
+  url?: string;
 }
 
 export interface NoteLink {

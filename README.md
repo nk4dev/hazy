@@ -5,8 +5,8 @@ tenant, one database.
 
 | | |
 |---|---|
-| `apps/hazy` | Save URLs, search your reading, ask questions about it, read-later digest. Next 16, next-intl (en/ja). |
-| `apps/hazy-note` | Turn saved URLs into your own writing: capture → organise → notes → compare → graph → export. Next 15. |
+| `apps/hazy` | Save URLs, search your reading, ask questions about it, read-later digest. Next 16 (Turbopack), next-intl (en/ja). |
+| `apps/hazy-note` | Turn saved URLs into your own writing: capture → organise → notes → compare → graph → export. Next 16. |
 | `packages/db` | `@repo/db` — the single Drizzle schema + client + migrations + search-vector trigger. See `packages/db/README.md`. |
 
 Both apps resolve the signed-in Clerk user to a `users` row by `clerk_id`; same
@@ -29,8 +29,8 @@ Local Postgres for development: `apps/hazy-note/scripts/localdb.sh start`
 
 | Task | |
 |---|---|
-| `dev` | Both dev servers (`--filter=hazy` / `--filter=hazy-note` for one) |
-| `build` | `next build` for both |
+| `dev` | Both dev servers, Turbopack (`--filter=hazy` / `--filter=hazy-note` for one) |
+| `build` | `next build --turbopack` for both |
 | `lint` | Biome |
 | `check-types` | `tsc --noEmit` across all three packages |
 | `db:generate` / `db:migrate` / `db:push` / `db:trigger` / `db:studio` | `@repo/db`, driven by `packages/db/.env.local` |
@@ -46,3 +46,9 @@ transparently switches to the postgres.js TCP driver instead.
 Deploy one: `bun run cf:deploy --filter=hazy` (needs `wrangler login` +
 `apps/hazy/.dev.vars` for `cf:preview`). Or point Cloudflare Workers Builds at
 each app dir with build `bunx turbo run cf:build --filter=<app>`.
+
+`next.config.ts` in each app externalizes `drizzle-orm` etc. from the server
+bundle **only for the production/Worker build** (`PHASE_PRODUCTION_BUILD`) —
+Turbopack's dev server can't resolve a package externalized through the
+`@repo/db` workspace package, and the size win only matters for the 3 MiB
+Worker limit.

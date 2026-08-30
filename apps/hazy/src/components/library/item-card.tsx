@@ -1,6 +1,6 @@
 import { Favicon } from "@/components/favicon";
 import { Link } from "@/i18n/navigation";
-import type { SavedUrlDTO } from "@/types/api";
+import type { SavedUrlDTO } from "@repo/api-client";
 
 export function ItemCard({ item }: { item: SavedUrlDTO }) {
   return (

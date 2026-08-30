@@ -2,64 +2,42 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale } from "next-intl";
-import type { CollectionDTO, SavedUrlDTO } from "@/types/api";
-
-type ApiEnvelope<T> = { data: T } | { error: { code: string; message: string } };
-
-async function unwrap<T>(res: Response): Promise<T> {
-  const body: ApiEnvelope<T> = await res.json();
-  if ("error" in body) throw new Error(body.error.message);
-  return body.data;
-}
+import { useHazyClient } from "@repo/api-client/react";
+import type { CollectionDetailDTO, CollectionSummaryDTO } from "@repo/api-client";
 
 export function useCollectionsQuery() {
+  const client = useHazyClient();
   return useQuery({
     queryKey: ["collections"],
-    queryFn: async () => unwrap<{ items: CollectionDTO[] }>(await fetch("/api/v1/collections")),
+    queryFn: () => client.collections.list(),
   });
 }
 
 export function useCollectionQuery(id: string) {
+  const client = useHazyClient();
   return useQuery({
     queryKey: ["collections", id],
-    queryFn: async () =>
-      unwrap<CollectionDTO & { items: SavedUrlDTO[] }>(await fetch(`/api/v1/collections/${id}`)),
+    queryFn: ({ signal }) => client.collections.get(id, signal),
     enabled: Boolean(id),
   });
 }
 
 export function useCreateCollectionMutation() {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { name: string; description?: string }) =>
-      unwrap<CollectionDTO>(
-        await fetch("/api/v1/collections", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input),
-        })
-      ),
+    mutationFn: (input: { name: string; description?: string }) =>
+      client.collections.create(input),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["collections"] }),
   });
 }
 
 export function useAddToCollectionMutation() {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      collectionId,
-      savedUrlId,
-    }: {
-      collectionId: string;
-      savedUrlId: string;
-    }) =>
-      unwrap(
-        await fetch(`/api/v1/collections/${collectionId}/items`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ savedUrlId }),
-        })
-      ),
+    mutationFn: ({ collectionId, savedUrlId }: { collectionId: string; savedUrlId: string }) =>
+      client.collections.addItem(collectionId, savedUrlId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
@@ -68,22 +46,15 @@ export function useAddToCollectionMutation() {
 }
 
 export function useSummarizeCollectionMutation(id: string) {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   const locale = useLocale();
   return useMutation({
-    mutationFn: async () =>
-      unwrap<{ summary: string; summaryUpdatedAt: string }>(
-        await fetch(`/api/v1/collections/${id}/summarize`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locale }),
-        })
-      ),
-    onSuccess: (data) => {
+    mutationFn: () => client.collections.summarize(id, locale as "en" | "ja"),
+    onSuccess: (data: CollectionSummaryDTO) => {
       queryClient.setQueryData(
         ["collections", id],
-        (prev: (CollectionDTO & { items: SavedUrlDTO[] }) | undefined) =>
-          prev ? { ...prev, ...data } : prev
+        (prev: CollectionDetailDTO | undefined) => (prev ? { ...prev, ...data } : prev)
       );
       queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
@@ -91,20 +62,11 @@ export function useSummarizeCollectionMutation(id: string) {
 }
 
 export function useRemoveFromCollectionMutation() {
+  const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({
-      collectionId,
-      savedUrlId,
-    }: {
-      collectionId: string;
-      savedUrlId: string;
-    }) =>
-      unwrap(
-        await fetch(`/api/v1/collections/${collectionId}/items/${savedUrlId}`, {
-          method: "DELETE",
-        })
-      ),
+    mutationFn: ({ collectionId, savedUrlId }: { collectionId: string; savedUrlId: string }) =>
+      client.collections.removeItem(collectionId, savedUrlId),
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });

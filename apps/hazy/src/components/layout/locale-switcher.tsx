@@ -1,5 +1,6 @@
 "use client";
 
+import { useHazyClient } from "@repo/api-client/react";
 import { Languages } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTransition } from "react";
@@ -23,17 +24,14 @@ export function LocaleSwitcher() {
   const t = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
+  const client = useHazyClient();
   const [isPending, startTransition] = useTransition();
 
   function setLocale(next: string) {
     startTransition(() => {
       router.replace(pathname, { locale: next });
       // Best-effort persist; ignored if not signed in yet.
-      fetch("/api/v1/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ interfaceLocale: next }),
-      }).catch(() => {});
+      client.me.updatePreferences({ interfaceLocale: next as "en" | "ja" }).catch(() => {});
     });
   }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CiteBox } from "@/components/cite-box";
+import { CiteBox, type CiteTarget } from "@/components/cite-box";
 import { Icon } from "@/components/icon";
 import { Loading, Spinner } from "@/components/loading";
 import { Button } from "@/components/ui";
@@ -114,21 +114,14 @@ export function NoteClient({ id }: { id?: string }) {
     });
   }
 
-  /** Register a URL as a source of this note; returns its `[n]` number. */
-  function cite(label: string, url: string): number {
+  /** Record an `@`-cited URL as a source of this note. */
+  function cite(t: CiteTarget) {
     const base = noteRef.current;
-    if (!base) return 0;
-    const existing = base.sources.find((s) => s.label === label || s.label.startsWith(`${label} `));
-    if (existing) {
-      if (!existing.cited) {
-        mutate({ sources: base.sources.map((s) => (s === existing ? { ...s, cited: true } : s)) });
-      }
-      return existing.n;
-    }
+    if (!base) return;
+    const label = `${t.title} — ${t.site}`;
+    if (base.sources.some((s) => s.url === t.url || s.label === label)) return;
     const n = base.sources.reduce((m, s) => Math.max(m, s.n), 0) + 1;
-    mutate({ sources: [...base.sources, { n, label, cited: true }] });
-    void url;
-    return n;
+    mutate({ sources: [...base.sources, { n, label, cited: true, url: t.url }] });
   }
 
   function editBlockText(i: number, text: string) {
@@ -312,17 +305,32 @@ export function NoteClient({ id }: { id?: string }) {
           {note.sources.length === 0 && (
             <div className="text-[12px] text-text/40">まだありません</div>
           )}
-          {note.sources.map((s) => (
-            <div
-              key={s.n}
-              className={`flex gap-[7px] text-[12px] leading-[1.45] ${
-                s.cited ? "opacity-75" : "opacity-50"
-              }`}
-            >
-              <span className={s.cited ? "text-accent" : ""}>{s.n}</span>
-              {s.label}
-            </div>
-          ))}
+          {note.sources.map((s) => {
+            const body = (
+              <>
+                <span className={s.cited ? "text-accent" : ""}>{s.n}</span>
+                <span className="min-w-0 flex-1">{s.label}</span>
+              </>
+            );
+            const cls = `flex gap-[7px] text-[12px] leading-[1.45] ${
+              s.cited ? "opacity-75" : "opacity-50"
+            }`;
+            return s.url ? (
+              <a
+                key={s.n}
+                href={s.url}
+                target="_blank"
+                rel="noreferrer"
+                className={`${cls} no-underline hover:opacity-100 hover:underline`}
+              >
+                {body}
+              </a>
+            ) : (
+              <div key={s.n} className={cls}>
+                {body}
+              </div>
+            );
+          })}
         </Panel>
 
         {note.links.length > 0 && (
@@ -367,6 +375,33 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
       {children}
     </div>
   );
+}
+
+const LINK_RE = /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+/** Render `[title](https://…)` markdown links as clickable titles (new tab). */
+function RichText({ text }: { text: string }) {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(LINK_RE)) {
+    const i = m.index ?? 0;
+    if (i > last) out.push(text.slice(last, i));
+    out.push(
+      <a
+        key={`${i}-${m[2]}`}
+        href={m[2]}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        className="text-accent underline decoration-accent/40 underline-offset-2 transition-colors hover:decoration-accent"
+      >
+        {m[1]}
+      </a>,
+    );
+    last = i + m[0].length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return <>{out}</>;
 }
 
 function DeleteHandle({ onDelete }: { onDelete: () => void }) {
@@ -457,7 +492,7 @@ function Block({
         }}
       >
         <DeleteHandle onDelete={onDelete} />
-        {block.text}
+        <RichText text={block.text} />
         {block.refs && <sup className="ml-[2px] text-[11px] text-accent">{block.refs}</sup>}
       </div>
     );
@@ -467,7 +502,9 @@ function Block({
     return (
       <figure className="group relative m-0 flex flex-col gap-[7px] rounded-lg bg-surface px-4 py-[14px] shadow-[0_0_0_1px_var(--color-neutral-900)]">
         <DeleteHandle onDelete={onDelete} />
-        <blockquote className="m-0 text-[14.5px] leading-[1.7] opacity-90">{block.text}</blockquote>
+        <blockquote className="m-0 text-[14.5px] leading-[1.7] opacity-90">
+          <RichText text={block.text} />
+        </blockquote>
         <figcaption className="m-0 flex items-center gap-[7px] text-[12px]">
           <Icon name="quotes" size={13} className="text-accent" />
           {block.cite}

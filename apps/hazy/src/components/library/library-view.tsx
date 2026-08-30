@@ -12,7 +12,7 @@ import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
 import { useItemsQuery } from "@/hooks/use-items";
 import { useSearchQuery } from "@/hooks/use-search";
 import { useViewMode, type ViewMode } from "@/hooks/use-view-mode";
-import type { SavedUrlDTO } from "@/types/api";
+import type { SavedUrlDTO } from "@repo/api-client";
 
 function ItemList({ items, view }: { items: SavedUrlDTO[]; view: ViewMode }) {
   if (view === "grid") {

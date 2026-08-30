@@ -13,7 +13,7 @@ import {
   useSetReadLaterStatus,
 } from "@/hooks/use-read-later";
 import { Link } from "@/i18n/navigation";
-import type { SavedUrlDTO } from "@/types/api";
+import type { SavedUrlDTO } from "@repo/api-client";
 
 function ReadLaterRow({ item }: { item: SavedUrlDTO }) {
   const t = useTranslations("readLater");

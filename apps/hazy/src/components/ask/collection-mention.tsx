@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useCollectionQuery, useCollectionsQuery } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";
-import type { CollectionDTO } from "@/types/api";
+import type { CollectionDTO } from "@repo/api-client";
 
 // Matches a trailing "@partial" token (start of string or after whitespace)
 // in the text before the caret — the trigger for the collection menu.

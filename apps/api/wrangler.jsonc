@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "hazy-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-14",
+  // nodejs_compat: `process.env` is populated from vars/secrets, and the
+  //   drizzle / postgres / openai / chesario stacks resolve their node polyfills.
+  // global_fetch_strictly_public: SSRF guard — `fetchUrlMetadata` fetches
+  //   arbitrary user-supplied URLs; this blocks Worker -> private-IP requests.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "routes": [{ "pattern": "api.hz.nknighta.me", "custom_domain": true }],
+  "observability": { "enabled": true },
+  "vars": {
+    "NEXT_PUBLIC_APP_URL": "https://hz.nknighta.me",
+    "CORS_ALLOWED_ORIGINS": "https://hz.nknighta.me",
+    "OPENROUTER_MODEL_ID": "google/gemma-4-26b-a4b-it:free",
+    "OPENROUTER_SITE_URL": "https://hz.nknighta.me",
+    "OPENROUTER_APP_NAME": "Hazy"
+  }
+  // Secrets (set via `wrangler secret put` from apps/api/):
+  //   DATABASE_URL, CLERK_SECRET_KEY, CLERK_WEBHOOK_SIGNING_SECRET,
+  //   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, OPENROUTER_API_KEY
+}

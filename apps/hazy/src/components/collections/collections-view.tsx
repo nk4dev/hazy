@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCollectionsQuery, useCreateCollectionMutation } from "@/hooks/use-collections";
 import { Link } from "@/i18n/navigation";
-import type { CollectionDTO } from "@/types/api";
+import type { CollectionDTO } from "@repo/api-client";
 
 export function CollectionsView() {
   const t = useTranslations("collections");

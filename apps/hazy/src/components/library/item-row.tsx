@@ -5,7 +5,7 @@ import { Favicon } from "@/components/favicon";
 import { Button } from "@/components/ui/button";
 import { useSummarizeItemMutation } from "@/hooks/use-item";
 import { Link } from "@/i18n/navigation";
-import type { SavedUrlDTO } from "@/types/api";
+import type { SavedUrlDTO } from "@repo/api-client";
 
 export function ItemRow({
   item,

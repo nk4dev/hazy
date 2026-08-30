@@ -1,7 +1,7 @@
+import { auth } from "@clerk/nextjs/server";
 import { Header } from "@/components/layout/header";
 import { MobileTabBar } from "@/components/layout/mobile-tab-bar";
 import { redirect } from "@/i18n/navigation";
-import { getOptionalUser } from "@/lib/auth/current-user";
 
 export default async function AppLayout({
   children,
@@ -11,8 +11,8 @@ export default async function AppLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const user = await getOptionalUser();
-  if (!user) {
+  const { userId } = await auth();
+  if (!userId) {
     redirect({ href: "/sign-in", locale });
   }
 

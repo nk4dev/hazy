@@ -1,11 +1,6 @@
 import type { CoreService } from "@/lib/env";
 
 const SERVICE_INFO: Record<CoreService, { label: string; vars: string[]; signupUrl: string }> = {
-  database: {
-    label: "Postgres database (any provider — Neon is a free option)",
-    vars: ["DATABASE_URL"],
-    signupUrl: "https://neon.tech",
-  },
   clerk: {
     label: "Clerk (authentication)",
     vars: ["NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"],

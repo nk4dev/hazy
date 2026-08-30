@@ -15,7 +15,9 @@
     "NEXT_PUBLIC_CLERK_SIGN_IN_FORCE_REDIRECT_URL",
     "NEXT_PUBLIC_CLERK_SIGN_UP_FORCE_REDIRECT_URL",
     "NEXT_PUBLIC_APP_URL",
-    "NEXT_PUBLIC_HAZY_NOTE_URL"
+    "NEXT_PUBLIC_HAZY_NOTE_URL",
+    "NEXT_PUBLIC_API_URL",
+    "CORS_ALLOWED_ORIGINS"
   ],
   "tasks": {
     "build": {
@@ -42,6 +44,8 @@
       "inputs": ["$TURBO_DEFAULT$", ".env", ".env.*"]
     },
     "cf:deploy": { "cache": false, "dependsOn": ["cf:build"] },
-    "cf:preview": { "cache": false, "dependsOn": ["cf:build"] }
+    "cf:preview": { "cache": false, "dependsOn": ["cf:build"] },
+    "deploy": { "cache": false, "dependsOn": ["check-types"] },
+    "preview": { "cache": false, "persistent": true }
   }
 }
