@@ -74,7 +74,8 @@ components/      Sidebar, UI プリミティブ (Button/Tag/Seg), Icon
 lib/            types / ai / extract / api(クライアント fetch)
 lib/db/         index.ts (= @repo/db の getDb) / repo.ts / current-user.ts / seed.ts
 design-source/  元の Claude Design プロジェクト（Hazy Note.dc.html ほか）
-scripts/localdb.sh   隔離開発用のローカル PG（`127.0.0.1:5433`）
+scripts/localdb.sh       隔離開発用のローカル PG（`127.0.0.1:5433`）
+scripts/sync-from-neon.sh  Neon（本番）のデータをローカル DB にコピー（`NEON_DATABASE_URL=… scripts/sync-from-neon.sh`）
 ```
 
 スキーマ・マイグレーション・`db:*` スクリプトは `packages/db`（`packages/db/README.md`）。
