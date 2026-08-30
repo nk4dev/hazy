@@ -1,0 +1,46 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M1857S9NKW8AKMC1TDT7D52N",
+  "strategy": "manual-commit",
+  "branch": "dev",
+  "checkpoints_count": 2,
+  "files_touched": [
+    "apps/hazy-note/app/(app)/notes/[id]/note-client.tsx",
+    "apps/hazy-note/app/(app)/notes/page.tsx",
+    "apps/hazy-note/app/api/notes/[id]/route.ts",
+    "apps/hazy-note/app/api/notes/[id]/suggestion/route.ts",
+    "apps/hazy-note/app/api/notes/route.ts",
+    "apps/hazy-note/app/globals.css",
+    "apps/hazy-note/components/cite-box.tsx",
+    "apps/hazy-note/components/note-editor.tsx",
+    "apps/hazy-note/lib/ai.ts",
+    "apps/hazy-note/lib/api.ts",
+    "apps/hazy-note/lib/db/repo.ts",
+    "apps/hazy-note/lib/note-delta.ts",
+    "apps/hazy-note/lib/types.ts",
+    "packages/db/src/delta.ts"
+  ],
+  "sessions": [
+    {
+      "metadata": "/0/metadata.json",
+      "transcript": "/0/full.jsonl",
+      "compact_transcript": "/0/transcript.jsonl",
+      "content_hash": "/0/content_hash.txt",
+      "prompt": "/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 120,
+    "cache_creation_tokens": 63623,
+    "cache_read_tokens": 26187277,
+    "output_tokens": 48102,
+    "api_call_count": 60,
+    "subagent_tokens": {
+      "input_tokens": 0,
+      "cache_creation_tokens": 0,
+      "cache_read_tokens": 0,
+      "output_tokens": 0,
+      "api_call_count": 0
+    }
+  }
+}
