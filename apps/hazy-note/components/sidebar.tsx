@@ -14,7 +14,6 @@ const NAV = [
   { href: "/library", icon: "tray", label: "受信箱" },
   { href: "/capture", icon: "link", label: "取り込み" },
   { href: "/compare", icon: "columns", label: "比較ボード" },
-  { href: "/graph", icon: "graph", label: "つながり" },
   { href: "/export", icon: "export", label: "書き出す" },
 ];
 

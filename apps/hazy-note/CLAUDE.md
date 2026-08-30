@@ -1,7 +1,8 @@
 # hazy-note
 
 `note.hz.nknighta.me` — Next 16 (App Router, Turbopack). Capture → notes →
-compare → graph → export. See `README.md`.
+compare → export. See `README.md`. (`/graph` "つながり" was removed — the
+`graph_snapshots` table stays in `@repo/db` but nothing reads it.)
 
 # Backend
 

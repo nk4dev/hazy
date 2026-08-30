@@ -40,8 +40,10 @@ bun run dev --filter=hazy-note # この app だけ
 | `/capture` | s2 | 取り込みの3コマ（読み取り中 → 要約とタグの提案 → 保存後の次の一手）。`URL` タブ＝新規URL、`Hazyから追加` タブ＝接続中のDB(`saved_urls`)に入っている自分のURL一覧から選ぶ（`/library` の「Hazyから」ボタン or `/capture?from=hazy` で直接開く） |
 | `/notes` , `/notes/[id]` | s3 | **主要機能。** Quill（bubble テーマ）のリッチテキストエディタ。本文は Delta として `notes.body` に保存（旧 `blocks` のノートは開いた時に変換）。`@` で保存済み URL を引用（リンク挿入＋出典登録）、タグ・状態編集、AI 提案は右サイドバー（本文に採る／消す） |
 | `/compare` | s4 | 比較ボード。出典×軸の表、食い違いだけアクセント、差分のまとめ |
-| `/graph` | s5 | つながり。SVGグラフ、線を選んで統合／仮説を消す |
 | `/export` | s6 | 書き出す。形式切替（ブログ／メモ／要点）、どこから来たかの対応表 |
+
+> `/graph`（s5「つながり」）はいったん廃止（新機能のため）。`graph_snapshots`
+> テーブルとスキーマは残置。
 
 ## API
 
@@ -61,7 +63,6 @@ PATCH  /api/notes/:id  {body,suggestions,...} ノート本文（Quill Delta）�
 POST   /api/notes/:id/suggestion  {id, action: "accept"|"dismiss"}
 GET    /api/compare                   比較ボード
 POST   /api/compare                   差分のまとめ（固定文）
-GET    /api/graph
 GET    /api/export?noteId=&format=blog|memo|bullets
 POST   /api/export        {noteId,format}
 ```

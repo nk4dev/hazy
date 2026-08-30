@@ -3,7 +3,7 @@
 // stand-in built from the same input so the app never hard-fails on AI.
 
 import { chatJSON, LLMError, llmConfigured } from "./llm";
-import type { CompareAxis, ExportDraft, ExportFormat, GraphEdge } from "./types";
+import type { CompareAxis, ExportDraft, ExportFormat } from "./types";
 
 /** Coerce a model's field to a clean string[] no matter what it actually sent. */
 function arr(v: unknown): string[] {
@@ -166,41 +166,6 @@ export async function synthesiseCompare(
       summary: "差分のまとめに失敗しました（AI応答なし）。",
       candidateAxes: [],
     };
-  }
-}
-
-// ── Graph: hypothesis connections ────────────────────────────
-export async function suggestConnections(
-  nodes: { id: string; label: string; text: string }[]
-): Promise<Pick<GraphEdge, "from" | "to" | "reason">[]> {
-  if (!llmConfigured() || nodes.length < 2) return [];
-  try {
-    const out = await chatJSON<{
-      edges: { from: string; to: string; reason: string }[];
-    }>([
-      {
-        role: "system",
-        content:
-          "ノートとソースの一覧から、まだ明示的に結ばれていない関連を推測する。" +
-          '返答は JSON のみ: {"edges":[{"from":id,"to":id,"reason":string}]}. ' +
-          "id は与えたものだけ。reason は日本語1文。多くても5本。",
-      },
-      {
-        role: "user",
-        content: JSON.stringify(
-          nodes.map((n) => ({ id: n.id, label: n.label, text: n.text.slice(0, 400) })),
-          null,
-          1
-        ),
-      },
-    ]);
-    const ids = new Set(nodes.map((n) => n.id));
-    return (Array.isArray(out.edges) ? out.edges : [])
-      .filter((e) => e && ids.has(e.from) && ids.has(e.to) && e.from !== e.to)
-      .slice(0, 5);
-  } catch (e) {
-    if (!(e instanceof LLMError)) throw e;
-    return [];
   }
 }
 

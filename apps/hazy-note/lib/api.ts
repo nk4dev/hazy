@@ -3,7 +3,6 @@ import type {
   Digest,
   ExportDraft,
   ExportFormat,
-  GraphData,
   Item,
   Note,
   Project,
@@ -71,8 +70,6 @@ export const api = {
   rebuildCompare: (projectId?: string) =>
     fetch("/api/compare", opts("POST", projectId ? { projectId } : {})).then(j<CompareBoard>),
 
-  graph: () => fetch("/api/graph", { cache: "no-store" }).then(j<GraphData>),
-  rebuildGraph: () => fetch("/api/graph", opts("POST")).then(j<GraphData>),
 
   export: (noteId: string, format: ExportFormat) =>
     fetch(`/api/export?noteId=${noteId}&format=${format}`, {

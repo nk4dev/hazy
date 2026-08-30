@@ -106,32 +106,6 @@ export interface CompareBoard {
   candidateAxes: string[];
 }
 
-export interface GraphNode {
-  id: string;
-  label: string;
-  kind: "note" | "tag" | "source";
-  x: number;
-  y: number;
-  r: number;
-  focus?: boolean;
-  unreadLabel?: string;
-}
-
-export interface GraphEdge {
-  id: string;
-  from: string;
-  to: string;
-  kind: "citation" | "hypothesis";
-  reason?: string;
-  title?: string;
-}
-
-export interface GraphData {
-  nodes: GraphNode[];
-  edges: GraphEdge[];
-  isolated: string[];
-}
-
 export interface Digest {
   unsorted: number;
   message: string;

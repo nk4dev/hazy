@@ -6,7 +6,7 @@ tenant, one database, one API.
 | | |
 |---|---|
 | `apps/hazy` | Save URLs, search your reading, ask questions about it, read-later digest. Pure frontend (Next 16, Turbopack, next-intl en/ja) — talks to `apps/api`. |
-| `apps/hazy-note` | Turn saved URLs into your own writing: capture → organise → notes (Quill editor) → compare → graph → export. Next 16. Still has its own `/api/*` route handlers. |
+| `apps/hazy-note` | Turn saved URLs into your own writing: capture → organise → notes (Quill editor) → compare → export. Next 16. Still has its own `/api/*` route handlers. |
 | `apps/api` | The hazy backend — a **Hono Worker** for `api.hz.nknighta.me`. Serves hazy's `/v1/**` JSON API + the Clerk webhook. See `apps/api/README.md`. |
 | `packages/api-client` | `@repo/api-client` — the typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types, shared by hazy and any future native client. |
 | `packages/db` | `@repo/db` — the single Drizzle schema + client + migrations + search-vector trigger. See `packages/db/README.md`. |

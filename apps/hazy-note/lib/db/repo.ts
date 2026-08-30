@@ -1,7 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import {
   rewriteForExport,
-  suggestConnections,
   summariseMemo,
   summariseSource,
   synthesiseCompare,
@@ -19,7 +18,6 @@ import type {
   Digest,
   ExportDraft,
   ExportFormat,
-  GraphData,
   Item,
   Note,
   NoteSuggestion,
@@ -714,123 +712,6 @@ export async function buildCompareBoard(userId: string, projectId?: string): Pro
     })
     .returning();
   return toCompare(row);
-}
-
-// ── Graph ──────────────────────────────────────────────────
-const GRAPH_W = 840;
-const GRAPH_H = 600;
-
-/** Deterministic ring layout so re-renders don't jump nodes around. */
-function ringLayout(n: number, i: number, radius: number) {
-  if (n === 1) return { x: GRAPH_W / 2, y: GRAPH_H / 2 };
-  const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-  return {
-    x: Math.round(GRAPH_W / 2 + Math.cos(a) * radius),
-    y: Math.round(GRAPH_H / 2 + Math.sin(a) * radius),
-  };
-}
-
-export async function buildGraph(userId: string): Promise<GraphData> {
-  const notes = await listNotes(userId);
-  const sourceRows = await db.query.savedUrls.findMany({
-    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.fetchStatus, "success")),
-    with: { collectionItems: true },
-    orderBy: (t, { desc }) => [desc(t.createdAt)],
-  });
-  const sources = sourceRows.map(toItem).slice(0, 12);
-
-  const noteIds = new Set(notes.map((n) => n.id));
-  const nodes: GraphData["nodes"] = [
-    ...notes.map((n, i) => ({
-      id: n.id,
-      label: n.title,
-      kind: "note" as const,
-      ...ringLayout(Math.max(notes.length, 1), i, notes.length > 3 ? 150 : 90),
-      r: 40,
-      focus: i === 0 && notes.length > 0,
-    })),
-    ...sources.map((s, i) => ({
-      id: s.id,
-      label: s.title,
-      kind: "source" as const,
-      ...ringLayout(Math.max(sources.length, 1), i, 250),
-      r: 26,
-    })),
-  ];
-
-  const edges: GraphData["edges"] = [];
-  // note → note links the user (or a prior AI pass) already recorded.
-  for (const n of notes) {
-    for (const l of n.links) {
-      if (noteIds.has(l.noteId) && n.id < l.noteId) {
-        edges.push({
-          id: `c-${n.id}-${l.noteId}`,
-          from: n.id,
-          to: l.noteId,
-          kind: "citation",
-          title: `${n.title} ↔ ${l.title}`,
-          reason: l.reason,
-        });
-      }
-    }
-  }
-  // source → note when the capture was filed against a note.
-  for (const s of sources) {
-    if (s.relatedNoteId && noteIds.has(s.relatedNoteId)) {
-      edges.push({
-        id: `c-${s.id}-${s.relatedNoteId}`,
-        from: s.id,
-        to: s.relatedNoteId,
-        kind: "citation",
-        title: `${s.title} → ノート`,
-      });
-    }
-  }
-  // AI-guessed connections between anything not already linked.
-  const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
-  const guesses = await suggestConnections([
-    ...notes.map((n) => ({
-      id: n.id,
-      label: n.title,
-      text: deltaToPlainText(n.body),
-    })),
-    ...sources.map((s) => ({ id: s.id, label: s.title, text: s.summary.join(" ") })),
-  ]);
-  for (const g of guesses) {
-    const key = [g.from, g.to].sort().join("-");
-    if (edges.some((e) => [e.from, e.to].sort().join("-") === key)) continue;
-    edges.push({ id: `h-${key}`, from: g.from, to: g.to, kind: "hypothesis", reason: g.reason });
-    linked.add(g.from);
-    linked.add(g.to);
-  }
-
-  const isolated = [...notes, ...sources]
-    .filter((x) => !linked.has(x.id) && !edges.some((e) => e.from === x.id || e.to === x.id))
-    .map((x) => ("title" in x ? x.title : ""))
-    .filter(Boolean);
-
-  await db
-    .insert(schema.graphSnapshots)
-    .values({ userId, nodes, edges, isolated })
-    .onConflictDoUpdate({
-      target: schema.graphSnapshots.userId,
-      set: { nodes, edges, isolated, updatedAt: new Date() },
-    });
-  return { nodes, edges, isolated };
-}
-
-export async function getGraph(userId: string): Promise<GraphData> {
-  const row = await db.query.graphSnapshots.findFirst({
-    where: (t, { eq }) => eq(t.userId, userId),
-  });
-  if (row) {
-    return {
-      nodes: row.nodes as GraphData["nodes"],
-      edges: row.edges as GraphData["edges"],
-      isolated: row.isolated as string[],
-    };
-  }
-  return buildGraph(userId);
 }
 
 // ── Export ─────────────────────────────────────────────────
