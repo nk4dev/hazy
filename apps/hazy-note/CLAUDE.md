@@ -11,6 +11,15 @@ over `@repo/db` (`lib/db/repo.ts` is the data layer, scoped by the internal
 `users.id` from `lib/db/current-user.ts`). Moving it behind `apps/api` is a
 follow-up — for now, edit the routes + `repo.ts` here.
 
+# Projects
+
+A "プロジェクト" is a `collections` row the user **creates deliberately** as a
+workspace to develop an idea — `/projects/[id]` shows its `description` (the
+idea), the sources filed under it (`collection_items`, via
+`updateItem(_, { projectId })`) and the notes under it (`notes.collectionId`).
+There is **no** tag-based auto-creation or auto-sort (removed), and no digest.
+`collections.tone` is now just a colour.
+
 # The note editor
 
 `/notes/[id]` uses **Quill 2** (`components/note-editor.tsx`, bubble theme). The

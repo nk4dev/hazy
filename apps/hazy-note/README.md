@@ -36,8 +36,9 @@ bun run dev --filter=hazy-note # この app だけ
 
 | ルート | 元 | 内容 |
 | --- | --- | --- |
-| `/library` | s1 | 受信箱。URL入力→取り込み、カード/リスト表示、プロジェクト・タグで絞り込み |
-| `/capture` | s2 | 取り込みの3コマ（読み取り中 → 要約とタグの提案 → 保存後の次の一手）。`URL` タブ＝新規URL、`Hazyから追加` タブ＝接続中のDB(`saved_urls`)に入っている自分のURL一覧から選ぶ（`/library` の「Hazyから」ボタン or `/capture?from=hazy` で直接開く） |
+| `/library` , `/library/[id]` | s1 | 受信箱。URL入力→取り込み、カード/リスト表示、タグ絞り込み。アイテムをクリックすると概要ページ（AIは走らない・要約は明示ボタン） |
+| `/capture` | s2 | 取り込みの3コマ（読み取り中 → 要約とタグの提案 → 保存後の次の一手）。`URL` タブ＝新規URL、`Hazyから追加` タブ＝接続中のDB(`saved_urls`)に入っている自分のURL一覧から選ぶ |
+| `/projects/[id]` | — | プロジェクト＝アイデアを練る場。ユーザーが自分で作成し、`description`（言いたいこと）を書き、出典を集め（`collection_items`）、ノートを紐づける（`notes.collection_id`）。タグからの自動生成・自動振り分けは廃止 |
 | `/notes` , `/notes/[id]` | s3 | **主要機能。** Quill（bubble テーマ）のリッチテキストエディタ。本文は Delta として `notes.body` に保存（旧 `blocks` のノートは開いた時に変換）。`@` で保存済み URL を引用（リンク挿入＋出典登録）、タグ・状態編集、AI 提案は右サイドバー（本文に採る／消す） |
 | `/compare` | s4 | 比較ボード。出典×軸の表、食い違いだけアクセント、差分のまとめ |
 | `/export` | s6 | 書き出す。形式切替（ブログ／メモ／要点）、どこから来たかの対応表 |
@@ -55,8 +56,12 @@ GET    /api/items/:id
 PATCH  /api/items/:id      {tags,projectId,...}
 DELETE /api/items/:id
 POST   /api/items/:id/read            読み取り完了（取得＋要約を流し込む）
-POST   /api/items/sort                「まとめて振り分け」
-GET    /api/projects  /api/tags  /api/digest
+GET    /api/projects                  プロジェクト一覧
+POST   /api/projects       {name,description?}
+GET    /api/projects/:id              プロジェクト詳細（出典・ノート込み）
+PATCH  /api/projects/:id   {name?,description?,tone?}
+DELETE /api/projects/:id
+GET    /api/tags
 GET    /api/notes  /api/notes/:id
 PATCH  /api/notes/:id  {text}                 段落を追記
 PATCH  /api/notes/:id  {body,suggestions,...} ノート本文（Quill Delta）ほかを更新

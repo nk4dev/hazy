@@ -1,11 +1,11 @@
 import type {
   CompareBoard,
-  Digest,
   ExportDraft,
   ExportFormat,
   Item,
   Note,
   Project,
+  ProjectDetail,
   Tag,
 } from "./types";
 
@@ -22,8 +22,6 @@ const opts = (method: string, body?: unknown): RequestInit => ({
 });
 
 export const api = {
-  digest: () => fetch("/api/digest", { cache: "no-store" }).then(j<Digest>),
-
   items: () => fetch("/api/items", { cache: "no-store" }).then(j<Item[]>),
   importable: () => fetch("/api/items/importable", { cache: "no-store" }).then(j<Item[]>),
   item: (id: string) => fetch(`/api/items/${id}`, { cache: "no-store" }).then(j<Item>),
@@ -33,13 +31,18 @@ export const api = {
   updateItem: (id: string, patch: Partial<Item>) =>
     fetch(`/api/items/${id}`, opts("PATCH", patch)).then(j<Item>),
   deleteItem: (id: string) => fetch(`/api/items/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
-  autoSort: () => fetch("/api/items/sort", opts("POST")).then(j<{ moved: number }>),
 
   projects: () => fetch("/api/projects", { cache: "no-store" }).then(j<Project[]>),
-  addProject: (name: string, tone: "accent" | "neutral" = "neutral") =>
-    fetch("/api/projects", opts("POST", { name, tone })).then(j<Project>),
-  updateProject: (id: string, patch: { name?: string; tone?: "accent" | "neutral" }) =>
-    fetch(`/api/projects/${id}`, opts("PATCH", patch)).then(j<Project>),
+  project: (id: string) =>
+    fetch(`/api/projects/${id}`, { cache: "no-store" }).then(j<ProjectDetail>),
+  addProject: (
+    name: string,
+    patch: { description?: string; tone?: "accent" | "neutral" } = {},
+  ) => fetch("/api/projects", opts("POST", { name, ...patch })).then(j<Project>),
+  updateProject: (
+    id: string,
+    patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" },
+  ) => fetch(`/api/projects/${id}`, opts("PATCH", patch)).then(j<Project>),
   deleteProject: (id: string) =>
     fetch(`/api/projects/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
   tags: () => fetch("/api/tags", { cache: "no-store" }).then(j<Tag[]>),

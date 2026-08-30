@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Loading } from "@/components/loading";
 import { Button } from "@/components/ui";
@@ -10,13 +10,16 @@ import type { CompareAxis, CompareBoard, Project } from "@/lib/types";
 
 export default function ComparePage() {
   const router = useRouter();
+  const [projectParam, setProjectParam] = useState<string | null>(null);
   const [board, setBoard] = useState<CompareBoard | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [extraAxes, setExtraAxes] = useState<CompareAxis[]>([]);
   const [showConfidence, setShowConfidence] = useState(true);
   const [rebuilding, setRebuilding] = useState(false);
+  const scopedTo = useRef<string | null>(null);
 
   useEffect(() => {
+    setProjectParam(new URLSearchParams(window.location.search).get("project"));
     api
       .compare()
       .then(setBoard)
@@ -26,6 +29,25 @@ export default function ComparePage() {
       .then(setProjects)
       .catch(() => {});
   }, []);
+
+  // ?project=<id> — rebuild the board scoped to that project once.
+  useEffect(() => {
+    if (!board || !projectParam || scopedTo.current === projectParam) return;
+    if (board.projectId === projectParam) {
+      scopedTo.current = projectParam;
+      return;
+    }
+    scopedTo.current = projectParam;
+    setRebuilding(true);
+    api
+      .rebuildCompare(projectParam)
+      .then((b) => {
+        setBoard(b);
+        setExtraAxes([]);
+      })
+      .catch(() => {})
+      .finally(() => setRebuilding(false));
+  }, [board, projectParam]);
 
   if (!board) return <Loading label="比較ボードを読み込んでいます" />;
 

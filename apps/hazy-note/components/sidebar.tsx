@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
-import type { Digest, Project, Tag as TagT } from "@/lib/types";
+import type { Project, Tag as TagT } from "@/lib/types";
 import { Icon } from "./icon";
 import { Tag } from "./ui";
 
@@ -22,8 +22,6 @@ export function Sidebar() {
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [tags, setTags] = useState<TagT[]>([]);
-  const [digest, setDigest] = useState<Digest | null>(null);
-  const [sorting, setSorting] = useState(false);
 
   const load = () => {
     api
@@ -34,29 +32,15 @@ export function Sidebar() {
       .tags()
       .then(setTags)
       .catch(() => {});
-    api
-      .digest()
-      .then(setDigest)
-      .catch(() => {});
   };
   useEffect(load, []);
 
-  async function sortAll() {
-    setSorting(true);
-    try {
-      await api.autoSort();
-      load();
-      router.refresh();
-    } finally {
-      setSorting(false);
-    }
-  }
-
   async function addProject() {
-    const name = window.prompt("プロジェクト名");
+    const name = window.prompt("プロジェクト名（あとで変更できます）");
     if (!name?.trim()) return;
-    await api.addProject(name.trim());
+    const created = await api.addProject(name.trim());
     load();
+    router.push(`/projects/${created.id}`);
   }
 
 
@@ -134,7 +118,7 @@ export function Sidebar() {
           {projects.map((p) => (
             <Link
               key={p.id}
-              href={`/library?project=${p.id}`}
+              href={`/projects/${p.id}`}
               target="_self"
               className="flex items-center gap-[9px] rounded-[7px] px-[10px] py-[6px] text-[13px] text-text no-underline hover:bg-white/[0.04]"
             >
@@ -150,7 +134,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="mt-auto flex flex-col gap-2">
         <div className="px-[10px] text-[10px] uppercase tracking-[0.1em] text-text/[0.38]">
           タグ
         </div>
@@ -166,19 +150,6 @@ export function Sidebar() {
           ))}
           {tags.length > 4 && <Tag tone="outline">+{tags.length - 4}</Tag>}
         </div>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-[7px] rounded-[9px] bg-surface p-3 shadow-[0_0_0_1px_var(--color-neutral-900)]">
-        <div className="text-[11px] text-text/50">今日の霧</div>
-        <div className="text-[12.5px] leading-[1.55]">{digest?.message ?? "…"}</div>
-        <button
-          className="btn btn-primary self-start px-[9px] py-[5px] text-[12px]"
-          onClick={sortAll}
-          disabled={sorting}
-        >
-          <Icon name="sparkle" />
-          {sorting ? "振り分け中…" : "まとめて振り分け"}
-        </button>
       </div>
     </aside>
   );

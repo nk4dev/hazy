@@ -99,6 +99,11 @@ export function LibraryClient() {
           <h3 className="tracking-[-0.02em]">{heading}</h3>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          {projectFilter && (
+            <Link href={`/projects/${projectFilter}`} className="btn btn-secondary text-[12px]">
+              <Icon name="folder-open" /> プロジェクトを開く
+            </Link>
+          )}
           {(projectFilter || tagFilter) && (
             <Link href="/library" className="btn btn-ghost text-[12px]">
               <Icon name="x" /> フィルタ解除

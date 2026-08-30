@@ -1,11 +1,9 @@
 import { db, schema } from "./index";
 
 /**
- * First-run setup for a brand-new user. The app used to seed a full demo
- * workspace here; it now starts empty and every surface is built from the
- * user's own captures. We still create the three default collections so the
- * sidebar and "振り分け" have somewhere to put things — the accent one is the
- * default destination the digest and auto-sort target.
+ * First-run setup for a brand-new user. The app starts empty — every surface is
+ * built from the user's own captures, and projects are created deliberately by
+ * the user. The one exception is a plain "あとで読む" bucket for the inbox.
  */
 export async function seedForUser(userId: string) {
   const already = await db.query.collections.findFirst({
@@ -13,8 +11,5 @@ export async function seedForUser(userId: string) {
   });
   if (already) return;
 
-  await db.insert(schema.collections).values([
-    { userId, name: "いま気になっていること", tone: "accent" },
-    { userId, name: "あとで読む", tone: "neutral" },
-  ]);
+  await db.insert(schema.collections).values([{ userId, name: "あとで読む", tone: "neutral" }]);
 }

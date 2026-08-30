@@ -15,13 +15,13 @@ import {
 } from "@/lib/note-delta";
 import type {
   CompareBoard,
-  Digest,
   ExportDraft,
   ExportFormat,
   Item,
   Note,
   NoteSuggestion,
   Project,
+  ProjectDetail,
   SourceKind,
   Tag,
 } from "@/lib/types";
@@ -337,38 +337,33 @@ export async function deleteItem(userId: string, id: string): Promise<boolean> {
   return deleted.length > 0;
 }
 
-/** POST /api/items/sort — the "まとめて振り分け" digest action. */
-export async function autoSort(userId: string): Promise<{ moved: number }> {
-  const target = await db.query.collections.findFirst({
-    where: (c, { and, eq }) => and(eq(c.userId, userId), eq(c.tone, "accent")),
-  });
-  if (!target) return { moved: 0 };
+// ── Projects & Tags ───────────────────────────────────────────
+// A "project" is a `collections` row — a space the user creates deliberately to
+// develop an idea (`description`), gather sources into (`collection_items`) and
+// file notes under (`notes.collection_id`). `tone` is now just a colour.
 
-  const unsorted = await db
-    .select({ id: schema.savedUrls.id })
-    .from(schema.savedUrls)
-    .leftJoin(schema.collectionItems, eq(schema.collectionItems.savedUrlId, schema.savedUrls.id))
-    .where(
-      and(
-        eq(schema.savedUrls.userId, userId),
-        isNull(schema.collectionItems.id),
-        sql`cardinality(${schema.savedUrls.suggestedTags}) > 0`
-      )
-    );
-  if (!unsorted.length) return { moved: 0 };
-
-  await db
-    .insert(schema.collectionItems)
-    .values(unsorted.map((u) => ({ collectionId: target.id, savedUrlId: u.id })));
-  return { moved: unsorted.length };
+function toProjectRow(r: {
+  id: string;
+  name: string;
+  description: string | null;
+  tone: string;
+  count: number;
+}): Project {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    tone: r.tone === "accent" ? "accent" : "neutral",
+    count: r.count,
+  };
 }
 
-// ── Projects & Tags ───────────────────────────────────────────
 export async function listProjects(userId: string): Promise<Project[]> {
   const rows = await db
     .select({
       id: schema.collections.id,
       name: schema.collections.name,
+      description: schema.collections.description,
       tone: schema.collections.tone,
       count: sql<number>`count(${schema.collectionItems.id})::int`,
     })
@@ -380,38 +375,66 @@ export async function listProjects(userId: string): Promise<Project[]> {
     .where(eq(schema.collections.userId, userId))
     .groupBy(schema.collections.id)
     .orderBy(schema.collections.createdAt);
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    tone: r.tone === "accent" ? "accent" : "neutral",
-    count: r.count,
+  return rows.map(toProjectRow);
+}
+
+/** GET /api/projects/:id — the project workspace: its idea, sources and notes. */
+export async function getProject(
+  userId: string,
+  id: string
+): Promise<ProjectDetail | undefined> {
+  if (!isUuid(id)) return undefined;
+  const project = (await listProjects(userId)).find((p) => p.id === id);
+  if (!project) return undefined;
+
+  const sourceRows = await db.query.savedUrls.findMany({
+    where: (t, { eq }) => eq(t.userId, userId),
+    with: { collectionItems: true },
+    orderBy: (t, { desc }) => [desc(t.createdAt)],
+  });
+  const sources = sourceRows
+    .map(toItem)
+    .filter((it) => it.projectId === id);
+
+  const noteRows = await db.query.notes.findMany({
+    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.collectionId, id)),
+    orderBy: (t, { desc }) => [desc(t.updatedAt)],
+  });
+  const notes = noteRows.map((n) => ({
+    id: n.id,
+    title: n.title,
+    status: n.status,
+    updatedLabel: relativeLabel(n.updatedAt),
   }));
+
+  return { ...project, sources, notes };
 }
 
 export async function createProject(
   userId: string,
   name: string,
-  tone: "accent" | "neutral" = "neutral"
+  opts: { tone?: "accent" | "neutral"; description?: string } = {}
 ): Promise<Project> {
   const [row] = await db
     .insert(schema.collections)
-    .values({ userId, name: name.trim() || "無題", tone })
+    .values({
+      userId,
+      name: name.trim() || "無題のプロジェクト",
+      tone: opts.tone ?? "neutral",
+      description: opts.description?.trim() || null,
+    })
     .returning();
-  return {
-    id: row.id,
-    name: row.name,
-    tone: row.tone === "accent" ? "accent" : "neutral",
-    count: 0,
-  };
+  return toProjectRow({ ...row, count: 0 });
 }
 
 export async function updateProject(
   userId: string,
   id: string,
-  patch: { name?: string; tone?: "accent" | "neutral" }
+  patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" }
 ): Promise<Project | undefined> {
   const set: Partial<typeof schema.collections.$inferInsert> = {};
-  if (patch.name !== undefined) set.name = patch.name.trim() || "無題";
+  if (patch.name !== undefined) set.name = patch.name.trim() || "無題のプロジェクト";
+  if (patch.description !== undefined) set.description = patch.description?.trim() || null;
   if (patch.tone !== undefined) set.tone = patch.tone;
   if (Object.keys(set).length) {
     set.updatedAt = new Date();
@@ -450,31 +473,6 @@ export async function listTags(userId: string): Promise<Tag[]> {
     tone: "neutral",
     count: r.n,
   }));
-}
-
-export async function getDigest(userId: string): Promise<Digest> {
-  const [row] = await db
-    .select({
-      unsorted: sql<number>`count(*) filter (where ${schema.collectionItems.id} is null)::int`,
-      guess: sql<number>`count(*) filter (where ${schema.collectionItems.id} is null and cardinality(${schema.savedUrls.suggestedTags}) > 0)::int`,
-    })
-    .from(schema.savedUrls)
-    .leftJoin(schema.collectionItems, eq(schema.collectionItems.savedUrlId, schema.savedUrls.id))
-    .where(eq(schema.savedUrls.userId, userId));
-
-  const target = await db.query.collections.findFirst({
-    where: (c, { and, eq }) => and(eq(c.userId, userId), eq(c.tone, "accent")),
-  });
-
-  const unsorted = row?.unsorted ?? 0;
-  const guess = row?.guess ?? 0;
-  return {
-    unsorted,
-    message:
-      guess > 0 && target
-        ? `未整理が${unsorted}件。${guess}件は「${target.name}」に入りそうです。`
-        : `未整理が${unsorted}件。`,
-  };
 }
 
 // ── Notes ──────────────────────────────────────────────────

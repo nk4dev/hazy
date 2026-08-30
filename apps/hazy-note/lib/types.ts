@@ -27,8 +27,24 @@ export interface Item {
 export interface Project {
   id: string;
   name: string;
+  /** The idea being developed in this project — free text. */
+  description: string | null;
   tone: "accent" | "neutral";
+  /** Number of sources filed under it. */
   count: number;
+}
+
+export interface ProjectNoteRef {
+  id: string;
+  title: string;
+  status: NoteStatus;
+  updatedLabel: string;
+}
+
+/** GET /api/projects/:id — the project workspace. */
+export interface ProjectDetail extends Project {
+  sources: Item[];
+  notes: ProjectNoteRef[];
 }
 
 export interface Tag {
@@ -104,11 +120,6 @@ export interface CompareBoard {
   axes: CompareAxis[];
   summary: string;
   candidateAxes: string[];
-}
-
-export interface Digest {
-  unsorted: number;
-  message: string;
 }
 
 export type ExportFormat = "blog" | "memo" | "bullets";

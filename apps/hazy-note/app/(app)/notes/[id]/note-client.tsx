@@ -9,7 +9,7 @@ import { NoteEditor, type CiteTarget, type NoteEditorHandle } from "@/components
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { DeltaOp } from "@/lib/note-delta";
-import type { Note } from "@/lib/types";
+import type { Note, Project } from "@/lib/types";
 
 const BLANK: Note = {
   id: "",
@@ -33,9 +33,14 @@ export function NoteClient({ id }: { id?: string }) {
   const [note, setNote] = useState<Note | null>(id ? null : BLANK);
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
   const isDraft = !noteId;
 
   const editorRef = useRef<NoteEditorHandle>(null);
+
+  useEffect(() => {
+    api.projects().then(setProjects).catch(() => {});
+  }, []);
 
   // The authoritative note / id, updated synchronously so rapid edits chain
   // correctly instead of building off a stale render.
@@ -96,6 +101,7 @@ export function NoteClient({ id }: { id?: string }) {
         tags: cur.tags,
         status: cur.status,
         sources: cur.sources,
+        projectId: cur.projectId,
       };
       if (idRef.current) {
         const saved = await api.updateNote(idRef.current, payload);
@@ -240,6 +246,21 @@ export function NoteClient({ id }: { id?: string }) {
           <button type="button" onClick={addTag} className="tag tag-outline text-text/60">
             <Icon name="plus" size={10} className="mr-[3px]" /> タグ
           </button>
+          <label className="ml-auto flex items-center gap-[6px] text-[12px] text-text/55">
+            <Icon name="folder-open" size={13} className="text-accent" />
+            <select
+              className="input w-auto py-[3px] text-[12px]"
+              value={note.projectId || ""}
+              onChange={(e) => mutate({ projectId: e.target.value })}
+            >
+              <option value="">プロジェクトなし</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="max-w-[66ch]">
