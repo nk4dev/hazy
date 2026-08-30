@@ -11,7 +11,7 @@ database — so there is a single schema here, not one per app.
 | `src/schema.ts` | Every table, enum and relation. The read-later core (`users`, `saved_urls`, `collections`, `read_later_state`, `ask_*`) plus hazy-note's additions (`source_kind` / `note_status` enums; extra `saved_urls` / `collections` columns; `notes` / `compare_boards` / `graph_snapshots`). |
 | `src/client.ts` | `getDb(url?)` — lazy, self-caching. Picks **postgres.js** (TCP) for a `localhost` / `127.0.0.1` URL and **Neon's HTTP driver** for anything else. The HTTP branch is what lets both apps run on Cloudflare Workers, which has no raw TCP sockets. |
 | `src/connection-options.ts` | `isLocalDatabaseUrl`, `resolveSslMode`. |
-| `migrations/` | drizzle-kit migrations `0000`–`0004` + `meta/`. |
+| `migrations/` | drizzle-kit migrations `0000`–`0005` + `meta/`. `0005` adds `notes.body` (Quill Delta) + `notes.suggestions`. |
 | `sql/search-vector-trigger.sql` | Keeps `saved_urls.search_vector` populated (drizzle-kit can't express a trigger). |
 
 Consumed as `@repo/db` / `@repo/db/schema` / `@repo/db/client`. It's a JIT
@@ -61,6 +61,7 @@ row for `0000` (`1787944616065`) so only later migrations apply.
 ### Rollback (hazy-note additions are all additive)
 
 ```sql
+ALTER TABLE notes DROP COLUMN IF EXISTS body, DROP COLUMN IF EXISTS suggestions;  -- 0005
 DROP TABLE IF EXISTS graph_snapshots, compare_boards, notes CASCADE;
 ALTER TABLE saved_urls
   DROP COLUMN IF EXISTS kind, DROP COLUMN IF EXISTS points,
