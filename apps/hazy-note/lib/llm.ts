@@ -1,5 +1,5 @@
 // Thin OpenRouter client. Every "AI" surface in the app (summaries, tag
-// suggestions, the compare board, the export draft) goes through here.
+// suggestions, the tendency analysis, the export draft) goes through here.
 // Configure it in .env.local:
 //
 //   OPENROUTER_API_KEY   — required for any AI output

@@ -1,8 +1,9 @@
 # hazy-note
 
 `note.hz.nknighta.me` — Next 16 (App Router, Turbopack). Capture → notes →
-compare → export. See `README.md`. (`/graph` "つながり" was removed — the
-`graph_snapshots` table stays in `@repo/db` but nothing reads it.)
+analyze → export. See `README.md`. (`/graph` "つながり" and `/compare` "比較ボード"
+were removed — the `graph_snapshots` and `compare_boards` tables stay in
+`@repo/db` but nothing reads them.)
 
 # UI: hand-rolled Nocturne + shadcn/ui
 
@@ -34,7 +35,25 @@ workspace to develop an idea: `/projects/[id]` shows its `description`, the
 sources filed under it (`saved_urls.project_id`, set via
 `updateItem(_, { projectId })`) and the notes under it (`notes.project_id`).
 There is **no** tag-based auto-creation, auto-sort or digest (all removed).
-`notes.collection_id` / `compare_boards.collection_id` are dead columns.
+`notes.collection_id` / `compare_boards.*` are dead columns/tables.
+`/analyze` also accepts `?project=<id>` to scope the tendency read to one project.
+
+# Search (`/search`)
+
+`lib/search.ts` is pure and shared: `buildCorpus(notes, items)` flattens
+notes + non-note sources to `SearchDoc[]`; `textSearch` / `tagSearch` /
+`rankBySimilarity` do the ranking. Four modes:
+
+- **文字列 / タグ / AI検索** run entirely client-side on `/search` — no route.
+  AI検索 lazy-`import()`s `@ternlight/base/web` (a ~7 MB WASM MiniLM embedder,
+  loaded once on first use), embeds the corpus + query, ranks by cosine.
+  Use the `/web` subpath — the bare `@ternlight/base` (`pkg-bundler`) breaks
+  Turbopack (`type: commonjs` package.json over ESM files).
+- **チャット** → `POST /api/search/chat` → `repo.runSearchChat` →
+  `ai.answerSearchChat` (OpenRouter `chat()`, keyword-retrieved shortlist as
+  context, `[n]` citations parsed back to sources). Stateless — no `ask_*` rows.
+
+Tests: `lib/search.test.ts` (`bun test`), `e2e/*.spec.ts` (Playwright).
 
 # The note editor
 
@@ -55,3 +74,6 @@ body is a Quill **Delta** stored in `notes.body` (jsonb `ops` array).
 - Schema changes → `packages/db/src/schema.ts` only, then `bun db:generate`.
 - Local dev DB: `scripts/localdb.sh` (`127.0.0.1:5433`). Deploy: OpenNext →
   Cloudflare Worker `hazy-note`; secrets via `wrangler secret put`.
+- Tests: `bun run test` (unit, `bun:test`, `lib/`), `bun run test:e2e`
+  (Playwright, `e2e/`). E2E auth needs `E2E_CLERK_USER_EMAIL` + `CLERK_SECRET_KEY`;
+  without them the signed-in specs skip. See `README.md` › テスト.

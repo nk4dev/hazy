@@ -6,7 +6,7 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
 |---|---|
 | `apps/api` | `hazy-api` — a **Hono Worker** at `api.hz.nknighta.me`. hazy's backend: `/v1/**` JSON API + the Clerk webhook. |
 | `apps/hazy` | `hz.nknighta.me` — a **pure frontend** (Next 16, Turbopack). No backend, no DB. Calls `apps/api` via `@repo/api-client`. |
-| `apps/hazy-note` | `note.hz.nknighta.me` — Next 16. Capture → notes (Quill editor) → compare → graph → export. **Still has its own `/api/*` route handlers** over `@repo/db` (migrating to `apps/api` is a follow-up). |
+| `apps/hazy-note` | `note.hz.nknighta.me` — Next 16. Capture → notes (Quill editor) → search / analyze → export. **Still has its own `/api/*` route handlers** over `@repo/db` (migrating to `apps/api` is a follow-up). Search: client-side keyword/tag + on-device `@ternlight/base` semantic + an OpenRouter chat route. |
 | `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types. The single source of truth for the API shape. |
 | `packages/db` | `@repo/db` — the one Drizzle schema + `getDb()` + migrations + search-vector trigger. |
 
@@ -24,6 +24,12 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
   Clerk dashboard webhook pointed at `api.hz.nknighta.me/v1/webhooks/clerk`.
 - `bun run dev` starts all three: api :8787 (Node, `@hono/node-server`),
   hazy-note :3000, hazy :3100. hazy needs `NEXT_PUBLIC_API_URL=http://localhost:8787`.
+- **Keep agent-facing docs in sync in the same change.** Any spec/behaviour
+  change — a route added or removed, a nav item, an API endpoint, a schema
+  table, a workflow step — must update the affected `CLAUDE.md` (root +
+  per-app) and the app's `README.md` in the same commit, not as a follow-up.
+  Removed-but-retained tables/columns get a one-line "dead, nothing reads it"
+  note rather than silent deletion.
 
 ## Database
 

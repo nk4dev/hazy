@@ -27,7 +27,14 @@ export default function NotesPage() {
           <div className="mb-[5px] text-[11px] uppercase tracking-[0.1em] text-text/[0.42]">
             ノート
           </div>
-          <h3 className="tracking-[-0.02em]">概念単位で書きためる</h3>
+          <h3 className="tracking-[-0.02em]">
+            書いたノート一覧
+            {!loading && notes.length > 0 && (
+              <span className="ml-[8px] text-[13px] font-normal text-text/45">
+                {notes.length}本
+              </span>
+            )}
+          </h3>
         </div>
         <Link href="/notes/new" className="btn btn-primary ml-auto text-[13px]">
           <Icon name="plus" /> 新しいノート
@@ -40,7 +47,7 @@ export default function NotesPage() {
         <div className="rounded-[10px] bg-surface px-6 py-10 text-center text-[13px] leading-[1.8] text-text/55 shadow-[0_0_0_1px_var(--color-neutral-900)]">
           まだノートがありません。「新しいノート」から書き始めるか、
           <br />
-          比較ボードのまとめをノートに落とせます。
+          傾向分析の結果をノートに落とせます。
         </div>
       )}
 

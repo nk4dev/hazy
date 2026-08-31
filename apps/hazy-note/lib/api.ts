@@ -1,11 +1,12 @@
 import type {
-  CompareBoard,
   ExportDraft,
   ExportFormat,
+  InsightProfile,
   Item,
   Note,
   Project,
   ProjectDetail,
+  SearchChatAnswer,
   Tag,
 } from "./types";
 
@@ -35,13 +36,11 @@ export const api = {
   projects: () => fetch("/api/projects", { cache: "no-store" }).then(j<Project[]>),
   project: (id: string) =>
     fetch(`/api/projects/${id}`, { cache: "no-store" }).then(j<ProjectDetail>),
-  addProject: (
-    name: string,
-    patch: { description?: string; tone?: "accent" | "neutral" } = {},
-  ) => fetch("/api/projects", opts("POST", { name, ...patch })).then(j<Project>),
+  addProject: (name: string, patch: { description?: string; tone?: "accent" | "neutral" } = {}) =>
+    fetch("/api/projects", opts("POST", { name, ...patch })).then(j<Project>),
   updateProject: (
     id: string,
-    patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" },
+    patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" }
   ) => fetch(`/api/projects/${id}`, opts("PATCH", patch)).then(j<Project>),
   deleteProject: (id: string) =>
     fetch(`/api/projects/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
@@ -59,7 +58,7 @@ export const api = {
       tags?: Note["tags"];
       status?: Note["status"];
       sources?: Note["sources"];
-    } = {},
+    } = {}
   ) => fetch("/api/notes", opts("POST", input)).then(j<Note>),
   updateNote: (id: string, patch: Partial<Note>) =>
     fetch(`/api/notes/${id}`, opts("PATCH", patch)).then(j<Note>),
@@ -69,10 +68,15 @@ export const api = {
   suggestion: (id: string, suggestionId: string, action: "accept" | "dismiss") =>
     fetch(`/api/notes/${id}/suggestion`, opts("POST", { id: suggestionId, action })).then(j<Note>),
 
-  compare: () => fetch("/api/compare", { cache: "no-store" }).then(j<CompareBoard>),
-  rebuildCompare: (projectId?: string) =>
-    fetch("/api/compare", opts("POST", projectId ? { projectId } : {})).then(j<CompareBoard>),
+  analyze: (projectId?: string) =>
+    fetch(`/api/analyze${projectId ? `?project=${projectId}` : ""}`, { cache: "no-store" }).then(
+      j<InsightProfile>
+    ),
+  rebuildAnalyze: (projectId?: string) =>
+    fetch("/api/analyze", opts("POST", projectId ? { projectId } : {})).then(j<InsightProfile>),
 
+  searchChat: (query: string, history?: { role: "user" | "assistant"; content: string }[]) =>
+    fetch("/api/search/chat", opts("POST", { query, history })).then(j<SearchChatAnswer>),
 
   export: (noteId: string, format: ExportFormat) =>
     fetch(`/api/export?noteId=${noteId}&format=${format}`, {

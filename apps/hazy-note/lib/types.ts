@@ -107,19 +107,74 @@ export interface Note {
   flags: { icon: string; tone: string; text: string }[];
 }
 
-export interface CompareAxis {
-  name: string;
-  values: (string | null)[];
-  accentCols: number[]; // column indices rendered in accent (the disagreements)
+// ── 検索（/search） ─────────────────────────────────────────
+
+export type SearchMode = "text" | "tag" | "ai" | "chat";
+
+/** One row of the flat, mixed notes+sources result list. */
+export interface SearchHit {
+  id: string;
+  /** "note" or one of the source kinds. */
+  kind: SourceKind;
+  title: string;
+  /** A one-line context snippet (body excerpt / summary). */
+  snippet: string;
+  tags: string[];
+  /** Where to go — `/notes/:id` or the external URL. */
+  href: string;
+  external: boolean;
+  /** 0–1, only set by AI mode. */
+  score?: number;
 }
 
-export interface CompareBoard {
-  id: string;
-  projectId: string;
-  sources: string[];
-  axes: CompareAxis[];
-  summary: string;
-  candidateAxes: string[];
+/** POST /api/search/chat — a conversational lookup over the user's own library. */
+export interface SearchChatAnswer {
+  answer: string;
+  /** The notes / sources the answer drew on. */
+  sources: SearchHit[];
+  /** false when the LLM was unavailable and this is a plain keyword fallback. */
+  llm: boolean;
+}
+
+// ── 傾向分析（/analyze） ─────────────────────────────────────
+
+/** The deterministic aggregation over a user's notes + saved URLs. */
+export interface InsightStats {
+  noteCount: number;
+  noteCharTotal: number;
+  noteCharAvg: number;
+  notesLast30d: number;
+  urlCount: number;
+  /** URLs whose fetch succeeded (i.e. actually read / extracted). */
+  urlReadCount: number;
+  topDomains: { domain: string; count: number }[];
+  kindMix: { kind: SourceKind; count: number }[];
+  /** `notes.tags[].label` + `savedUrls.tags[]`, normalised and merged. */
+  topTags: { label: string; count: number }[];
+  languageMix: { lang: string; count: number }[];
+  span: { firstLabel: string; lastLabel: string } | null;
+}
+
+export interface InsightTheme {
+  label: string;
+  /** 1–5, rough salience. */
+  weight: number;
+  /** One line of evidence / nuance. */
+  note: string;
+}
+
+/** GET/POST /api/analyze — a cached tendency read for the account or one project. */
+export interface InsightProfile {
+  projectId: string; // "" = whole account
+  generatedLabel: string; // "分析 · 3分前"
+  /** false when the LLM was unavailable and only the aggregation ran. */
+  llm: boolean;
+  stats: InsightStats;
+  profile: string;
+  themes: InsightTheme[];
+  leanings: string[];
+  blindSpots: string[];
+  nextSteps: string[];
 }
 
 export type ExportFormat = "blog" | "memo" | "bullets";

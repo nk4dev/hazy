@@ -1,9 +1,10 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import {
+  analyseTendencies,
+  answerSearchChat,
   rewriteForExport,
   summariseMemo,
   summariseSource,
-  synthesiseCompare,
 } from "@/lib/ai";
 import { fetchAndExtract } from "@/lib/extract";
 import {
@@ -13,15 +14,18 @@ import {
   isDelta,
   legacyBlocksToDelta,
 } from "@/lib/note-delta";
+import { buildCorpus, type SearchDoc, textSearch, toHit } from "@/lib/search";
 import type {
-  CompareBoard,
   ExportDraft,
   ExportFormat,
+  InsightProfile,
+  InsightStats,
   Item,
   Note,
   NoteSuggestion,
   Project,
   ProjectDetail,
+  SearchChatAnswer,
   SourceKind,
   Tag,
 } from "@/lib/types";
@@ -370,10 +374,7 @@ export async function listProjects(userId: string): Promise<Project[]> {
 }
 
 /** GET /api/projects/:id — the project workspace: its idea, sources and notes. */
-export async function getProject(
-  userId: string,
-  id: string
-): Promise<ProjectDetail | undefined> {
+export async function getProject(userId: string, id: string): Promise<ProjectDetail | undefined> {
   if (!isUuid(id)) return undefined;
   const project = (await listProjects(userId)).find((p) => p.id === id);
   if (!project) return undefined;
@@ -493,6 +494,41 @@ export async function listNotes(userId: string): Promise<Note[]> {
     orderBy: (t, { desc }) => [desc(t.updatedAt)],
   });
   return rows.map(toNote);
+}
+
+/** Notes + sources flattened to text — the corpus behind `/search` chat mode. */
+export async function getSearchCorpus(userId: string): Promise<SearchDoc[]> {
+  const [notes, items] = await Promise.all([listNotes(userId), listItems(userId)]);
+  return buildCorpus(notes, items);
+}
+
+/**
+ * Chat search: keyword-retrieve a shortlist from the user's library, let the
+ * model answer over it, and hand back the answer + the records it cited.
+ */
+export async function runSearchChat(
+  userId: string,
+  query: string,
+  history?: { role: "user" | "assistant"; content: string }[]
+): Promise<SearchChatAnswer> {
+  const corpus = await getSearchCorpus(userId);
+  const hits = textSearch(corpus, query, 8);
+  // Nothing matched on keywords — give the model the most recent slice anyway.
+  const shortlist = hits.length
+    ? hits.map((h) => corpus.find((d) => d.id === h.id))
+    : corpus.slice(0, 8);
+  const docs = shortlist.filter((d): d is SearchDoc => Boolean(d));
+
+  const { answer, usedIndexes, llm } = await answerSearchChat({
+    query,
+    history,
+    candidates: docs.map((d) => ({ title: d.title, text: d.text })),
+  });
+
+  const usedDocs = usedIndexes.length
+    ? usedIndexes.map((i) => docs[i - 1]).filter((d): d is SearchDoc => Boolean(d))
+    : docs;
+  return { answer, sources: usedDocs.map((d) => toHit(d)), llm };
 }
 
 /**
@@ -636,67 +672,160 @@ export async function appendParagraph(
   return getNote(userId, noteId);
 }
 
-// ── Compare ────────────────────────────────────────────────
-function toCompare(row: typeof schema.compareBoards.$inferSelect): CompareBoard {
+// ── Insight (傾向分析) ──────────────────────────────────────
+
+/** Count occurrences of `key(x)` over `xs` and return the top `n`, desc. */
+function topCounts<T>(
+  xs: T[],
+  key: (x: T) => string | null | undefined,
+  n: number
+): { value: string; count: number }[] {
+  const m = new Map<string, number>();
+  for (const x of xs) {
+    const k = key(x)?.trim();
+    if (!k) continue;
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return [...m.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+}
+
+function toInsight(row: typeof schema.insightProfiles.$inferSelect): InsightProfile {
   return {
-    id: row.id,
     projectId: row.projectId ?? "",
-    sources: row.sources,
-    axes: row.axes as CompareBoard["axes"],
-    summary: row.summary,
-    candidateAxes: row.candidateAxes,
+    generatedLabel: `分析 · ${relativeLabel(row.updatedAt)}`,
+    llm: row.llm,
+    stats: row.stats as unknown as InsightStats,
+    profile: row.profile,
+    themes: row.themes,
+    leanings: row.leanings,
+    blindSpots: row.blindSpots,
+    nextSteps: row.nextSteps,
   };
 }
 
-export async function getCompare(userId: string): Promise<CompareBoard | undefined> {
-  const row = await db.query.compareBoards.findFirst({
-    where: (t, { eq }) => eq(t.userId, userId),
+export async function getInsightProfile(
+  userId: string,
+  projectId?: string
+): Promise<InsightProfile | undefined> {
+  const row = await db.query.insightProfiles.findFirst({
+    where: (t, { and, eq, isNull: _isNull }) =>
+      and(eq(t.userId, userId), projectId ? eq(t.projectId, projectId) : _isNull(t.projectId)),
     orderBy: (t, { desc }) => [desc(t.updatedAt)],
   });
-  return row ? toCompare(row) : undefined;
+  return row ? toInsight(row) : undefined;
 }
 
 /**
- * "差分をまとめる" — (re)build the compare board from the ready sources in a
- * project (or, with no project, every ready source). Needs ≥2 sources.
+ * "傾向を分析する" — aggregate the user's notes + saved URLs (optionally scoped
+ * to one project) into `InsightStats`, then ask the model for the interpretive
+ * layer. One cached row per (user, project|null), replaced on each rebuild.
  */
-export async function buildCompareBoard(userId: string, projectId?: string): Promise<CompareBoard> {
-  const rows = await db.query.savedUrls.findMany({
-    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.fetchStatus, "success")),
+export async function buildInsightProfile(
+  userId: string,
+  projectId?: string
+): Promise<InsightProfile> {
+  const noteRows = await db.query.notes.findMany({
+    where: (t, { and, eq }) =>
+      and(eq(t.userId, userId), projectId ? eq(t.projectId, projectId) : undefined),
+    orderBy: (t, { desc }) => [desc(t.updatedAt)],
+  });
+  const urlRows = await db.query.savedUrls.findMany({
+    where: (t, { and, eq, ne }) =>
+      and(
+        eq(t.userId, userId),
+        ne(t.kind, "note"),
+        projectId ? eq(t.projectId, projectId) : undefined
+      ),
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
-  const items = rows
-    .map(toItem)
-    .filter((it) => (projectId ? it.projectId === projectId : true))
-    .filter((it) => it.summary.length > 0)
-    .slice(0, 8);
 
-  const synth = await synthesiseCompare(
-    items.map((it) => ({ title: it.title, summary: it.summary }))
+  const notes = noteRows
+    .map((r) => ({ title: r.title, text: deltaToPlainText(r.body).trim(), createdAt: r.createdAt }))
+    .filter((n) => n.text.length > 0);
+
+  const now = Date.now();
+  const day = 86_400_000;
+  const noteCharTotal = notes.reduce((n, x) => n + x.text.length, 0);
+
+  const tagBag = [
+    ...noteRows.flatMap((r) => (r.tags as { label: string }[]).map((t) => t.label)),
+    ...urlRows.flatMap((r) => r.tags),
+  ];
+
+  const allDates = [...noteRows.map((r) => r.createdAt), ...urlRows.map((r) => r.createdAt)].sort(
+    (a, b) => +new Date(a) - +new Date(b)
   );
 
+  const stats: InsightStats = {
+    noteCount: notes.length,
+    noteCharTotal,
+    noteCharAvg: notes.length ? Math.round(noteCharTotal / notes.length) : 0,
+    notesLast30d: notes.filter((n) => now - +new Date(n.createdAt) < 30 * day).length,
+    urlCount: urlRows.length,
+    urlReadCount: urlRows.filter((r) => r.fetchStatus === "success").length,
+    topDomains: topCounts(urlRows, (r) => r.domain, 6).map((c) => ({
+      domain: c.value,
+      count: c.count,
+    })),
+    kindMix: topCounts(urlRows, (r) => r.kind, 6).map((c) => ({
+      kind: c.value as SourceKind,
+      count: c.count,
+    })),
+    topTags: topCounts(tagBag, (t) => t.toLowerCase(), 12).map((c) => ({
+      label: c.value,
+      count: c.count,
+    })),
+    languageMix: topCounts(urlRows, (r) => r.contentLanguage, 4).map((c) => ({
+      lang: c.value,
+      count: c.count,
+    })),
+    span: allDates.length
+      ? {
+          firstLabel: relativeLabel(allDates[0]),
+          lastLabel: relativeLabel(allDates[allDates.length - 1]),
+        }
+      : null,
+  };
+
+  const read = await analyseTendencies({
+    stats,
+    noteExcerpts: notes.map((n) => ({ title: n.title, text: n.text })),
+    urlBlurbs: urlRows.map((r) => ({
+      title: r.title ?? r.domain ?? r.url,
+      domain: r.domain ?? "",
+      summary: r.summary ?? r.summaryLines.join(" "),
+    })),
+  });
+
   await db
-    .delete(schema.compareBoards)
+    .delete(schema.insightProfiles)
     .where(
       and(
-        eq(schema.compareBoards.userId, userId),
+        eq(schema.insightProfiles.userId, userId),
         projectId
-          ? eq(schema.compareBoards.projectId, projectId)
-          : isNull(schema.compareBoards.projectId)
+          ? eq(schema.insightProfiles.projectId, projectId)
+          : isNull(schema.insightProfiles.projectId)
       )
     );
   const [row] = await db
-    .insert(schema.compareBoards)
+    .insert(schema.insightProfiles)
     .values({
       userId,
       projectId: projectId ?? null,
-      sources: items.map((it) => it.title),
-      axes: synth.axes,
-      summary: synth.summary,
-      candidateAxes: synth.candidateAxes,
+      stats: stats as unknown as Record<string, unknown>,
+      profile: read.profile,
+      themes: read.themes,
+      leanings: read.leanings,
+      blindSpots: read.blindSpots,
+      nextSteps: read.nextSteps,
+      llm: read.llm,
+      updatedAt: new Date(),
     })
     .returning();
-  return toCompare(row);
+  return toInsight(row);
 }
 
 // ── Export ─────────────────────────────────────────────────

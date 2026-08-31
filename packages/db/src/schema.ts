@@ -352,6 +352,39 @@ export const compareBoards = pgTable(
   (table) => [index("compare_boards_user_id_idx").on(table.userId)]
 );
 
+// Tendency analysis (hazy-note `/analyze`). Same shape as compareBoards:
+// one row per (user, project|null), replaced wholesale on each rebuild.
+export const insightProfiles = pgTable(
+  "insight_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // null = the whole account; otherwise scoped to one project's notes + sources.
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
+      onDelete: "set null",
+    }),
+    // Deterministic aggregation (hazy-note's InsightStats).
+    stats: jsonb("stats").$type<Record<string, unknown>>().notNull().default({}),
+    // LLM-written 2–3 sentence summary.
+    profile: text("profile").notNull().default(""),
+    // InsightTheme[] — { label, weight (1–5), note }.
+    themes: jsonb("themes")
+      .$type<{ label: string; weight: number; note: string }[]>()
+      .notNull()
+      .default([]),
+    leanings: jsonb("leanings").$type<string[]>().notNull().default([]),
+    blindSpots: jsonb("blind_spots").$type<string[]>().notNull().default([]),
+    nextSteps: jsonb("next_steps").$type<string[]>().notNull().default([]),
+    // true when the LLM produced this; false = deterministic fallback only.
+    llm: boolean("llm").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("insight_profiles_user_id_idx").on(table.userId)]
+);
+
 // One row per user: the whole graph blob.
 export const graphSnapshots = pgTable("graph_snapshots", {
   userId: uuid("user_id")
@@ -373,6 +406,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   askThreads: many(askThreads),
   notes: many(notes),
   compareBoards: many(compareBoards),
+  insightProfiles: many(insightProfiles),
   graphSnapshot: one(graphSnapshots, {
     fields: [users.id],
     references: [graphSnapshots.userId],
@@ -463,6 +497,14 @@ export const compareBoardsRelations = relations(compareBoards, ({ one }) => ({
   user: one(users, { fields: [compareBoards.userId], references: [users.id] }),
   project: one(projects, {
     fields: [compareBoards.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const insightProfilesRelations = relations(insightProfiles, ({ one }) => ({
+  user: one(users, { fields: [insightProfiles.userId], references: [users.id] }),
+  project: one(projects, {
+    fields: [insightProfiles.projectId],
     references: [projects.id],
   }),
 }));

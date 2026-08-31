@@ -331,6 +331,7 @@
   .card-body {
     margin: 0;
     font-size: 13px;
+    line-height: 1.7;
     opacity: 0.8;
     flex: 1;
   }
@@ -496,6 +497,11 @@
   font-style: normal;
   color: color-mix(in srgb, var(--color-text) 32%, transparent);
 }
+.note-editor .ql-editor h1 {
+  font-size: 1.5em;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
 .note-editor .ql-editor h2 {
   font-size: 1.3em;
   font-weight: 600;
@@ -555,6 +561,20 @@
   background: var(--color-bg);
   color: var(--color-text);
   border-radius: var(--radius-sm);
+}
+
+/* ── 表示密度: 「行間を詰める」 ──────────────────────────────
+   Toggled by <html class="density-compact"> (components/density-toggle.tsx).
+   Tightens the reading surfaces: the note editor body and the notes-list
+   card excerpts. */
+.density-compact .note-editor .ql-editor {
+  line-height: 1.5;
+}
+.density-compact .note-editor .ql-editor > * {
+  margin-bottom: 8px;
+}
+.density-compact .card-body {
+  line-height: 1.4;
 }
 
 /* shadcn/ui token layer (preset). Nocturne keeps `--color-accent` and

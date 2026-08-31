@@ -32,8 +32,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       {/* `dark` keeps shadcn/ui components on their dark palette (Nocturne is
           always dark). */}
-      <html lang="ja" className={`dark ${inter.variable} ${notoJP.variable}`}>
-        <body>{children}</body>
+      <html
+        lang="ja"
+        className={`dark ${inter.variable} ${notoJP.variable}`}
+        suppressHydrationWarning
+      >
+        <body>
+          {/* Apply the saved display density before paint (see DensityToggle). */}
+          <script
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: tiny pre-paint theme script
+            dangerouslySetInnerHTML={{
+              __html: `try{if(localStorage.getItem('hazy-note:density')==='compact')document.documentElement.classList.add('density-compact')}catch(e){}`,
+            }}
+          />
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );

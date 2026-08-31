@@ -21,6 +21,8 @@
     "preview": "turbo run preview"
   },
   "devDependencies": {
+    "@clerk/testing": "^2.2.31",
+    "@playwright/test": "^1.62.1",
     "agent-browser": "^0.35.1",
     "turbo": "^2"
   },

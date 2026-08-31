@@ -2,8 +2,14 @@
 // JSON and, if the key is missing or the call fails, returns a deterministic
 // stand-in built from the same input so the app never hard-fails on AI.
 
-import { chatJSON, LLMError, llmConfigured } from "./llm";
-import type { CompareAxis, ExportDraft, ExportFormat } from "./types";
+import { chat, chatJSON, LLMError, llmConfigured } from "./llm";
+import type {
+  ExportDraft,
+  ExportFormat,
+  InsightProfile,
+  InsightStats,
+  InsightTheme,
+} from "./types";
 
 /** Coerce a model's field to a clean string[] no matter what it actually sent. */
 function arr(v: unknown): string[] {
@@ -103,68 +109,183 @@ export async function summariseMemo(text: string): Promise<SourceDigest> {
   }
 }
 
-// ── Compare board synthesis ──────────────────────────────────
-export type CompareSynthesis = {
-  axes: CompareAxis[];
-  summary: string;
-  candidateAxes: string[];
+// ── Tendency analysis (/analyze) ─────────────────────────────
+
+export type TendencyRead = Pick<
+  InsightProfile,
+  "profile" | "themes" | "leanings" | "blindSpots" | "nextSteps"
+>;
+
+/** `llm: true` only when the model actually produced this read. */
+export type TendencyResult = TendencyRead & { llm: boolean };
+
+export type TendencyInput = {
+  stats: InsightStats;
+  noteExcerpts: { title: string; text: string }[];
+  urlBlurbs: { title: string; domain: string; summary: string }[];
 };
 
-export async function synthesiseCompare(
-  sources: { title: string; summary: string[] }[]
-): Promise<CompareSynthesis> {
-  const names = sources.map((s) => s.title);
-  if (!llmConfigured() || sources.length < 2) {
-    return {
-      axes: [{ name: "主題", values: sources.map((s) => s.summary[0] ?? null), accentCols: [] }],
-      summary: llmConfigured()
-        ? "比較には2本以上の出典が必要です。"
-        : "差分の自動抽出には OPENROUTER_API_KEY が必要です。",
-      candidateAxes: [],
-    };
-  }
+const clampWeight = (n: unknown): number => Math.min(5, Math.max(1, Math.round(Number(n) || 1)));
+
+/** Coerce whatever the model sent for `themes` into clean InsightTheme[]. */
+function themeArr(v: unknown): InsightTheme[] {
+  if (!Array.isArray(v)) return [];
+  return v
+    .map((t) => {
+      const o = (t ?? {}) as Record<string, unknown>;
+      return {
+        label: String(o.label ?? "").trim(),
+        weight: clampWeight(o.weight),
+        note: String(o.note ?? "").trim(),
+      };
+    })
+    .filter((t) => t.label);
+}
+
+/** Themes/profile straight from the aggregation — used with no key or on failure. */
+export function fallbackTendencies(stats: InsightStats): TendencyRead {
+  const maxTag = stats.topTags[0]?.count ?? 1;
+  const themes: InsightTheme[] = stats.topTags.slice(0, 5).map((t) => ({
+    label: t.label,
+    weight: clampWeight(1 + Math.round((t.count / maxTag) * 4)),
+    note: `タグ「${t.label}」が${t.count}件`,
+  }));
+  const topDomain = stats.topDomains[0]?.domain;
+  const parts = [`ノート${stats.noteCount}本・出典${stats.urlCount}本。`];
+  if (topDomain) parts.push(`主に ${topDomain} を読み、`);
+  if (stats.topTags[0]) parts.push(`「${stats.topTags[0].label}」への関心が目立ちます。`);
+  return {
+    profile: parts.join("").replace(/、$/, "。"),
+    themes,
+    leanings: [],
+    blindSpots: [],
+    nextSteps: [],
+  };
+}
+
+/**
+ * Read the person's tendencies off their notes + saved URLs. The deterministic
+ * `stats` always carry the numbers; the model adds the interpretive layer
+ * (themes, leanings, blind spots, next steps). Falls back to `stats` alone.
+ */
+export async function analyseTendencies(input: TendencyInput): Promise<TendencyResult> {
+  const { stats } = input;
+  const thin = stats.noteCount + stats.urlCount < 3;
+  if (!llmConfigured() || thin) return { ...fallbackTendencies(stats), llm: false };
+
   try {
-    const out = await chatJSON<CompareSynthesis>([
+    const out = await chatJSON<TendencyRead>([
       {
         role: "system",
         content:
-          "複数の出典を表で比較する。返答は JSON のみ: " +
-          '{"axes":[{"name":string,"values":(string|null)[],"accentCols":number[]}],' +
-          '"summary":string,"candidateAxes":string[]}. ' +
-          "values は sources と同じ順・同じ長さ。触れていない出典は null。" +
-          "accentCols は出典どうしが食い違う列の index。axes は3〜5個。summary は分岐の理由を1〜2文で。",
+          "読書メモと保存URLから、その人の関心・思考の傾向を推定する。" +
+          "断定しすぎず、必ず本人の記録に基づく根拠を添える。憶測で属性を決めつけない。" +
+          "返答は JSON のみ: " +
+          '{"profile":string(2〜3文の人物像),' +
+          '"themes":[{"label":string,"weight":1..5,"note":string(根拠1行)}](3〜6),' +
+          '"leanings":string[](2〜4, 繰り返し出る立場・論調),' +
+          '"blindSpots":string[](2〜4, 逆に触れていない観点),' +
+          '"nextSteps":string[](2〜3, 次に深掘りしそう／補うと良い観点)}. ' +
+          "すべて日本語。",
       },
       {
         role: "user",
         content: JSON.stringify(
-          { sources: sources.map((s, i) => ({ i, title: s.title, summary: s.summary })) },
+          {
+            stats,
+            notes: input.noteExcerpts.slice(0, 20).map((n) => ({
+              title: n.title,
+              text: n.text.slice(0, 600),
+            })),
+            urls: input.urlBlurbs.slice(0, 30).map((u) => ({
+              title: u.title,
+              domain: u.domain,
+              summary: u.summary.slice(0, 200),
+            })),
+          },
           null,
           1
         ),
       },
     ]);
-    const axes = (Array.isArray(out.axes) ? out.axes : [])
-      .filter((a) => a?.name)
-      .map((a) => ({
-        name: a.name,
-        values: names.map((_, i) => a.values?.[i] ?? null),
-        accentCols: (Array.isArray(a.accentCols) ? a.accentCols : []).filter(
-          (c) => typeof c === "number" && c >= 0 && c < names.length
-        ),
-      }));
+    const themes = themeArr(out.themes).slice(0, 6);
     return {
-      axes: axes.length
-        ? axes
-        : [{ name: "主題", values: sources.map((s) => s.summary[0] ?? null), accentCols: [] }],
-      summary: out.summary ?? "",
-      candidateAxes: arr(out.candidateAxes).slice(0, 4),
+      profile: String(out.profile ?? "").trim() || fallbackTendencies(stats).profile,
+      themes: themes.length ? themes : fallbackTendencies(stats).themes,
+      leanings: arr(out.leanings).slice(0, 4),
+      blindSpots: arr(out.blindSpots).slice(0, 4),
+      nextSteps: arr(out.nextSteps).slice(0, 3),
+      llm: true,
+    };
+  } catch (e) {
+    if (!(e instanceof LLMError)) throw e;
+    return { ...fallbackTendencies(stats), llm: false };
+  }
+}
+
+// ── Search chat (/search のチャットモード) ───────────────────
+
+export type ChatTurn = { role: "user" | "assistant"; content: string };
+
+export type SearchChatResult = {
+  answer: string;
+  /** 1-based indexes into `candidates` that the answer actually leaned on. */
+  usedIndexes: number[];
+  llm: boolean;
+};
+
+/**
+ * Answer a natural-language question against the user's own notes + sources.
+ * `candidates` is the already-retrieved shortlist (keyword-ranked upstream).
+ * With no API key, returns a plain "here's what matched" stand-in.
+ */
+export async function answerSearchChat(input: {
+  query: string;
+  history?: ChatTurn[];
+  candidates: { title: string; text: string }[];
+}): Promise<SearchChatResult> {
+  const cands = input.candidates.slice(0, 8);
+
+  if (!llmConfigured() || cands.length === 0) {
+    const answer = cands.length
+      ? `「${input.query}」に関連しそうな記録が${cands.length}件見つかりました。下の候補を確認してください。`
+      : `「${input.query}」に一致する記録は見つかりませんでした。`;
+    return { answer, usedIndexes: cands.map((_, i) => i + 1), llm: false };
+  }
+
+  const context = cands
+    .map((c, i) => `[${i + 1}] ${c.title}\n${c.text.slice(0, 700)}`)
+    .join("\n\n");
+
+  try {
+    const raw = await chat(
+      [
+        {
+          role: "system",
+          content:
+            "あなたはユーザー自身のノートと保存記事だけを資料に答えるアシスタント。" +
+            "資料にない事実は足さない。参照した資料は文末で [1] [2] のように番号で示す。" +
+            "日本語で、3〜6文程度で簡潔に。",
+        },
+        ...(input.history ?? []).slice(-6),
+        { role: "user", content: `資料:\n${context}\n\n質問: ${input.query}` },
+      ],
+      { temperature: 0.3, maxTokens: 700 }
+    );
+    const used = [...raw.matchAll(/\[(\d{1,2})\]/g)]
+      .map((m) => Number(m[1]))
+      .filter((n) => n >= 1 && n <= cands.length);
+    return {
+      answer: raw,
+      usedIndexes: [...new Set(used)].sort((a, b) => a - b),
+      llm: true,
     };
   } catch (e) {
     if (!(e instanceof LLMError)) throw e;
     return {
-      axes: [{ name: "主題", values: sources.map((s) => s.summary[0] ?? null), accentCols: [] }],
-      summary: "差分のまとめに失敗しました（AI応答なし）。",
-      candidateAxes: [],
+      answer: `AIの応答を取得できませんでした。「${input.query}」に関連する候補を下に表示します。`,
+      usedIndexes: cands.map((_, i) => i + 1),
+      llm: false,
     };
   }
 }

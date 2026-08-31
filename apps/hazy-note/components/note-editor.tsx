@@ -98,11 +98,15 @@ export const NoteEditor = forwardRef<
   // ── mount Quill (dynamic import — Quill touches `document` at load) ──
   useEffect(() => {
     let quill: Quill | null = null;
+    let markdown: { destroy: () => void } | null = null;
     let debounce: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
 
     (async () => {
-      const { default: QuillCtor } = await import("quill");
+      const [{ default: QuillCtor }, { default: QuillMarkdown }] = await Promise.all([
+        import("quill"),
+        import("quilljs-markdown"),
+      ]);
       if (disposed || !holderRef.current) return;
 
       quill = new QuillCtor(holderRef.current, {
@@ -111,6 +115,16 @@ export const NoteEditor = forwardRef<
         modules: { toolbar: TOOLBAR },
       });
       quillRef.current = quill;
+
+      // Live markdown: `#`/`##`/`###`, `> `, `**bold**`, `*italic*`, `[t](url)`
+      // convert as you type. `- ` / `1. ` lists are handled by Quill's own
+      // keyboard defaults. Restricted to the formats the toolbar +
+      // lib/note-delta.ts round-trip — no h4–h6, strikethrough, or code blocks
+      // (they'd export as unstyled text).
+      markdown = new QuillMarkdown(quill, {
+        ignoreTags: ["h4", "h5", "h6", "strikethrough", "pre", "code"],
+      });
+
       if (value.length) quill.setContents({ ops: value } as never, "silent");
 
       const scan = () => {
@@ -160,6 +174,7 @@ export const NoteEditor = forwardRef<
     return () => {
       disposed = true;
       if (debounce) clearTimeout(debounce);
+      markdown?.destroy();
       quill?.root.removeEventListener("keydown", onKeyDown, true);
       // flush a pending edit
       const q = quillRef.current;

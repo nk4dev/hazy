@@ -263,8 +263,8 @@ export function ProjectClient({ id }: { id: string }) {
       </section>
 
       <div className="flex flex-wrap gap-2 border-t border-white/[0.06] pt-4">
-        <Link href={`/compare?project=${id}`} className="btn btn-secondary text-[13px]">
-          <Icon name="columns" /> この出典で比較する
+        <Link href={`/analyze?project=${id}`} className="btn btn-secondary text-[13px]">
+          <Icon name="chart-donut" /> この出典を分析する
         </Link>
         <Link href="/export" className="btn btn-secondary text-[13px]">
           <Icon name="export" /> 書き出す
