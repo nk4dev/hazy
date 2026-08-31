@@ -23,6 +23,10 @@ on failure:
 `GET /health` is unauthenticated. The DTO shapes are the contract in
 `@repo/api-client` (`packages/api-client/src/types.ts`).
 
+`docs/ai/flutter/` re-documents this whole surface by genre (auth, errors,
+models, items, collections, ask, read-later, search, me) for the Flutter
+hazy app. Update it alongside the contract.
+
 ## Layout
 
 ```

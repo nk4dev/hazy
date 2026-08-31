@@ -7,7 +7,7 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
 | `apps/api` | `hazy-api` — a **Hono Worker** at `api.hz.nknighta.me`. hazy's backend: `/v1/**` JSON API + the Clerk webhook. |
 | `apps/hazy` | `hz.nknighta.me` — a **pure frontend** (Next 16, Turbopack). No backend, no DB. Calls `apps/api` via `@repo/api-client`. |
 | `apps/hazy-note` | `note.hz.nknighta.me` — Next 16. Capture → notes (Quill editor) → search / analyze → export. **Still has its own `/api/*` route handlers** over `@repo/db` (migrating to `apps/api` is a follow-up). Search: client-side keyword/tag + on-device `@ternlight/base` semantic + an OpenRouter chat route. |
-| `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types. The single source of truth for the API shape. |
+| `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types. The single source of truth for the API shape. `docs/ai/flutter/` re-documents this surface by genre for the Flutter hazy app — keep it in sync when the contract changes. |
 | `packages/db` | `@repo/db` — the one Drizzle schema + `getDb()` + migrations + search-vector trigger. |
 
 ## Rules
