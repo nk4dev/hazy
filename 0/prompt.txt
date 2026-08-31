@@ -1,0 +1,17 @@
+start up local server
+
+---
+
+open agent-browser and debugging
+
+---
+
+現在のバグを修正
+
+---
+
+文章や保存されているURLからその人の傾向を予測するアナライズ機能を作って
+
+---
+
+notesのヘッダーのタイトルをもう少しわかり易く
