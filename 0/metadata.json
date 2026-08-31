@@ -1,0 +1,86 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M1AXJ12EEGQZXSVCRZJK375R",
+  "session_id": "3046a329-862c-49bb-a9c3-96c383554c96",
+  "strategy": "manual-commit",
+  "created_at": "2026-08-31T03:24:43.353560871Z",
+  "branch": "dev",
+  "checkpoints_count": 5,
+  "files_touched": [
+    "CLAUDE.md",
+    "apps/api/CLAUDE.md",
+    "apps/api/README.md",
+    "docs/ai/flutter/README.md",
+    "docs/ai/flutter/ask.md",
+    "docs/ai/flutter/auth.md",
+    "docs/ai/flutter/collections.md",
+    "docs/ai/flutter/errors.md",
+    "docs/ai/flutter/items.md",
+    "docs/ai/flutter/me.md",
+    "docs/ai/flutter/models.md",
+    "docs/ai/flutter/read-later.md",
+    "docs/ai/flutter/search.md"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "0b9aae57bcb2",
+  "checkpoint_transcript_start": 1862,
+  "transcript_lines_at_start": 1862,
+  "compact_transcript_start": 350,
+  "token_usage": {
+    "input_tokens": 50,
+    "cache_creation_tokens": 49868,
+    "cache_read_tokens": 11779410,
+    "output_tokens": 19906,
+    "api_call_count": 25
+  },
+  "skill_events_version": 1,
+  "skill_events": [
+    {
+      "id": "claude-skill-toolu_01RMEWPnTBHrSSfhf58QJQBt",
+      "event_type": "tool_invocation",
+      "skill": {
+        "name": "agent-browser"
+      },
+      "source": {
+        "agent": "claude-code",
+        "signal": "skill_tool_use",
+        "confidence": "explicit"
+      },
+      "turn_id": "0b9aae57bcb2",
+      "transcript_anchor": {
+        "unit": "line",
+        "start": 49,
+        "end": 50,
+        "entry_ids": [
+          "7c2b8192-b7f7-4fe9-b4cb-af7e758ab7f0"
+        ],
+        "tool_use_id": "toolu_01RMEWPnTBHrSSfhf58QJQBt"
+      },
+      "native": {
+        "tool_name": "Skill",
+        "tool_use_id": "toolu_01RMEWPnTBHrSSfhf58QJQBt"
+      },
+      "collapse": {
+        "target": "tool_pair",
+        "label": "Skill: agent-browser",
+        "default_collapsed": true
+      }
+    }
+  ],
+  "session_metrics": {
+    "turn_count": 5
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-08-31T03:24:42.99027094Z",
+    "agent_lines": 906,
+    "agent_removed": 2,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 906,
+    "total_lines_changed": 908,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
