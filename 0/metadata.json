@@ -1,0 +1,47 @@
+{
+  "cli_version": "0.10.3",
+  "checkpoint_id": "01M2JDG3JB2YX896XBWBXJ59X3",
+  "session_id": "d17ea24a-d52d-4999-8a35-348786f64357",
+  "strategy": "manual-commit",
+  "created_at": "2026-09-15T11:33:40.851797317Z",
+  "branch": "dev",
+  "checkpoints_count": 4,
+  "files_touched": [
+    "apps/api/src/routes/items.ts",
+    "apps/hazy/messages/en.json",
+    "apps/hazy/messages/ja.json",
+    "apps/hazy/src/components/item/editable-field.tsx",
+    "apps/hazy/src/components/item/item-detail-view.tsx",
+    "apps/hazy/src/components/save/save-url-dialog.tsx",
+    "docs/ai/flutter/items.md",
+    "packages/api-client/src/client.ts"
+  ],
+  "agent": "Claude Code",
+  "model": "claude-sonnet-5",
+  "turn_id": "b1902b885012",
+  "checkpoint_transcript_start": 2044,
+  "transcript_lines_at_start": 2044,
+  "compact_transcript_start": 349,
+  "token_usage": {
+    "input_tokens": 6,
+    "cache_creation_tokens": 2307,
+    "cache_read_tokens": 1394201,
+    "output_tokens": 1003,
+    "api_call_count": 3
+  },
+  "session_metrics": {
+    "turn_count": 4
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-09-15T11:33:40.174676192Z",
+    "agent_lines": 191,
+    "agent_removed": 17,
+    "human_added": 0,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 191,
+    "total_lines_changed": 208,
+    "agent_percentage": 100,
+    "metric_version": 2
+  }
+}
