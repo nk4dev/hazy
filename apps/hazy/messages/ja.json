@@ -48,7 +48,8 @@
     "urlLabel": "URL",
     "urlPlaceholder": "https://example.com/article",
     "submit": "保存",
-    "fetching": "ページ情報を取得しています…"
+    "fetching": "ページ情報を取得しています…",
+    "fxtwitterHint": "画像をダウンロードするなら fxtwitter で開く"
   },
   "item": {
     "openOriginal": "元のページを開く",
@@ -57,6 +58,10 @@
     "readLater": "後で見るに追加",
     "summary": "要約",
     "refetch": "情報を再取得",
+    "title": "タイトル",
+    "site": "サイト名",
+    "addSite": "サイト名を追加",
+    "editField": "{field}を編集",
     "tags": "タグ",
     "addTag": "タグを追加",
     "removeTag": "タグ「{tag}」を削除"

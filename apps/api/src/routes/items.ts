@@ -139,6 +139,7 @@ items.get("/:id", async (c) => {
 const patchSchema = z.object({
   summary: z.string().max(4000).nullable().optional(),
   title: z.string().max(500).nullable().optional(),
+  domain: z.string().max(255).nullable().optional(),
   tags: z.array(z.string()).max(100).optional(),
 });
 

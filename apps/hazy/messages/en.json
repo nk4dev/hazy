@@ -48,7 +48,8 @@
     "urlLabel": "URL",
     "urlPlaceholder": "https://example.com/article",
     "submit": "Save",
-    "fetching": "Fetching page details…"
+    "fetching": "Fetching page details…",
+    "fxtwitterHint": "Want the images? Open this post on fxtwitter"
   },
   "item": {
     "openOriginal": "Open original",
@@ -57,6 +58,10 @@
     "readLater": "Add to read later",
     "summary": "Summary",
     "refetch": "Refetch metadata",
+    "title": "Title",
+    "site": "Site name",
+    "addSite": "Add site name",
+    "editField": "Edit {field}",
     "tags": "Tags",
     "addTag": "Add tag",
     "removeTag": "Remove tag {tag}"

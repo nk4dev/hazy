@@ -78,6 +78,7 @@ function createRequest(config: HazyClientConfig) {
 
 export interface ItemPatch {
   title?: string | null;
+  domain?: string | null;
   summary?: string | null;
   tags?: string[];
 }
