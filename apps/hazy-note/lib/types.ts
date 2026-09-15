@@ -51,7 +51,10 @@ export interface Tag {
   id: string;
   label: string;
   tone: "accent" | "neutral";
+  /** urlCount + noteCount. */
   count: number;
+  urlCount: number;
+  noteCount: number;
 }
 
 export type NoteStatus = "draft" | "done";

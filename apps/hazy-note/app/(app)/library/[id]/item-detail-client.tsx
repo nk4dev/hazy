@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useBreadcrumb } from "@/components/breadcrumbs";
 import { Icon } from "@/components/icon";
 import { Loading, Spinner } from "@/components/loading";
 import { Button, Tag } from "@/components/ui";
@@ -34,8 +35,13 @@ export function ItemDetailClient({ id }: { id: string }) {
   }, [id]);
   useEffect(load, [load]);
   useEffect(() => {
-    api.projects().then(setProjects).catch(() => {});
+    api
+      .projects()
+      .then(setProjects)
+      .catch(() => {});
   }, []);
+
+  useBreadcrumb(notFound || !item ? null : [{ label: item.title || "読み取り中…" }]);
 
   async function runReading() {
     setBusy("read");
@@ -125,7 +131,9 @@ export function ItemDetailClient({ id }: { id: string }) {
           )}
           {item.points.length > 0 && (
             <div className="flex flex-col gap-[6px] rounded-lg bg-accent/[0.08] p-[12px] shadow-[0_0_0_1px_var(--color-accent-800)]">
-              <div className="text-[10px] uppercase tracking-[0.09em] text-accent">抽出した論点</div>
+              <div className="text-[10px] uppercase tracking-[0.09em] text-accent">
+                抽出した論点
+              </div>
               <div className="flex flex-col gap-[4px] text-[12.5px] leading-[1.7] opacity-90">
                 {item.points.map((p, i) => (
                   <div key={i}>・{p}</div>

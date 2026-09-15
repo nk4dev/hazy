@@ -154,9 +154,14 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
         </div>
 
         <div className="flex flex-col gap-2">
-          <div className="px-[10px] text-[10px] uppercase tracking-[0.1em] text-text/[0.38]">
+          <Link
+            href="/tags"
+            target="_self"
+            onClick={onNavigate}
+            className="px-[10px] text-[10px] uppercase tracking-[0.1em] text-text/[0.38] no-underline hover:text-text/60"
+          >
             タグ
-          </div>
+          </Link>
           <div className="flex flex-wrap gap-[5px] px-[10px]">
             {tags.slice(0, 4).map((t) => (
               <Link
@@ -168,7 +173,11 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
                 <Tag tone={t.tone === "accent" ? "accent" : "neutral"}>{t.label}</Tag>
               </Link>
             ))}
-            {tags.length > 4 && <Tag tone="outline">+{tags.length - 4}</Tag>}
+            {tags.length > 4 && (
+              <Link href="/tags" target="_self" onClick={onNavigate}>
+                <Tag tone="outline">+{tags.length - 4}</Tag>
+              </Link>
+            )}
           </div>
         </div>
       </aside>

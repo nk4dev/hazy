@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBreadcrumb } from "@/components/breadcrumbs";
 import { Icon } from "@/components/icon";
 import { Button, Seg, Tag } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -71,6 +72,8 @@ export function LibraryClient() {
     : tagFilter
       ? `#${tagFilter}`
       : "受信箱";
+
+  useBreadcrumb(projectFilter || tagFilter ? [{ label: heading }] : null);
 
   async function ingest() {
     if (!url.trim() || busy) return;

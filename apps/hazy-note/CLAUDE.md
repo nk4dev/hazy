@@ -38,6 +38,21 @@ There is **no** tag-based auto-creation, auto-sort or digest (all removed).
 `notes.collection_id` / `compare_boards.*` are dead columns/tables.
 `/analyze` also accepts `?project=<id>` to scope the tendency read to one project.
 
+# Tags (`/tags`) + breadcrumbs
+
+`/tags` lists every tag across `saved_urls.tags` and `notes.tags`, merged by
+label (`repo.ts` `listTags` — one `GET /api/tags`, `Tag.urlCount` /
+`Tag.noteCount` say which side each tag lives on). Clicking a tag goes to
+`/library?tag=` when it has URLs, else `/notes?tag=` (both already supported
+client-side filters). The sidebar's tag chips link here too.
+
+`components/breadcrumbs.tsx` renders a header trail, but only past the
+top level: `BreadcrumbProvider` wraps `AppShell`, and any detail page calls
+`useBreadcrumb([{label}])` once its data loads to add its own trailing crumb
+(`/notes/[id]`, `/projects/[id]`, `/library/[id]`, a tag/project-filtered
+`/library` or `/notes`). No route table — it's just the pathname's first
+segment (`ROOT` map) plus whatever the page reports.
+
 # Search (`/search`)
 
 `lib/search.ts` is pure and shared: `buildCorpus(notes, items)` flattens
@@ -67,6 +82,11 @@ body is a Quill **Delta** stored in `notes.body` (jsonb `ops` array).
   `toNote`), persisted on the next save. Don't write `blocks`.
 - `@`-mention in the editor inserts a link + registers a source in
   `notes.sources`. AI suggestions are `notes.suggestions` (sidebar), not body blocks.
+- The mention picker's caret-position scan runs off `quill.getSelection()` on a
+  deferred (`setTimeout(…, 0)`) tick, not synchronously inside `text-change` —
+  Quill reports the pre-edit range there on the very first edit to an empty
+  document (typing `@` as a note's first character wouldn't open the picker
+  otherwise).
 
 # Rules
 
@@ -77,3 +97,13 @@ body is a Quill **Delta** stored in `notes.body` (jsonb `ops` array).
 - Tests: `bun run test` (unit, `bun:test`, `lib/`), `bun run test:e2e`
   (Playwright, `e2e/`). E2E auth needs `E2E_CLERK_USER_EMAIL` + `CLERK_SECRET_KEY`;
   without them the signed-in specs skip. See `README.md` › テスト.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

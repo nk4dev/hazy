@@ -4,6 +4,7 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BreadcrumbProvider, Breadcrumbs } from "./breadcrumbs";
 import { Icon } from "./icon";
 import { Sidebar } from "./sidebar";
 
@@ -23,37 +24,42 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [open]);
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/[0.06] bg-neutral-900 px-4 py-[10px] lg:hidden">
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          aria-label="メニューを開く"
-          className="text-text/70 hover:text-text"
-        >
-          <Icon name="list" size={22} />
-        </button>
-        <Link href="/notes" className="flex items-center gap-2 no-underline">
-          <span className="h-[18px] w-[18px] rounded-[6px] bg-[radial-gradient(circle_at_30%_25%,var(--color-accent-400),var(--color-accent-700))]" />
-          <span className="text-[14px] font-medium text-text">hazy note</span>
-        </Link>
-        <div className="ml-auto">
-          <UserButton />
+    <BreadcrumbProvider>
+      <div className="flex min-h-screen flex-col lg:flex-row">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/[0.06] bg-neutral-900 px-4 py-[10px] lg:hidden">
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="メニューを開く"
+            className="text-text/70 hover:text-text"
+          >
+            <Icon name="list" size={22} />
+          </button>
+          <Link href="/notes" className="flex items-center gap-2 no-underline">
+            <span className="h-[18px] w-[18px] rounded-[6px] bg-[radial-gradient(circle_at_30%_25%,var(--color-accent-400),var(--color-accent-700))]" />
+            <span className="text-[14px] font-medium text-text">hazy note</span>
+          </Link>
+          <div className="ml-auto">
+            <UserButton />
+          </div>
+        </header>
+
+        {open && (
+          <button
+            type="button"
+            aria-label="メニューを閉じる"
+            onClick={() => setOpen(false)}
+            className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          />
+        )}
+
+        <Sidebar open={open} onNavigate={() => setOpen(false)} />
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <Breadcrumbs />
+          <div className="min-w-0 flex-1">{children}</div>
         </div>
-      </header>
-
-      {open && (
-        <button
-          type="button"
-          aria-label="メニューを閉じる"
-          onClick={() => setOpen(false)}
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-        />
-      )}
-
-      <Sidebar open={open} onNavigate={() => setOpen(false)} />
-
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+      </div>
+    </BreadcrumbProvider>
   );
 }

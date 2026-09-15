@@ -43,9 +43,16 @@ bun run dev --filter=hazy-note # この app だけ
 | `/search` | — | ノート＋出典を横断検索。4 モード: **文字列**（`lib/search.ts` のキーワード一致・クライアント）／**タグ**（タグクラウド＋部分一致）／**AI検索**（`@ternlight/base/web` の端末内埋め込みで意味の近い順・初回に数MBの wasm 読み込み）／**チャット**（`/api/search/chat` → OpenRouter、自分の記録だけを資料に回答＋参照元）。文字列・タグ・AI はサーバーを介さない |
 | `/analyze` | s4 | 傾向分析。ノート本文＋保存済み URL を集計し、関心テーマ／情報源のクセ／視点の偏り・死角／次の一歩を推定。`?project=<id>` でプロジェクト単位に絞れる。`(user, project|null)` ごとに 1 行キャッシュ（`insight_profiles`） |
 | `/export` | s6 | 書き出す。形式切替（ブログ／メモ／要点）、どこから来たかの対応表 |
+| `/tags` | — | タグ一覧。`saved_urls.tags` と `notes.tags` を横断して集計、件数順。クリックで `/library?tag=` か `/notes?tag=` に絞り込む |
 
 > `/graph`（s5「つながり」）と `/compare`（s4「比較ボード」）は廃止。
 > `graph_snapshots` / `compare_boards` テーブルとスキーマは残置（読み書きなし）。
+
+ヘッダーにパンくずリストが出る（`components/breadcrumbs.tsx`）。トップレベルの
+画面（`/notes` 等）では出さず、詳細画面（`/notes/[id]`, `/projects/[id]`,
+`/library/[id]`, タグ・プロジェクトで絞った `/library` `/notes`）でのみ
+「ノート › タイトル」のように一段追加される。各詳細ページが `useBreadcrumb()`
+でデータ読み込み後に自分の見出しを渡す仕組み — サーバー側にルート定義は無い。
 
 ## API
 
@@ -62,7 +69,7 @@ POST   /api/projects       {name,description?}
 GET    /api/projects/:id              プロジェクト詳細（出典・ノート込み）
 PATCH  /api/projects/:id   {name?,description?,tone?}
 DELETE /api/projects/:id
-GET    /api/tags
+GET    /api/tags                      タグ一覧（saved_urls + notes を横断、件数順）
 GET    /api/notes  /api/notes/:id
 PATCH  /api/notes/:id  {text}                 段落を追記
 PATCH  /api/notes/:id  {body,suggestions,...} ノート本文（Quill Delta）ほかを更新

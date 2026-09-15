@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBreadcrumb } from "@/components/breadcrumbs";
 import { Icon } from "@/components/icon";
 import { Loading, Spinner } from "@/components/loading";
 import { Button } from "@/components/ui";
@@ -41,6 +42,8 @@ export function ProjectClient({ id }: { id: string }) {
       .catch(() => setNotFound(true));
   }, [id]);
   useEffect(load, [load]);
+
+  useBreadcrumb(notFound || !detail ? null : [{ label: detail.name }]);
 
   function saveDesc(next: string) {
     setDesc(next);
@@ -101,7 +104,11 @@ export function ProjectClient({ id }: { id: string }) {
 
   function openPicker() {
     setAdding(true);
-    if (allItems.length === 0) api.items().then(setAllItems).catch(() => {});
+    if (allItems.length === 0)
+      api
+        .items()
+        .then(setAllItems)
+        .catch(() => {});
   }
 
   if (notFound) return <div className="p-8 text-text/50">プロジェクトが見つかりません。</div>;
@@ -184,11 +191,7 @@ export function ProjectClient({ id }: { id: string }) {
                     onClick={() => addSource(it.id)}
                     className="flex w-full items-start gap-[9px] rounded-md px-[8px] py-[7px] text-left hover:bg-white/[0.05]"
                   >
-                    <Icon
-                      name={KIND_ICON[it.kind]}
-                      size={14}
-                      className="mt-[2px] text-accent"
-                    />
+                    <Icon name={KIND_ICON[it.kind]} size={14} className="mt-[2px] text-accent" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13px] text-text">{it.title}</span>
                       <span className="block truncate text-[11px] text-text/50">{it.site}</span>
@@ -256,7 +259,12 @@ export function ProjectClient({ id }: { id: string }) {
             <span className="shrink-0 text-[11px] text-text/40">{n.updatedLabel}</span>
           </Link>
         ))}
-        <Button variant="primary" className="self-start text-[13px]" onClick={newNote} disabled={creatingNote}>
+        <Button
+          variant="primary"
+          className="self-start text-[13px]"
+          onClick={newNote}
+          disabled={creatingNote}
+        >
           {creatingNote ? <Spinner className="size-4" /> : <Icon name="note-pencil" />}
           このプロジェクトでノートを書く
         </Button>

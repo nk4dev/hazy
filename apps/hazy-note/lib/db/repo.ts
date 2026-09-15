@@ -443,25 +443,46 @@ export async function deleteProject(userId: string, id: string): Promise<boolean
   return deleted.length > 0;
 }
 
+/** Tags used anywhere — saved URLs (`saved_urls.tags`) and notes (`notes.tags`), merged by label. */
 export async function listTags(userId: string): Promise<Tag[]> {
   const res: unknown = await db.execute(sql`
     select label, count(*)::int as n
     from saved_urls, unnest(tags) as label
     where user_id = ${userId}
     group by label
-    order by n desc, label
   `);
   // postgres.js returns an array; neon-http returns { rows }.
-  const rows = (Array.isArray(res) ? res : (res as { rows: unknown[] }).rows) as {
+  const urlRows = (Array.isArray(res) ? res : (res as { rows: unknown[] }).rows) as {
     label: string;
     n: number;
   }[];
-  return rows.map((r) => ({
-    id: `t-${encodeURIComponent(r.label)}`,
-    label: r.label,
-    tone: "neutral",
-    count: r.n,
-  }));
+  const urlCounts = new Map(urlRows.map((r) => [r.label, r.n]));
+
+  const noteRows = await db.query.notes.findMany({
+    where: (t, { eq }) => eq(t.userId, userId),
+  });
+  const noteCounts = new Map<string, number>();
+  for (const row of noteRows) {
+    for (const t of row.tags as { label: string }[]) {
+      noteCounts.set(t.label, (noteCounts.get(t.label) ?? 0) + 1);
+    }
+  }
+
+  const labels = new Set([...urlCounts.keys(), ...noteCounts.keys()]);
+  return [...labels]
+    .map((label) => {
+      const urlCount = urlCounts.get(label) ?? 0;
+      const noteCount = noteCounts.get(label) ?? 0;
+      return {
+        id: `t-${encodeURIComponent(label)}`,
+        label,
+        tone: "neutral" as const,
+        count: urlCount + noteCount,
+        urlCount,
+        noteCount,
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 // ── Notes ──────────────────────────────────────────────────

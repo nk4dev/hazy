@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useBreadcrumb } from "@/components/breadcrumbs";
 import { Icon } from "@/components/icon";
 import { Loading, Spinner } from "@/components/loading";
-import { NoteEditor, type CiteTarget, type NoteEditorHandle } from "@/components/note-editor";
+import { type CiteTarget, NoteEditor, type NoteEditorHandle } from "@/components/note-editor";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { DeltaOp } from "@/lib/note-delta";
@@ -36,10 +37,17 @@ export function NoteClient({ id }: { id?: string }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const isDraft = !noteId;
 
+  useBreadcrumb(
+    notFound ? null : [{ label: isDraft ? "新しいノート" : note?.title || "無題のノート" }]
+  );
+
   const editorRef = useRef<NoteEditorHandle>(null);
 
   useEffect(() => {
-    api.projects().then(setProjects).catch(() => {});
+    api
+      .projects()
+      .then(setProjects)
+      .catch(() => {});
   }, []);
 
   // The authoritative note / id, updated synchronously so rapid edits chain
@@ -185,8 +193,6 @@ export function NoteClient({ id }: { id?: string }) {
         <div className="flex flex-wrap items-center gap-[10px] text-[12px] text-text/45">
           <Icon name="notebook" />
           ノート
-          <Icon name="caret-right" size={11} />
-          <span className="text-text">{note.title}</span>
           <div className="flex flex-wrap items-center gap-[7px] sm:ml-auto">
             <span className="flex items-center gap-[5px] text-[11px]">
               {saving && <Spinner className="size-[11px] text-accent" />}
@@ -277,7 +283,9 @@ export function NoteClient({ id }: { id?: string }) {
 
       <aside className="flex flex-col gap-[18px] bg-neutral-900 p-[18px_16px]">
         <Panel title="このノートの状態">
-          {note.flags.length === 0 && <div className="text-[12px] text-text/40">特にありません</div>}
+          {note.flags.length === 0 && (
+            <div className="text-[12px] text-text/40">特にありません</div>
+          )}
           {note.flags.map((f) => (
             <div key={f.text} className="flex items-center gap-2 text-[12.5px] opacity-90">
               <Icon
