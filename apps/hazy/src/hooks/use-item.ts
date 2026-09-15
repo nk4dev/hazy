@@ -37,6 +37,13 @@ export function useRefetchItemMutation(id: string) {
   });
 }
 
+export function useDownloadItemImageMutation(id: string) {
+  const client = useHazyClient();
+  return useMutation({
+    mutationFn: () => client.items.downloadImage(id),
+  });
+}
+
 export function useSummarizeItemMutation(id: string) {
   const client = useHazyClient();
   const queryClient = useQueryClient();

@@ -1,6 +1,14 @@
 "use client";
 
-import { Clock, ExternalLink, Loader2, NotebookPen, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Clock,
+  Download,
+  ExternalLink,
+  Loader2,
+  NotebookPen,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Favicon } from "@/components/favicon";
@@ -9,10 +17,20 @@ import { EditableField } from "@/components/item/editable-field";
 import { ItemTagsEditor } from "@/components/item/item-tags-editor";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useItemQuery, useRefetchItemMutation, useUpdateItemMutation } from "@/hooks/use-item";
+import {
+  useDownloadItemImageMutation,
+  useItemQuery,
+  useRefetchItemMutation,
+  useUpdateItemMutation,
+} from "@/hooks/use-item";
 import { useDeleteItemMutation } from "@/hooks/use-items";
 import { useSetReadLaterStatus } from "@/hooks/use-read-later";
 import { useRouter } from "@/i18n/navigation";
+
+// x.com / twitter.com block image scraping outright — the "download image"
+// action falls back to fxtwitter.com server-side (see apps/api's
+// lib/metadata/x-fallback.ts), so it only makes sense to show for those hosts.
+const X_DOMAINS = new Set(["x.com", "twitter.com"]);
 
 export function ItemDetailView({ id }: { id: string }) {
   const t = useTranslations("item");
@@ -20,7 +38,27 @@ export function ItemDetailView({ id }: { id: string }) {
   const refetch = useRefetchItemMutation(id);
   const update = useUpdateItemMutation(id);
   const del = useDeleteItemMutation();
+  const downloadImage = useDownloadItemImageMutation(id);
   const router = useRouter();
+
+  function handleDownloadImage() {
+    downloadImage.mutate(undefined, {
+      onSuccess: ({ blob, contentType }) => {
+        const ext = contentType.split("/")[1]?.split(";")[0] || "jpg";
+        const filename = `${item?.domain ?? "x"}-${id.slice(0, 8)}.${ext}`;
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      },
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : "Could not download the image."),
+    });
+  }
 
   function commitField(field: "title" | "domain", next: string | null) {
     update.mutate(
@@ -141,6 +179,22 @@ export function ItemDetailView({ id }: { id: string }) {
           {t("readLater")}
         </Button>
         <AddToCollectionButton savedUrlId={id} />
+        {item.domain && X_DOMAINS.has(item.domain) && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleDownloadImage}
+            disabled={downloadImage.isPending}
+          >
+            {downloadImage.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5" />
+            )}
+            {t("downloadImage")}
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

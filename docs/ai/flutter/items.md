@@ -104,6 +104,28 @@ Future<SavedUrl> summarize(String id) async {
 
 ---
 
+## GET `/v1/items/:id/image` — プレビュー画像のダウンロード
+
+`og_image_url` を起点に画像バイナリをそのままストリームして返す（サーバーには
+保存しない、毎回取得し直す）。`Content-Type` は元画像のもの、`Content-Disposition:
+attachment; filename="..."` 付き。
+
+x.com / twitter.com は og:image のスクレイピング自体をブロックしているため、
+`og_image_url` が空でそのドメインの場合は fxtwitter.com 経由でその場だけ解決する
+（DB へは書き戻さない — 恒久的に直すには `POST /:id/refetch` を使う）。
+
+- 画像が解決できない/取得に失敗 → `404 not_found` または `502 image_fetch_failed`。
+- 無い / 他人の item → `404 not_found`。
+
+```dart
+Future<Uint8List> downloadItemImage(String id) async {
+  final res = await apiGetBinary('/items/$id/image'); // raw bytes, not the {data} envelope
+  return res.bodyBytes;
+}
+```
+
+---
+
 ## 典型フロー
 
 1. ユーザーが URL を貼る → `POST /v1/items` → カードに追加。

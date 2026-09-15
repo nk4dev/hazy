@@ -4,10 +4,11 @@ import { z } from "zod";
 import { getDb } from "@/db";
 import { readLaterState, savedUrls } from "@/db/schema";
 import { summarizeItem } from "@/lib/ai/summarize-item";
-import { NotFoundError } from "@/lib/api/errors";
+import { ApiError, NotFoundError } from "@/lib/api/errors";
 import { ok } from "@/lib/api/response";
 import { fetchUrlMetadata } from "@/lib/metadata/fetch-metadata";
 import { parseAndNormalizeUrl } from "@/lib/metadata/normalize-url";
+import { toFxTwitterUrl } from "@/lib/metadata/x-fallback";
 import { serializeSavedUrl } from "@/lib/serializers";
 import type { AppEnv } from "@/types/hono";
 
@@ -213,4 +214,55 @@ items.post("/:id/summarize", async (c) => {
   const user = c.get("user");
   const result = await summarizeItem(user.id, c.req.param("id"));
   return ok(result);
+});
+
+const IMAGE_FETCH_TIMEOUT_MS = 8000;
+
+/**
+ * Streams the item's preview image straight through (never persisted here —
+ * `og_image_url` only gets written by `refetch`). For x.com/twitter.com items
+ * where og:image is blocked at the source, falls back to fxtwitter.com to
+ * resolve an image URL on the fly.
+ */
+items.get("/:id/image", async (c) => {
+  const user = c.get("user");
+  const row = await loadOwnedItem(user.id, c.req.param("id"));
+
+  let imageUrl = row.ogImageUrl;
+  if (!imageUrl) {
+    const fxUrl = toFxTwitterUrl(row.url);
+    if (fxUrl) {
+      const result = await fetchUrlMetadata(fxUrl);
+      if (result.status === "success" && result.metadata.ogImageUrl) {
+        imageUrl = result.metadata.ogImageUrl;
+      }
+    }
+  }
+  if (!imageUrl) throw new NotFoundError("Image");
+
+  let imageResponse: Response;
+  try {
+    imageResponse = await fetch(imageUrl, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
+      headers: { "User-Agent": "HazyBot/1.0 (+https://hazy.app; link preview fetcher)" },
+    });
+  } catch {
+    throw new ApiError(502, "image_fetch_failed", "Could not fetch the image.");
+  }
+  if (!imageResponse.ok || !imageResponse.body) {
+    throw new ApiError(502, "image_fetch_failed", "Could not fetch the image.");
+  }
+
+  const contentType = imageResponse.headers.get("content-type") ?? "application/octet-stream";
+  const ext = contentType.split("/")[1]?.split(";")[0] || "jpg";
+  const filename = `${row.domain ?? "image"}-${row.id.slice(0, 8)}.${ext}`;
+
+  return new Response(imageResponse.body, {
+    status: 200,
+    headers: {
+      "Content-Type": contentType,
+      "Content-Disposition": `attachment; filename="${filename}"`,
+    },
+  });
 });
