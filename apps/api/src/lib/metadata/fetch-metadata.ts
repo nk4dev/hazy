@@ -22,6 +22,19 @@ const FETCH_TIMEOUT_MS = 8000;
 const EXTRACTED_TEXT_CAP = 4000;
 const WORDS_PER_MINUTE = 200;
 
+/**
+ * `String.slice` cuts by UTF-16 code unit, not code point — if the cut lands
+ * in the middle of a surrogate pair (e.g. an emoji or a rare CJK extension
+ * character), the result ends in a lone surrogate. That round-trips to
+ * invalid UTF-8 on the wire, which Postgres rejects outright (error 22021,
+ * "invalid byte sequence for encoding"), failing the entire insert.
+ */
+function safeSlice(text: string, maxLength: number): string {
+  const sliced = text.slice(0, maxLength);
+  const lastCode = sliced.charCodeAt(sliced.length - 1);
+  return lastCode >= 0xd800 && lastCode <= 0xdbff ? sliced.slice(0, -1) : sliced;
+}
+
 function absoluteUrl(base: string, maybeRelative: string | undefined): string | null {
   if (!maybeRelative) return null;
   try {
@@ -84,7 +97,7 @@ export async function fetchUrlMetadata(url: string): Promise<FetchMetadataResult
 
     $("script, style, noscript, nav, footer").remove();
     const bodyText = $("body").text().replace(/\s+/g, " ").trim();
-    const extractedText = bodyText ? bodyText.slice(0, EXTRACTED_TEXT_CAP) : null;
+    const extractedText = bodyText ? safeSlice(bodyText, EXTRACTED_TEXT_CAP) : null;
 
     const wordCount = bodyText ? bodyText.split(/\s+/).length : 0;
     const estimatedReadMinutes = wordCount
