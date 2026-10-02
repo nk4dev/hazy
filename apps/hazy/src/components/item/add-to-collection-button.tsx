@@ -64,7 +64,11 @@ export function AddToCollectionButton({ savedUrlId }: { savedUrlId: string }) {
             {t("addToCollection")}
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
+        <DropdownMenuContent
+          align="start"
+          collisionPadding={16}
+          className="w-auto max-w-72 min-w-48"
+        >
           {(data?.items.length ?? 0) === 0 && (
             <div className="px-2 py-1.5 text-xs text-muted-foreground">{tCollections("empty")}</div>
           )}
@@ -78,7 +82,7 @@ export function AddToCollectionButton({ savedUrlId }: { savedUrlId: string }) {
                 )
               }
             >
-              {collection.name}
+              <span className="truncate">{collection.name}</span>
             </DropdownMenuItem>
           ))}
           {(data?.items.length ?? 0) > 0 && <DropdownMenuSeparator />}

@@ -55,7 +55,8 @@ export default async function LocaleLayout({
       <QueryProvider>
         <TooltipProvider>
           {children}
-          <Toaster />
+          {/* Clear the mobile tab bar (~63px, sm:hidden) on narrow screens. */}
+          <Toaster mobileOffset={{ bottom: 80 }} />
         </TooltipProvider>
       </QueryProvider>
     </NextIntlClientProvider>
