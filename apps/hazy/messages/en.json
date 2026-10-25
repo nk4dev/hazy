@@ -6,7 +6,12 @@
     "ask": "Ask",
     "library": "Library",
     "collections": "Collections",
-    "readLater": "Read later"
+    "readLater": "Read later",
+    "menu": "Menu",
+    "settings": "Settings",
+    "connections": "Connected apps",
+    "save": "Save",
+    "account": "Account"
   },
   "common": {
     "save": "Save",
@@ -41,7 +46,8 @@
     "empty": "Nothing saved yet. Save your first link to get started.",
     "sortOldest": "Oldest first",
     "sortNewest": "Newest first",
-    "itemCount": "{count, plural, one {# item} other {# items}}"
+    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "more": "Load more"
   },
   "save": {
     "title": "Save a link",
@@ -49,7 +55,10 @@
     "urlPlaceholder": "https://example.com/article",
     "submit": "Save",
     "fetching": "Fetching page details…",
-    "fxtwitterHint": "Want the images? Open this post on fxtwitter"
+    "fxtwitterHint": "Want the images? Open this post on fxtwitter",
+    "paste": "Paste",
+    "pasteEmpty": "The clipboard is empty.",
+    "pasteFailed": "Couldn't read the clipboard. Paste into the field instead."
   },
   "item": {
     "openOriginal": "Open original",
@@ -127,6 +136,30 @@
       "matchInterface": "Match the interface",
       "matchSource": "Match the page I saved",
       "note": "You can save a page in one language and ask about it in another. Hazy answers in whichever you pick here."
+    },
+    "nav": {
+      "language": "Language",
+      "connections": "Connected apps"
+    },
+    "connections": {
+      "title": "Connected apps",
+      "empty": "No apps are connected to your Hazy.",
+      "loadFailed": "Couldn't load connected apps.",
+      "retry": "Retry",
+      "lastUsed": "Used {when}",
+      "neverUsed": "Not used yet",
+      "revoke": "Revoke",
+      "revoked": "Disconnected {name}.",
+      "revokeFailed": "Couldn't revoke access.",
+      "note": "Connected apps can read and save in your library on your behalf. Revoking cuts off access immediately."
     }
+  },
+  "connect": {
+    "title": "Connect {name} to Hazy?",
+    "scope": "This app will be able to read your library and save links on your behalf. You can revoke it any time in Settings.",
+    "approve": "Connect",
+    "deny": "Cancel",
+    "failed": "Couldn't authorize this app. Try again.",
+    "invalid": "This connection request is invalid or incomplete."
   }
 }

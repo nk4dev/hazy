@@ -396,6 +396,40 @@ export const graphSnapshots = pgTable("graph_snapshots", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ── Connected apps ────────────────────────────────────────────────────
+// "Connect with Hazy": a third-party client (e.g. a personal dashboard) sends
+// the user to hazy's `/connector/add` page, gets a one-shot code (PKCE, S256) and
+// trades it at `POST /v1/connect/token` for a long-lived `hz_…` bearer token.
+// Only SHA-256 hashes are stored.
+export const connectCodes = pgTable("connect_codes", {
+  codeHash: varchar("code_hash", { length: 64 }).primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  clientName: varchar("client_name", { length: 100 }).notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: varchar("code_challenge", { length: 128 }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    clientName: varchar("client_name", { length: 100 }).notNull(),
+    clientOrigin: text("client_origin").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("api_tokens_user_idx").on(t.userId)]
+);
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   preferences: one(userPreferences, {
     fields: [users.id],

@@ -6,6 +6,8 @@ import type {
   CollectionDetailDTO,
   CollectionItemRefDTO,
   CollectionSummaryDTO,
+  ConnectCodeDTO,
+  ConnectedAppDTO,
   MeDTO,
   PaginatedResponse,
   ReadLaterQueueDTO,
@@ -122,6 +124,13 @@ export interface AskInput {
   collectionIds?: string[];
 }
 
+export interface ConnectAuthorizeInput {
+  clientName: string;
+  redirectUri: string;
+  codeChallenge: string;
+  codeChallengeMethod: "S256";
+}
+
 export function createHazyClient(config: HazyClientConfig) {
   const request = createRequest(config);
   const requestBinary = createBinaryRequest(config);
@@ -206,6 +215,16 @@ export function createHazyClient(config: HazyClientConfig) {
       get: () => request<MeDTO>("/me"),
       updatePreferences: (patch: Partial<MeDTO["preferences"]>) =>
         request<MeDTO["preferences"]>("/me", { method: "PATCH", body: patch }),
+    },
+
+    // "Connect with Hazy" — needs a Clerk session (a connected app's own
+    // `hz_…` token gets 403 here). The code → token exchange is the public
+    // `POST /v1/connect/token`, called by the third-party client, not by hazy.
+    connect: {
+      authorize: (input: ConnectAuthorizeInput) =>
+        request<ConnectCodeDTO>("/connect/authorize", { method: "POST", body: input }),
+      apps: () => request<{ items: ConnectedAppDTO[] }>("/connect/apps"),
+      revoke: (id: string) => request<{ id: string }>(`/connect/apps/${id}`, { method: "DELETE" }),
     },
   };
 }

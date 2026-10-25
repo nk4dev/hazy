@@ -16,14 +16,19 @@ export function NavLinks() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-5 text-sm text-muted-foreground">
+    <nav className="flex h-full items-stretch gap-6 text-sm">
       {LINKS.map((link) => {
         const active = pathname === link.href || pathname.startsWith(`${link.href}/`);
         return (
           <Link
             key={link.href}
             href={link.href}
-            className={cn("transition-colors hover:text-foreground", active && "text-primary")}
+            aria-current={active ? "page" : undefined}
+            className={cn(
+              "relative flex items-center text-muted-foreground transition-colors hover:text-foreground",
+              "after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:rounded-full after:bg-primary after:opacity-0 after:transition-opacity",
+              active && "text-foreground after:opacity-100"
+            )}
           >
             {t(link.key)}
           </Link>

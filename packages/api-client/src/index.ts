@@ -3,6 +3,7 @@ export {
   createHazyClient,
   type AskInput,
   type CollectionPatch,
+  type ConnectAuthorizeInput,
   type HazyClient,
   type HazyClientConfig,
   type ItemPatch,
