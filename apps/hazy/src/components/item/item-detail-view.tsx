@@ -82,7 +82,7 @@ export function ItemDetailView({ id }: { id: string }) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-6 py-10">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-8 sm:px-6 sm:py-10">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-1/3" />
         <Skeleton className="h-40 w-full" />
@@ -97,7 +97,7 @@ export function ItemDetailView({ id }: { id: string }) {
   const hazyNoteUrl = process.env.NEXT_PUBLIC_HAZY_NOTE_URL || "http://localhost:3000";
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col px-6 py-10">
+    <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col px-4 py-8 sm:px-6 sm:py-10">
       <div className="mb-4 flex items-center gap-3">
         <Favicon src={item.faviconUrl} domain={item.domain} size={22} />
         <EditableField
@@ -128,6 +128,7 @@ export function ItemDetailView({ id }: { id: string }) {
           pending={update.isPending}
           onCommit={(next) => commitField("title", next)}
           inputClassName="text-[26px] font-medium h-auto"
+          wrap
         />
       </h1>
 

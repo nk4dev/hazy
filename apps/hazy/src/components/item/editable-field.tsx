@@ -18,6 +18,7 @@ export function EditableField({
   inputClassName,
   valueClassName,
   onValueClick,
+  wrap = false,
 }: {
   value: string | null;
   placeholder: string;
@@ -29,6 +30,8 @@ export function EditableField({
   valueClassName?: string;
   /** When set, the display text (not the edit button) is clickable — e.g. filter-by-domain. */
   onValueClick?: () => void;
+  /** Let a long value wrap onto several lines (e.g. the item title) instead of truncating. */
+  wrap?: boolean;
 }) {
   const t = useTranslations("item");
   const [editing, setEditing] = useState(false);
@@ -80,7 +83,13 @@ export function EditableField({
   }
 
   return (
-    <span className={cn("inline-flex min-w-0 items-center gap-1", className)}>
+    <span
+      className={cn(
+        "min-w-0 items-center gap-1",
+        wrap ? "flex max-w-full items-start" : "inline-flex",
+        className
+      )}
+    >
       {onValueClick && value ? (
         <button
           type="button"
@@ -90,7 +99,11 @@ export function EditableField({
           {value}
         </button>
       ) : (
-        <span className={cn("min-w-0 truncate", valueClassName)}>{value || placeholder}</span>
+        <span
+          className={cn("min-w-0", wrap ? "[overflow-wrap:anywhere]" : "truncate", valueClassName)}
+        >
+          {value || placeholder}
+        </span>
       )}
       {pending ? (
         <Loader2 className="size-3 shrink-0 animate-spin text-muted-foreground" />

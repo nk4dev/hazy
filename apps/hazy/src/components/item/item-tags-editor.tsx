@@ -1,5 +1,6 @@
 "use client";
 
+import type { SavedUrlDTO } from "@repo/api-client";
 import { Loader2, Plus, Tag, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { type KeyboardEvent, useState } from "react";
@@ -9,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useUpdateItemMutation } from "@/hooks/use-item";
 import { useRouter } from "@/i18n/navigation";
-import type { SavedUrlDTO } from "@repo/api-client";
 
 export function ItemTagsEditor({ item }: { item: SavedUrlDTO }) {
   const t = useTranslations("item");
