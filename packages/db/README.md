@@ -58,6 +58,11 @@ bun db:migrate
 drizzle decides what to run by comparing `created_at` (ms); the script seeds a
 row for `0000` (`1787944616065`) so only later migrations apply.
 
+The production Neon DB has **no** migration history (`drizzle.__drizzle_migrations`
+is empty) — `bun db:migrate` there restarts at `0000` and fails. Apply new
+migration files directly instead, e.g. `psql "$DATABASE_URL" -1 -f migrations/0008_high_katie_power.sql`
+(applied this way on 2026-10-26).
+
 ### Rollback (hazy-note additions are all additive)
 
 ```sql
