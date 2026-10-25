@@ -33,7 +33,7 @@ Cloudflare Worker）。このディレクトリはその `/v1/**` JSON API を
 
 ### 認証
 
-`/v1/**`（webhook を除く）はすべて **Clerk セッション JWT** を要求する:
+`/v1/**`（webhook と `/v1/connect/token` を除く）はすべて **Clerk セッション JWT** を要求する（連携アプリは代わりに `hz_…` トークン、[`connect.md`](./connect.md)）:
 ```
 Authorization: Bearer <clerk-session-token>
 ```
@@ -76,6 +76,7 @@ CORS はブラウザだけの制約。Flutter（モバイル / デスクトッ�
 | [`read-later.md`](./read-later.md) | あとで読む | 今日の3本 / 5分 / じっくり、既読化、週次統計 |
 | [`search.md`](./search.md) | 検索 | キーワード + `domain:` / `tag:` フィルタ |
 | [`me.md`](./me.md) | プロフィール | 自分の情報、UI 言語・通知設定 |
+| [`connect.md`](./connect.md) | 連携アプリ | 連携中アプリの一覧・解除（Connect with Hazy） |
 
 ## 最小の疎通確認（Dart）
 

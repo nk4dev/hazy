@@ -153,6 +153,20 @@ class SavedUrl {
 ```
 `PATCH /v1/me` は `preferences` の中身だけを返す（`UserPreferencesDTO`）。
 
+## Connect 系
+
+### ConnectedAppDTO — `GET /v1/connect/apps` の `items[]`
+| フィールド | 型 | Dart |
+|---|---|---|
+| `id` | string (uuid) | `String` |
+| `clientName` | string | `String` |
+| `clientOrigin` | string | `String` |
+| `createdAt` | ISO 8601 | `DateTime` |
+| `lastUsedAt` | ISO 8601 \| null | `DateTime?` |
+
+### ConnectCodeDTO / ConnectTokenDTO（Web・第三者クライアント用）
+`{ code }`（`POST /v1/connect/authorize`）、`{ accessToken, tokenType: "Bearer", clientName }`（`POST /v1/connect/token`）。
+
 ## その他の小さな封筒
 
 | エンドポイント | `data` の形 |
