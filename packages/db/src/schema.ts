@@ -116,6 +116,10 @@ export const savedUrls = pgTable(
     relatedNoteId: uuid("related_note_id").references((): AnyPgColumn => notes.id, {
       onDelete: "set null",
     }),
+    // hazy-note only: the project this URL is filed under (≤1).
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
+      onDelete: "set null",
+    }),
     // A short bullet list — distinct from the free-text `summary` above.
     summaryLines: text("summary_lines")
       .array()
@@ -164,7 +168,7 @@ export const collections = pgTable(
     color: varchar("color", { length: 32 }),
     summary: text("summary"),
     summaryUpdatedAt: timestamp("summary_updated_at", { withTimezone: true }),
-    // hazy-note addition: Project.tone ("accent" is its digest/auto-sort target).
+    // Legacy hazy-note column — hazy-note now uses its own `projects` table.
     tone: varchar("tone", { length: 16 }).notNull().default("neutral"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
@@ -187,6 +191,28 @@ export const collectionItems = pgTable(
   (table) => [
     unique("collection_items_collection_saved_url_unique").on(table.collectionId, table.savedUrlId),
   ]
+);
+
+/**
+ * hazy-note only. A "project" is a workspace the user creates deliberately to
+ * develop an idea — separate from hazy's `collections`. A saved URL is in at
+ * most one project (`saved_urls.project_id`); notes and compare boards file
+ * under one (`notes.project_id`, `compare_boards.project_id`).
+ */
+export const projects = pgTable(
+  "projects",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    tone: varchar("tone", { length: 16 }).notNull().default("neutral"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("projects_user_id_idx").on(table.userId)]
 );
 
 export const askThreads = pgTable(
@@ -248,7 +274,12 @@ export const notes = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Deprecated — hazy-note moved to its own `projects` table. Left in place
+    // so the schema diff stays additive; nothing writes it any more.
     collectionId: uuid("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
       onDelete: "set null",
     }),
     title: text("title").notNull(),
@@ -285,6 +316,7 @@ export const notes = pgTable(
   (table) => [
     index("notes_user_id_idx").on(table.userId),
     index("notes_collection_id_idx").on(table.collectionId),
+    index("notes_project_id_idx").on(table.projectId),
   ]
 );
 
@@ -295,7 +327,11 @@ export const compareBoards = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // Deprecated — see notes.collectionId.
     collectionId: uuid("collection_id").references(() => collections.id, {
+      onDelete: "set null",
+    }),
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
       onDelete: "set null",
     }),
     sources: text("sources")
@@ -316,6 +352,39 @@ export const compareBoards = pgTable(
   (table) => [index("compare_boards_user_id_idx").on(table.userId)]
 );
 
+// Tendency analysis (hazy-note `/analyze`). Same shape as compareBoards:
+// one row per (user, project|null), replaced wholesale on each rebuild.
+export const insightProfiles = pgTable(
+  "insight_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    // null = the whole account; otherwise scoped to one project's notes + sources.
+    projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
+      onDelete: "set null",
+    }),
+    // Deterministic aggregation (hazy-note's InsightStats).
+    stats: jsonb("stats").$type<Record<string, unknown>>().notNull().default({}),
+    // LLM-written 2–3 sentence summary.
+    profile: text("profile").notNull().default(""),
+    // InsightTheme[] — { label, weight (1–5), note }.
+    themes: jsonb("themes")
+      .$type<{ label: string; weight: number; note: string }[]>()
+      .notNull()
+      .default([]),
+    leanings: jsonb("leanings").$type<string[]>().notNull().default([]),
+    blindSpots: jsonb("blind_spots").$type<string[]>().notNull().default([]),
+    nextSteps: jsonb("next_steps").$type<string[]>().notNull().default([]),
+    // true when the LLM produced this; false = deterministic fallback only.
+    llm: boolean("llm").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("insight_profiles_user_id_idx").on(table.userId)]
+);
+
 // One row per user: the whole graph blob.
 export const graphSnapshots = pgTable("graph_snapshots", {
   userId: uuid("user_id")
@@ -327,6 +396,40 @@ export const graphSnapshots = pgTable("graph_snapshots", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// ── Connected apps ────────────────────────────────────────────────────
+// "Connect with Hazy": a third-party client (e.g. a personal dashboard) sends
+// the user to hazy's `/connector/add` page, gets a one-shot code (PKCE, S256) and
+// trades it at `POST /v1/connect/token` for a long-lived `hz_…` bearer token.
+// Only SHA-256 hashes are stored.
+export const connectCodes = pgTable("connect_codes", {
+  codeHash: varchar("code_hash", { length: 64 }).primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  clientName: varchar("client_name", { length: 100 }).notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  codeChallenge: varchar("code_challenge", { length: 128 }).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const apiTokens = pgTable(
+  "api_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
+    clientName: varchar("client_name", { length: 100 }).notNull(),
+    clientOrigin: text("client_origin").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("api_tokens_user_idx").on(t.userId)]
+);
+
 export const usersRelations = relations(users, ({ one, many }) => ({
   preferences: one(userPreferences, {
     fields: [users.id],
@@ -337,6 +440,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   askThreads: many(askThreads),
   notes: many(notes),
   compareBoards: many(compareBoards),
+  insightProfiles: many(insightProfiles),
   graphSnapshot: one(graphSnapshots, {
     fields: [users.id],
     references: [graphSnapshots.userId],
@@ -354,6 +458,10 @@ export const savedUrlsRelations = relations(savedUrls, ({ one, many }) => ({
     fields: [savedUrls.relatedNoteId],
     references: [notes.id],
   }),
+  project: one(projects, {
+    fields: [savedUrls.projectId],
+    references: [projects.id],
+  }),
 }));
 
 export const readLaterStateRelations = relations(readLaterState, ({ one }) => ({
@@ -367,6 +475,11 @@ export const readLaterStateRelations = relations(readLaterState, ({ one }) => ({
 export const collectionsRelations = relations(collections, ({ one, many }) => ({
   user: one(users, { fields: [collections.userId], references: [users.id] }),
   items: many(collectionItems),
+}));
+
+export const projectsRelations = relations(projects, ({ one, many }) => ({
+  user: one(users, { fields: [projects.userId], references: [users.id] }),
+  savedUrls: many(savedUrls),
   notes: many(notes),
   compareBoards: many(compareBoards),
 }));
@@ -408,17 +521,25 @@ export const askMessageCitationsRelations = relations(askMessageCitations, ({ on
 
 export const notesRelations = relations(notes, ({ one }) => ({
   user: one(users, { fields: [notes.userId], references: [users.id] }),
-  collection: one(collections, {
-    fields: [notes.collectionId],
-    references: [collections.id],
+  project: one(projects, {
+    fields: [notes.projectId],
+    references: [projects.id],
   }),
 }));
 
 export const compareBoardsRelations = relations(compareBoards, ({ one }) => ({
   user: one(users, { fields: [compareBoards.userId], references: [users.id] }),
-  collection: one(collections, {
-    fields: [compareBoards.collectionId],
-    references: [collections.id],
+  project: one(projects, {
+    fields: [compareBoards.projectId],
+    references: [projects.id],
+  }),
+}));
+
+export const insightProfilesRelations = relations(insightProfiles, ({ one }) => ({
+  user: one(users, { fields: [insightProfiles.userId], references: [users.id] }),
+  project: one(projects, {
+    fields: [insightProfiles.projectId],
+    references: [projects.id],
   }),
 }));
 

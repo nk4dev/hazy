@@ -1,3 +1,4 @@
+import type { SavedUrlDTO } from "@repo/api-client";
 import { ArrowUpRight, Loader2, Sparkles, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -5,7 +6,6 @@ import { Favicon } from "@/components/favicon";
 import { Button } from "@/components/ui/button";
 import { useSummarizeItemMutation } from "@/hooks/use-item";
 import { Link } from "@/i18n/navigation";
-import type { SavedUrlDTO } from "@repo/api-client";
 
 export function ItemRow({
   item,
@@ -27,25 +27,31 @@ export function ItemRow({
     <div className="group flex items-center gap-1">
       <Link
         href={`/item/${item.id}`}
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-md px-2 py-3.5 -mx-2 transition-colors hover:bg-secondary/40"
+        className="hz-interactive -mx-3 flex min-w-0 flex-1 items-start gap-3 rounded-xl px-3 py-3.5"
       >
-        <Favicon src={item.faviconUrl} domain={item.domain} />
+        <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
+          <Favicon src={item.faviconUrl} domain={item.domain} size={16} />
+        </span>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[14px] font-medium">{item.title || item.url}</div>
-          <div className="truncate text-[11.5px] text-muted-foreground">
+          <div className="line-clamp-2 text-[14.5px] font-medium leading-snug">
+            {item.title || item.url}
+          </div>
+          <div className="mt-0.5 truncate text-xs text-muted-foreground">
             {item.domain}
             {item.estimatedReadMinutes ? ` · ${item.estimatedReadMinutes} min` : ""}
             {item.fetchStatus === "error" ? " · fetch failed" : ""}
           </div>
           {item.summary && (
-            <div className="mt-1 line-clamp-2 text-[12px] text-foreground/80">{item.summary}</div>
+            <div className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-foreground/75">
+              {item.summary}
+            </div>
           )}
           {item.tags.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1">
+            <div className="mt-2 flex flex-wrap gap-1">
               {item.tags.slice(0, 4).map((tag) => (
                 <span
                   key={tag}
-                  className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                  className="rounded-full bg-secondary px-2 py-0.5 text-[10.5px] text-muted-foreground"
                 >
                   {tag}
                 </span>
@@ -53,14 +59,14 @@ export function ItemRow({
             </div>
           )}
         </div>
-        <ArrowUpRight className="size-4 shrink-0 text-muted-foreground" />
+        <ArrowUpRight className="mt-1 size-4 shrink-0 text-muted-foreground/60 transition-[color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-muted-foreground" />
       </Link>
       {showSummarize && (
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
-          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-primary focus-visible:opacity-100 group-hover:opacity-100"
+          size="icon"
+          className="hz-reveal shrink-0 text-muted-foreground hover:text-primary"
           aria-label={t("summarize")}
           disabled={summarize.isPending}
           onClick={() =>
@@ -81,8 +87,8 @@ export function ItemRow({
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
-          className="shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 group-hover:opacity-100"
+          size="icon"
+          className="hz-reveal shrink-0 text-muted-foreground hover:text-destructive"
           aria-label={removeLabel ?? t("delete")}
           disabled={removePending}
           onClick={onRemove}

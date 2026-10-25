@@ -1,5 +1,5 @@
 import { ClerkProvider } from "@clerk/nextjs";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Noto_Sans_JP } from "next/font/google";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
@@ -31,6 +31,13 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: "#0f101a",
+};
+
 export function generateStaticParams() {
   return routing.locales.map((locale) => ({ locale }));
 }
@@ -55,7 +62,8 @@ export default async function LocaleLayout({
       <QueryProvider>
         <TooltipProvider>
           {children}
-          <Toaster />
+          {/* Clear the mobile tab bar (~63px, sm:hidden) on narrow screens. */}
+          <Toaster mobileOffset={{ bottom: "calc(76px + env(safe-area-inset-bottom))" }} />
         </TooltipProvider>
       </QueryProvider>
     </NextIntlClientProvider>

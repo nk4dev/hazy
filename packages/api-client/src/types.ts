@@ -110,6 +110,21 @@ export type MeDTO = {
   preferences: UserPreferencesDTO;
 };
 
+/** POST /v1/connect/authorize — the one-shot code hazy's `/connect` page redirects back with. */
+export type ConnectCodeDTO = { code: string };
+
+/** GET /v1/connect/apps — one live connected-app token. */
+export type ConnectedAppDTO = {
+  id: string;
+  clientName: string;
+  clientOrigin: string;
+  createdAt: string;
+  lastUsedAt: string | null;
+};
+
+/** POST /v1/connect/token (public) — PKCE code exchange. */
+export type ConnectTokenDTO = { accessToken: string; tokenType: "Bearer"; clientName: string };
+
 /** GET /v1/read-later */
 export type ReadLaterQueueDTO = {
   totalCount: number;

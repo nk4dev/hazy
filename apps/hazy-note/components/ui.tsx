@@ -97,6 +97,7 @@ export function Seg<T extends string>({
           <input
             type="radio"
             name={name}
+            value={o.value}
             checked={value === o.value}
             onChange={() => onChange(o.value)}
           />

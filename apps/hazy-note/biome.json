@@ -17,7 +17,9 @@
       "!.wrangler",
       "!cloudflare-env.d.ts",
       "!public",
-      "!design-source"
+      "!design-source",
+      "!components/ui/**",
+      "!lib/utils.ts"
     ]
   },
   "formatter": {

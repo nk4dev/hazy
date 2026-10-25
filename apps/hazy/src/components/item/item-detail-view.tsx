@@ -1,24 +1,74 @@
 "use client";
 
-import { Clock, ExternalLink, Loader2, NotebookPen, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Clock,
+  Download,
+  ExternalLink,
+  Loader2,
+  NotebookPen,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Favicon } from "@/components/favicon";
 import { AddToCollectionButton } from "@/components/item/add-to-collection-button";
+import { EditableField } from "@/components/item/editable-field";
 import { ItemTagsEditor } from "@/components/item/item-tags-editor";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useItemQuery, useRefetchItemMutation } from "@/hooks/use-item";
+import {
+  useDownloadItemImageMutation,
+  useItemQuery,
+  useRefetchItemMutation,
+  useUpdateItemMutation,
+} from "@/hooks/use-item";
 import { useDeleteItemMutation } from "@/hooks/use-items";
 import { useSetReadLaterStatus } from "@/hooks/use-read-later";
 import { useRouter } from "@/i18n/navigation";
+
+// x.com / twitter.com block image scraping outright — the "download image"
+// action falls back to fxtwitter.com server-side (see apps/api's
+// lib/metadata/x-fallback.ts), so it only makes sense to show for those hosts.
+const X_DOMAINS = new Set(["x.com", "twitter.com"]);
 
 export function ItemDetailView({ id }: { id: string }) {
   const t = useTranslations("item");
   const { data: item, isLoading } = useItemQuery(id);
   const refetch = useRefetchItemMutation(id);
+  const update = useUpdateItemMutation(id);
   const del = useDeleteItemMutation();
+  const downloadImage = useDownloadItemImageMutation(id);
   const router = useRouter();
+
+  function handleDownloadImage() {
+    downloadImage.mutate(undefined, {
+      onSuccess: ({ blob, contentType }) => {
+        const ext = contentType.split("/")[1]?.split(";")[0] || "jpg";
+        const filename = `${item?.domain ?? "x"}-${id.slice(0, 8)}.${ext}`;
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(objectUrl);
+      },
+      onError: (error) =>
+        toast.error(error instanceof Error ? error.message : "Could not download the image."),
+    });
+  }
+
+  function commitField(field: "title" | "domain", next: string | null) {
+    update.mutate(
+      { [field]: next },
+      {
+        onError: (error) =>
+          toast.error(error instanceof Error ? error.message : "Something went wrong."),
+      }
+    );
+  }
 
   const setReadLaterStatus = useSetReadLaterStatus();
   const readLaterMutation = {
@@ -50,17 +100,18 @@ export function ItemDetailView({ id }: { id: string }) {
     <div className="mx-auto flex w-full max-w-2xl flex-col px-6 py-10">
       <div className="mb-4 flex items-center gap-3">
         <Favicon src={item.faviconUrl} domain={item.domain} size={22} />
-        {item.domain ? (
-          <button
-            type="button"
-            className="text-sm text-muted-foreground hover:text-foreground hover:underline"
-            onClick={() =>
-              router.push(`/library?q=${encodeURIComponent(`domain:${item.domain}`)}`)
-            }
-          >
-            {item.domain}
-          </button>
-        ) : null}
+        <EditableField
+          value={item.domain}
+          placeholder={t("addSite")}
+          label={t("site")}
+          pending={update.isPending}
+          onCommit={(next) => commitField("domain", next)}
+          className="text-sm"
+          valueClassName="text-muted-foreground hover:text-foreground"
+          onValueClick={() =>
+            item.domain && router.push(`/library?q=${encodeURIComponent(`domain:${item.domain}`)}`)
+          }
+        />
         {item.estimatedReadMinutes && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="size-3" />
@@ -69,7 +120,16 @@ export function ItemDetailView({ id }: { id: string }) {
         )}
       </div>
 
-      <h1 className="mb-3 text-[26px] font-medium leading-tight">{item.title || item.url}</h1>
+      <h1 className="mb-3 text-[26px] font-medium leading-tight">
+        <EditableField
+          value={item.title}
+          placeholder={item.url}
+          label={t("title")}
+          pending={update.isPending}
+          onCommit={(next) => commitField("title", next)}
+          inputClassName="text-[26px] font-medium h-auto"
+        />
+      </h1>
 
       {item.ogImageUrl && (
         // biome-ignore lint/performance/noImgElement: arbitrary external OG image, not worth next/image's overhead
@@ -119,6 +179,22 @@ export function ItemDetailView({ id }: { id: string }) {
           {t("readLater")}
         </Button>
         <AddToCollectionButton savedUrlId={id} />
+        {item.domain && X_DOMAINS.has(item.domain) && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={handleDownloadImage}
+            disabled={downloadImage.isPending}
+          >
+            {downloadImage.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5" />
+            )}
+            {t("downloadImage")}
+          </Button>
+        )}
         <Button
           variant="outline"
           size="sm"

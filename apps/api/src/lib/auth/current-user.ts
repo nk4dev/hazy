@@ -19,20 +19,21 @@ function clerk() {
   return cachedClerk;
 }
 
-const authorizedParties = [
-  env.NEXT_PUBLIC_APP_URL,
-  "http://localhost:3100",
-  ...(env.CORS_ALLOWED_ORIGINS?.split(",").map((s) => s.trim()).filter(Boolean) ?? []),
-];
-
 /**
  * Verifies the request's `Authorization: Bearer <session-jwt>` and returns the
  * Clerk user id, or null when there's no valid session. Replaces
  * `@clerk/nextjs/server`'s `auth()` for the standalone Worker.
+ *
+ * No `authorizedParties` here: that option checks the token's `azp` claim
+ * against a list of web origins, which is a CSRF guard for cookie-based
+ * browser sessions. Bearer-token callers (the Flutter app, any other native
+ * client) don't send an Origin and never populate `azp`, so enforcing it
+ * rejected every legitimate mobile session with a 401 — this endpoint is
+ * only reachable with a valid signed Clerk JWT regardless.
  */
 export async function authenticate(request: Request): Promise<string | null> {
   if (!isClerkConfigured()) return null;
-  const state = await clerk().authenticateRequest(request, { authorizedParties });
+  const state = await clerk().authenticateRequest(request);
   if (!state.isAuthenticated) return null;
   return state.toAuth().userId ?? null;
 }

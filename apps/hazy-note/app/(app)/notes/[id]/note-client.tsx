@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useBreadcrumb } from "@/components/breadcrumbs";
 import { Icon } from "@/components/icon";
 import { Loading, Spinner } from "@/components/loading";
-import { NoteEditor, type CiteTarget, type NoteEditorHandle } from "@/components/note-editor";
+import { type CiteTarget, NoteEditor, type NoteEditorHandle } from "@/components/note-editor";
 import { Button } from "@/components/ui";
 import { api } from "@/lib/api";
 import type { DeltaOp } from "@/lib/note-delta";
-import type { Note } from "@/lib/types";
+import type { Note, Project } from "@/lib/types";
 
 const BLANK: Note = {
   id: "",
@@ -33,9 +34,21 @@ export function NoteClient({ id }: { id?: string }) {
   const [note, setNote] = useState<Note | null>(id ? null : BLANK);
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
   const isDraft = !noteId;
 
+  useBreadcrumb(
+    notFound ? null : [{ label: isDraft ? "新しいノート" : note?.title || "無題のノート" }]
+  );
+
   const editorRef = useRef<NoteEditorHandle>(null);
+
+  useEffect(() => {
+    api
+      .projects()
+      .then(setProjects)
+      .catch(() => {});
+  }, []);
 
   // The authoritative note / id, updated synchronously so rapid edits chain
   // correctly instead of building off a stale render.
@@ -96,6 +109,7 @@ export function NoteClient({ id }: { id?: string }) {
         tags: cur.tags,
         status: cur.status,
         sources: cur.sources,
+        projectId: cur.projectId,
       };
       if (idRef.current) {
         const saved = await api.updateNote(idRef.current, payload);
@@ -175,13 +189,11 @@ export function NoteClient({ id }: { id?: string }) {
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1fr_260px]">
-      <main className="flex flex-col gap-4 p-[28px_44px_34px]">
-        <div className="flex items-center gap-[10px] text-[12px] text-text/45">
+      <main className="flex flex-col gap-4 p-4 pb-8 sm:p-[28px_44px_34px]">
+        <div className="flex flex-wrap items-center gap-[10px] text-[12px] text-text/45">
           <Icon name="notebook" />
           ノート
-          <Icon name="caret-right" size={11} />
-          <span className="text-text">{note.title}</span>
-          <div className="ml-auto flex items-center gap-[7px]">
+          <div className="flex flex-wrap items-center gap-[7px] sm:ml-auto">
             <span className="flex items-center gap-[5px] text-[11px]">
               {saving && <Spinner className="size-[11px] text-accent" />}
               {saving ? "保存中…" : note.updatedLabel}
@@ -240,6 +252,21 @@ export function NoteClient({ id }: { id?: string }) {
           <button type="button" onClick={addTag} className="tag tag-outline text-text/60">
             <Icon name="plus" size={10} className="mr-[3px]" /> タグ
           </button>
+          <label className="ml-auto flex items-center gap-[6px] text-[12px] text-text/55">
+            <Icon name="folder-open" size={13} className="text-accent" />
+            <select
+              className="input w-auto py-[3px] text-[12px]"
+              value={note.projectId || ""}
+              onChange={(e) => mutate({ projectId: e.target.value })}
+            >
+              <option value="">プロジェクトなし</option>
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div className="max-w-[66ch]">
@@ -256,7 +283,9 @@ export function NoteClient({ id }: { id?: string }) {
 
       <aside className="flex flex-col gap-[18px] bg-neutral-900 p-[18px_16px]">
         <Panel title="このノートの状態">
-          {note.flags.length === 0 && <div className="text-[12px] text-text/40">特にありません</div>}
+          {note.flags.length === 0 && (
+            <div className="text-[12px] text-text/40">特にありません</div>
+          )}
           {note.flags.map((f) => (
             <div key={f.text} className="flex items-center gap-2 text-[12.5px] opacity-90">
               <Icon

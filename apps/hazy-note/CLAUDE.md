@@ -1,7 +1,24 @@
 # hazy-note
 
 `note.hz.nknighta.me` — Next 16 (App Router, Turbopack). Capture → notes →
-compare → graph → export. See `README.md`.
+analyze → export. See `README.md`. (`/graph` "つながり" and `/compare` "比較ボード"
+were removed — the `graph_snapshots` and `compare_boards` tables stay in
+`@repo/db` but nothing reads them.)
+
+# UI: hand-rolled Nocturne + shadcn/ui
+
+The app's own look is the **Nocturne** design system — the `@theme` tokens
+(`--color-accent` etc.) and `.btn` / `.card` / `.tag` component classes in
+`app/globals.css`, plus `components/ui.tsx` (`Button` / `Tag` / `Seg`). That is
+what every existing screen uses; keep using it.
+
+**shadcn/ui** is also set up (preset `base-lyra`, `@base-ui/react`, hugeicons):
+`components.json`, `components/ui/*`, `lib/utils.ts` `cn()`. `bunx shadcn add
+<name>` for new primitives. Its token layer (`@theme inline` + `.dark` in
+globals.css) is namespaced (`--background`, `--primary`, …) and does **not**
+touch Nocturne's `--color-accent` / `--radius-{sm,md,lg}`. `<html class="dark">`
+keeps shadcn components on their dark palette. `components/ui/**` +
+`lib/utils.ts` are excluded from Biome (shadcn's own formatting).
 
 # Backend
 
@@ -9,6 +26,49 @@ Unlike `apps/hazy`, this app **still has its own `/app/api/*` route handlers**
 over `@repo/db` (`lib/db/repo.ts` is the data layer, scoped by the internal
 `users.id` from `lib/db/current-user.ts`). Moving it behind `apps/api` is a
 follow-up — for now, edit the routes + `repo.ts` here.
+
+# Projects
+
+A "プロジェクト" lives in hazy-note's **own `projects` table** (`@repo/db`) —
+separate from hazy's `collections`. The user creates one deliberately as a
+workspace to develop an idea: `/projects/[id]` shows its `description`, the
+sources filed under it (`saved_urls.project_id`, set via
+`updateItem(_, { projectId })`) and the notes under it (`notes.project_id`).
+There is **no** tag-based auto-creation, auto-sort or digest (all removed).
+`notes.collection_id` / `compare_boards.*` are dead columns/tables.
+`/analyze` also accepts `?project=<id>` to scope the tendency read to one project.
+
+# Tags (`/tags`) + breadcrumbs
+
+`/tags` lists every tag across `saved_urls.tags` and `notes.tags`, merged by
+label (`repo.ts` `listTags` — one `GET /api/tags`, `Tag.urlCount` /
+`Tag.noteCount` say which side each tag lives on). Clicking a tag goes to
+`/library?tag=` when it has URLs, else `/notes?tag=` (both already supported
+client-side filters). The sidebar's tag chips link here too.
+
+`components/breadcrumbs.tsx` renders a header trail, but only past the
+top level: `BreadcrumbProvider` wraps `AppShell`, and any detail page calls
+`useBreadcrumb([{label}])` once its data loads to add its own trailing crumb
+(`/notes/[id]`, `/projects/[id]`, `/library/[id]`, a tag/project-filtered
+`/library` or `/notes`). No route table — it's just the pathname's first
+segment (`ROOT` map) plus whatever the page reports.
+
+# Search (`/search`)
+
+`lib/search.ts` is pure and shared: `buildCorpus(notes, items)` flattens
+notes + non-note sources to `SearchDoc[]`; `textSearch` / `tagSearch` /
+`rankBySimilarity` do the ranking. Four modes:
+
+- **文字列 / タグ / AI検索** run entirely client-side on `/search` — no route.
+  AI検索 lazy-`import()`s `@ternlight/base/web` (a ~7 MB WASM MiniLM embedder,
+  loaded once on first use), embeds the corpus + query, ranks by cosine.
+  Use the `/web` subpath — the bare `@ternlight/base` (`pkg-bundler`) breaks
+  Turbopack (`type: commonjs` package.json over ESM files).
+- **チャット** → `POST /api/search/chat` → `repo.runSearchChat` →
+  `ai.answerSearchChat` (OpenRouter `chat()`, keyword-retrieved shortlist as
+  context, `[n]` citations parsed back to sources). Stateless — no `ask_*` rows.
+
+Tests: `lib/search.test.ts` (`bun test`), `e2e/*.spec.ts` (Playwright).
 
 # The note editor
 
@@ -22,6 +82,11 @@ body is a Quill **Delta** stored in `notes.body` (jsonb `ops` array).
   `toNote`), persisted on the next save. Don't write `blocks`.
 - `@`-mention in the editor inserts a link + registers a source in
   `notes.sources`. AI suggestions are `notes.suggestions` (sidebar), not body blocks.
+- The mention picker's caret-position scan runs off `quill.getSelection()` on a
+  deferred (`setTimeout(…, 0)`) tick, not synchronously inside `text-change` —
+  Quill reports the pre-edit range there on the very first edit to an empty
+  document (typing `@` as a note's first character wouldn't open the picker
+  otherwise).
 
 # Rules
 
@@ -29,3 +94,16 @@ body is a Quill **Delta** stored in `notes.body` (jsonb `ops` array).
 - Schema changes → `packages/db/src/schema.ts` only, then `bun db:generate`.
 - Local dev DB: `scripts/localdb.sh` (`127.0.0.1:5433`). Deploy: OpenNext →
   Cloudflare Worker `hazy-note`; secrets via `wrangler secret put`.
+- Tests: `bun run test` (unit, `bun:test`, `lib/`), `bun run test:e2e`
+  (Playwright, `e2e/`). E2E auth needs `E2E_CLERK_USER_EMAIL` + `CLERK_SECRET_KEY`;
+  without them the signed-in specs skip. See `README.md` › テスト.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

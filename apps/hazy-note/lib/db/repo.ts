@@ -1,10 +1,10 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import {
+  analyseTendencies,
+  answerSearchChat,
   rewriteForExport,
-  suggestConnections,
   summariseMemo,
   summariseSource,
-  synthesiseCompare,
 } from "@/lib/ai";
 import { fetchAndExtract } from "@/lib/extract";
 import {
@@ -14,16 +14,18 @@ import {
   isDelta,
   legacyBlocksToDelta,
 } from "@/lib/note-delta";
+import { buildCorpus, type SearchDoc, textSearch, toHit } from "@/lib/search";
 import type {
-  CompareBoard,
-  Digest,
   ExportDraft,
   ExportFormat,
-  GraphData,
+  InsightProfile,
+  InsightStats,
   Item,
   Note,
   NoteSuggestion,
   Project,
+  ProjectDetail,
+  SearchChatAnswer,
   SourceKind,
   Tag,
 } from "@/lib/types";
@@ -78,11 +80,9 @@ function normalizeUrl(url: string): string {
 }
 
 // ── Items ──────────────────────────────────────────────────
-type SavedUrlWithLinks = typeof schema.savedUrls.$inferSelect & {
-  collectionItems: { collectionId: string }[];
-};
+type SavedUrlRow = typeof schema.savedUrls.$inferSelect;
 
-function toItem(row: SavedUrlWithLinks): Item {
+function toItem(row: SavedUrlRow): Item {
   const site = row.kind === "note" ? (row.domain ?? "メモ") : (row.domain ?? siteFromUrl(row.url));
   return {
     id: row.id,
@@ -99,7 +99,7 @@ function toItem(row: SavedUrlWithLinks): Item {
     points: row.points,
     suggestedTags: row.suggestedTags,
     tags: row.tags,
-    projectId: row.collectionItems[0]?.collectionId ?? null,
+    projectId: row.projectId ?? null,
     quoteCandidates: row.quoteCandidates,
     relatedNoteId: row.relatedNoteId ?? undefined,
   };
@@ -108,7 +108,6 @@ function toItem(row: SavedUrlWithLinks): Item {
 export async function listItems(userId: string): Promise<Item[]> {
   const rows = await db.query.savedUrls.findMany({
     where: (t, { eq }) => eq(t.userId, userId),
-    with: { collectionItems: true },
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
   return rows.map(toItem);
@@ -128,7 +127,6 @@ export async function listItems(userId: string): Promise<Item[]> {
 export async function listImportable(userId: string): Promise<Item[]> {
   const rows = await db.query.savedUrls.findMany({
     where: (t, { and, eq, ne }) => and(eq(t.userId, userId), ne(t.kind, "note")),
-    with: { collectionItems: true },
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
   const items = rows.map(toItem);
@@ -140,7 +138,6 @@ export async function getItem(userId: string, id: string): Promise<Item | undefi
   if (!isUuid(id)) return undefined;
   const row = await db.query.savedUrls.findFirst({
     where: (t, { and, eq }) => and(eq(t.id, id), eq(t.userId, userId)),
-    with: { collectionItems: true },
   });
   return row ? toItem(row) : undefined;
 }
@@ -320,12 +317,10 @@ export async function updateItem(
   }
 
   if ("projectId" in patch) {
-    await db.delete(schema.collectionItems).where(eq(schema.collectionItems.savedUrlId, id));
-    if (patch.projectId) {
-      await db
-        .insert(schema.collectionItems)
-        .values({ collectionId: patch.projectId, savedUrlId: id });
-    }
+    await db
+      .update(schema.savedUrls)
+      .set({ projectId: patch.projectId || null, updatedAt: new Date() })
+      .where(eq(schema.savedUrls.id, id));
   }
 
   return getItem(userId, id);
@@ -339,144 +334,155 @@ export async function deleteItem(userId: string, id: string): Promise<boolean> {
   return deleted.length > 0;
 }
 
-/** POST /api/items/sort — the "まとめて振り分け" digest action. */
-export async function autoSort(userId: string): Promise<{ moved: number }> {
-  const target = await db.query.collections.findFirst({
-    where: (c, { and, eq }) => and(eq(c.userId, userId), eq(c.tone, "accent")),
-  });
-  if (!target) return { moved: 0 };
+// ── Projects & Tags ───────────────────────────────────────────
+// A "project" (hazy-note's own `projects` table — separate from hazy's
+// `collections`) is a space the user creates deliberately to develop an idea:
+// `description`, the sources filed under it (`saved_urls.project_id`) and the
+// notes under it (`notes.project_id`). `tone` is just a colour.
 
-  const unsorted = await db
-    .select({ id: schema.savedUrls.id })
-    .from(schema.savedUrls)
-    .leftJoin(schema.collectionItems, eq(schema.collectionItems.savedUrlId, schema.savedUrls.id))
-    .where(
-      and(
-        eq(schema.savedUrls.userId, userId),
-        isNull(schema.collectionItems.id),
-        sql`cardinality(${schema.savedUrls.suggestedTags}) > 0`
-      )
-    );
-  if (!unsorted.length) return { moved: 0 };
-
-  await db
-    .insert(schema.collectionItems)
-    .values(unsorted.map((u) => ({ collectionId: target.id, savedUrlId: u.id })));
-  return { moved: unsorted.length };
+function toProjectRow(r: {
+  id: string;
+  name: string;
+  description: string | null;
+  tone: string;
+  count: number;
+}): Project {
+  return {
+    id: r.id,
+    name: r.name,
+    description: r.description,
+    tone: r.tone === "accent" ? "accent" : "neutral",
+    count: r.count,
+  };
 }
 
-// ── Projects & Tags ───────────────────────────────────────────
 export async function listProjects(userId: string): Promise<Project[]> {
   const rows = await db
     .select({
-      id: schema.collections.id,
-      name: schema.collections.name,
-      tone: schema.collections.tone,
-      count: sql<number>`count(${schema.collectionItems.id})::int`,
+      id: schema.projects.id,
+      name: schema.projects.name,
+      description: schema.projects.description,
+      tone: schema.projects.tone,
+      count: sql<number>`count(${schema.savedUrls.id})::int`,
     })
-    .from(schema.collections)
-    .leftJoin(
-      schema.collectionItems,
-      eq(schema.collectionItems.collectionId, schema.collections.id)
-    )
-    .where(eq(schema.collections.userId, userId))
-    .groupBy(schema.collections.id)
-    .orderBy(schema.collections.createdAt);
-  return rows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    tone: r.tone === "accent" ? "accent" : "neutral",
-    count: r.count,
+    .from(schema.projects)
+    .leftJoin(schema.savedUrls, eq(schema.savedUrls.projectId, schema.projects.id))
+    .where(eq(schema.projects.userId, userId))
+    .groupBy(schema.projects.id)
+    .orderBy(schema.projects.createdAt);
+  return rows.map(toProjectRow);
+}
+
+/** GET /api/projects/:id — the project workspace: its idea, sources and notes. */
+export async function getProject(userId: string, id: string): Promise<ProjectDetail | undefined> {
+  if (!isUuid(id)) return undefined;
+  const project = (await listProjects(userId)).find((p) => p.id === id);
+  if (!project) return undefined;
+
+  const sourceRows = await db.query.savedUrls.findMany({
+    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.projectId, id)),
+    orderBy: (t, { desc }) => [desc(t.createdAt)],
+  });
+  const sources = sourceRows.map(toItem);
+
+  const noteRows = await db.query.notes.findMany({
+    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.projectId, id)),
+    orderBy: (t, { desc }) => [desc(t.updatedAt)],
+  });
+  const notes = noteRows.map((n) => ({
+    id: n.id,
+    title: n.title,
+    status: n.status,
+    updatedLabel: relativeLabel(n.updatedAt),
   }));
+
+  return { ...project, sources, notes };
 }
 
 export async function createProject(
   userId: string,
   name: string,
-  tone: "accent" | "neutral" = "neutral"
+  opts: { tone?: "accent" | "neutral"; description?: string } = {}
 ): Promise<Project> {
   const [row] = await db
-    .insert(schema.collections)
-    .values({ userId, name: name.trim() || "無題", tone })
+    .insert(schema.projects)
+    .values({
+      userId,
+      name: name.trim() || "無題のプロジェクト",
+      tone: opts.tone ?? "neutral",
+      description: opts.description?.trim() || null,
+    })
     .returning();
-  return {
-    id: row.id,
-    name: row.name,
-    tone: row.tone === "accent" ? "accent" : "neutral",
-    count: 0,
-  };
+  return toProjectRow({ ...row, count: 0 });
 }
 
 export async function updateProject(
   userId: string,
   id: string,
-  patch: { name?: string; tone?: "accent" | "neutral" }
+  patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" }
 ): Promise<Project | undefined> {
-  const set: Partial<typeof schema.collections.$inferInsert> = {};
-  if (patch.name !== undefined) set.name = patch.name.trim() || "無題";
+  const set: Partial<typeof schema.projects.$inferInsert> = {};
+  if (patch.name !== undefined) set.name = patch.name.trim() || "無題のプロジェクト";
+  if (patch.description !== undefined) set.description = patch.description?.trim() || null;
   if (patch.tone !== undefined) set.tone = patch.tone;
   if (Object.keys(set).length) {
     set.updatedAt = new Date();
     await db
-      .update(schema.collections)
+      .update(schema.projects)
       .set(set)
-      .where(and(eq(schema.collections.id, id), eq(schema.collections.userId, userId)));
+      .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)));
   }
   return (await listProjects(userId)).find((p) => p.id === id);
 }
 
 export async function deleteProject(userId: string, id: string): Promise<boolean> {
   const deleted = await db
-    .delete(schema.collections)
-    .where(and(eq(schema.collections.id, id), eq(schema.collections.userId, userId)))
-    .returning({ id: schema.collections.id });
+    .delete(schema.projects)
+    .where(and(eq(schema.projects.id, id), eq(schema.projects.userId, userId)))
+    .returning({ id: schema.projects.id });
   return deleted.length > 0;
 }
 
+/** Tags used anywhere — saved URLs (`saved_urls.tags`) and notes (`notes.tags`), merged by label. */
 export async function listTags(userId: string): Promise<Tag[]> {
   const res: unknown = await db.execute(sql`
     select label, count(*)::int as n
     from saved_urls, unnest(tags) as label
     where user_id = ${userId}
     group by label
-    order by n desc, label
   `);
   // postgres.js returns an array; neon-http returns { rows }.
-  const rows = (Array.isArray(res) ? res : (res as { rows: unknown[] }).rows) as {
+  const urlRows = (Array.isArray(res) ? res : (res as { rows: unknown[] }).rows) as {
     label: string;
     n: number;
   }[];
-  return rows.map((r) => ({
-    id: `t-${encodeURIComponent(r.label)}`,
-    label: r.label,
-    tone: "neutral",
-    count: r.n,
-  }));
-}
+  const urlCounts = new Map(urlRows.map((r) => [r.label, r.n]));
 
-export async function getDigest(userId: string): Promise<Digest> {
-  const [row] = await db
-    .select({
-      unsorted: sql<number>`count(*) filter (where ${schema.collectionItems.id} is null)::int`,
-      guess: sql<number>`count(*) filter (where ${schema.collectionItems.id} is null and cardinality(${schema.savedUrls.suggestedTags}) > 0)::int`,
-    })
-    .from(schema.savedUrls)
-    .leftJoin(schema.collectionItems, eq(schema.collectionItems.savedUrlId, schema.savedUrls.id))
-    .where(eq(schema.savedUrls.userId, userId));
-
-  const target = await db.query.collections.findFirst({
-    where: (c, { and, eq }) => and(eq(c.userId, userId), eq(c.tone, "accent")),
+  const noteRows = await db.query.notes.findMany({
+    where: (t, { eq }) => eq(t.userId, userId),
   });
+  const noteCounts = new Map<string, number>();
+  for (const row of noteRows) {
+    for (const t of row.tags as { label: string }[]) {
+      noteCounts.set(t.label, (noteCounts.get(t.label) ?? 0) + 1);
+    }
+  }
 
-  const unsorted = row?.unsorted ?? 0;
-  const guess = row?.guess ?? 0;
-  return {
-    unsorted,
-    message:
-      guess > 0 && target
-        ? `未整理が${unsorted}件。${guess}件は「${target.name}」に入りそうです。`
-        : `未整理が${unsorted}件。`,
-  };
+  const labels = new Set([...urlCounts.keys(), ...noteCounts.keys()]);
+  return [...labels]
+    .map((label) => {
+      const urlCount = urlCounts.get(label) ?? 0;
+      const noteCount = noteCounts.get(label) ?? 0;
+      return {
+        id: `t-${encodeURIComponent(label)}`,
+        label,
+        tone: "neutral" as const,
+        count: urlCount + noteCount,
+        urlCount,
+        noteCount,
+      };
+    })
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 }
 
 // ── Notes ──────────────────────────────────────────────────
@@ -491,7 +497,7 @@ function toNote(row: typeof schema.notes.$inferSelect): Note {
   return {
     id: row.id,
     title: row.title,
-    projectId: row.collectionId ?? "",
+    projectId: row.projectId ?? "",
     tags: row.tags as Note["tags"],
     status: row.status,
     updatedLabel: `自動保存 · ${relativeLabel(row.updatedAt)}`,
@@ -509,6 +515,41 @@ export async function listNotes(userId: string): Promise<Note[]> {
     orderBy: (t, { desc }) => [desc(t.updatedAt)],
   });
   return rows.map(toNote);
+}
+
+/** Notes + sources flattened to text — the corpus behind `/search` chat mode. */
+export async function getSearchCorpus(userId: string): Promise<SearchDoc[]> {
+  const [notes, items] = await Promise.all([listNotes(userId), listItems(userId)]);
+  return buildCorpus(notes, items);
+}
+
+/**
+ * Chat search: keyword-retrieve a shortlist from the user's library, let the
+ * model answer over it, and hand back the answer + the records it cited.
+ */
+export async function runSearchChat(
+  userId: string,
+  query: string,
+  history?: { role: "user" | "assistant"; content: string }[]
+): Promise<SearchChatAnswer> {
+  const corpus = await getSearchCorpus(userId);
+  const hits = textSearch(corpus, query, 8);
+  // Nothing matched on keywords — give the model the most recent slice anyway.
+  const shortlist = hits.length
+    ? hits.map((h) => corpus.find((d) => d.id === h.id))
+    : corpus.slice(0, 8);
+  const docs = shortlist.filter((d): d is SearchDoc => Boolean(d));
+
+  const { answer, usedIndexes, llm } = await answerSearchChat({
+    query,
+    history,
+    candidates: docs.map((d) => ({ title: d.title, text: d.text })),
+  });
+
+  const usedDocs = usedIndexes.length
+    ? usedIndexes.map((i) => docs[i - 1]).filter((d): d is SearchDoc => Boolean(d))
+    : docs;
+  return { answer, sources: usedDocs.map((d) => toHit(d)), llm };
 }
 
 /**
@@ -535,7 +576,7 @@ export async function createNote(
     .insert(schema.notes)
     .values({
       userId,
-      collectionId: input.projectId || null,
+      projectId: input.projectId || null,
       title: input.title?.trim() || "無題のノート",
       status: input.status ?? "draft",
       tags: input.tags ?? [],
@@ -564,7 +605,7 @@ export async function updateNote(
   };
   if (patch.title !== undefined) set.title = patch.title.trim() || "無題のノート";
   if (patch.status !== undefined) set.status = patch.status;
-  if (patch.projectId !== undefined) set.collectionId = patch.projectId || null;
+  if (patch.projectId !== undefined) set.projectId = patch.projectId || null;
   if (patch.body !== undefined) set.body = patch.body;
   if (patch.suggestions !== undefined) set.suggestions = patch.suggestions;
   if (patch.tags !== undefined) set.tags = patch.tags;
@@ -652,185 +693,160 @@ export async function appendParagraph(
   return getNote(userId, noteId);
 }
 
-// ── Compare ────────────────────────────────────────────────
-function toCompare(row: typeof schema.compareBoards.$inferSelect): CompareBoard {
+// ── Insight (傾向分析) ──────────────────────────────────────
+
+/** Count occurrences of `key(x)` over `xs` and return the top `n`, desc. */
+function topCounts<T>(
+  xs: T[],
+  key: (x: T) => string | null | undefined,
+  n: number
+): { value: string; count: number }[] {
+  const m = new Map<string, number>();
+  for (const x of xs) {
+    const k = key(x)?.trim();
+    if (!k) continue;
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return [...m.entries()]
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, n);
+}
+
+function toInsight(row: typeof schema.insightProfiles.$inferSelect): InsightProfile {
   return {
-    id: row.id,
-    projectId: row.collectionId ?? "",
-    sources: row.sources,
-    axes: row.axes as CompareBoard["axes"],
-    summary: row.summary,
-    candidateAxes: row.candidateAxes,
+    projectId: row.projectId ?? "",
+    generatedLabel: `分析 · ${relativeLabel(row.updatedAt)}`,
+    llm: row.llm,
+    stats: row.stats as unknown as InsightStats,
+    profile: row.profile,
+    themes: row.themes,
+    leanings: row.leanings,
+    blindSpots: row.blindSpots,
+    nextSteps: row.nextSteps,
   };
 }
 
-export async function getCompare(userId: string): Promise<CompareBoard | undefined> {
-  const row = await db.query.compareBoards.findFirst({
-    where: (t, { eq }) => eq(t.userId, userId),
+export async function getInsightProfile(
+  userId: string,
+  projectId?: string
+): Promise<InsightProfile | undefined> {
+  const row = await db.query.insightProfiles.findFirst({
+    where: (t, { and, eq, isNull: _isNull }) =>
+      and(eq(t.userId, userId), projectId ? eq(t.projectId, projectId) : _isNull(t.projectId)),
     orderBy: (t, { desc }) => [desc(t.updatedAt)],
   });
-  return row ? toCompare(row) : undefined;
+  return row ? toInsight(row) : undefined;
 }
 
 /**
- * "差分をまとめる" — (re)build the compare board from the ready sources in a
- * project (or, with no project, every ready source). Needs ≥2 sources.
+ * "傾向を分析する" — aggregate the user's notes + saved URLs (optionally scoped
+ * to one project) into `InsightStats`, then ask the model for the interpretive
+ * layer. One cached row per (user, project|null), replaced on each rebuild.
  */
-export async function buildCompareBoard(userId: string, projectId?: string): Promise<CompareBoard> {
-  const rows = await db.query.savedUrls.findMany({
-    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.fetchStatus, "success")),
-    with: { collectionItems: true },
+export async function buildInsightProfile(
+  userId: string,
+  projectId?: string
+): Promise<InsightProfile> {
+  const noteRows = await db.query.notes.findMany({
+    where: (t, { and, eq }) =>
+      and(eq(t.userId, userId), projectId ? eq(t.projectId, projectId) : undefined),
+    orderBy: (t, { desc }) => [desc(t.updatedAt)],
+  });
+  const urlRows = await db.query.savedUrls.findMany({
+    where: (t, { and, eq, ne }) =>
+      and(
+        eq(t.userId, userId),
+        ne(t.kind, "note"),
+        projectId ? eq(t.projectId, projectId) : undefined
+      ),
     orderBy: (t, { desc }) => [desc(t.createdAt)],
   });
-  const items = rows
-    .map(toItem)
-    .filter((it) => (projectId ? it.projectId === projectId : true))
-    .filter((it) => it.summary.length > 0)
-    .slice(0, 8);
 
-  const synth = await synthesiseCompare(
-    items.map((it) => ({ title: it.title, summary: it.summary }))
+  const notes = noteRows
+    .map((r) => ({ title: r.title, text: deltaToPlainText(r.body).trim(), createdAt: r.createdAt }))
+    .filter((n) => n.text.length > 0);
+
+  const now = Date.now();
+  const day = 86_400_000;
+  const noteCharTotal = notes.reduce((n, x) => n + x.text.length, 0);
+
+  const tagBag = [
+    ...noteRows.flatMap((r) => (r.tags as { label: string }[]).map((t) => t.label)),
+    ...urlRows.flatMap((r) => r.tags),
+  ];
+
+  const allDates = [...noteRows.map((r) => r.createdAt), ...urlRows.map((r) => r.createdAt)].sort(
+    (a, b) => +new Date(a) - +new Date(b)
   );
 
+  const stats: InsightStats = {
+    noteCount: notes.length,
+    noteCharTotal,
+    noteCharAvg: notes.length ? Math.round(noteCharTotal / notes.length) : 0,
+    notesLast30d: notes.filter((n) => now - +new Date(n.createdAt) < 30 * day).length,
+    urlCount: urlRows.length,
+    urlReadCount: urlRows.filter((r) => r.fetchStatus === "success").length,
+    topDomains: topCounts(urlRows, (r) => r.domain, 6).map((c) => ({
+      domain: c.value,
+      count: c.count,
+    })),
+    kindMix: topCounts(urlRows, (r) => r.kind, 6).map((c) => ({
+      kind: c.value as SourceKind,
+      count: c.count,
+    })),
+    topTags: topCounts(tagBag, (t) => t.toLowerCase(), 12).map((c) => ({
+      label: c.value,
+      count: c.count,
+    })),
+    languageMix: topCounts(urlRows, (r) => r.contentLanguage, 4).map((c) => ({
+      lang: c.value,
+      count: c.count,
+    })),
+    span: allDates.length
+      ? {
+          firstLabel: relativeLabel(allDates[0]),
+          lastLabel: relativeLabel(allDates[allDates.length - 1]),
+        }
+      : null,
+  };
+
+  const read = await analyseTendencies({
+    stats,
+    noteExcerpts: notes.map((n) => ({ title: n.title, text: n.text })),
+    urlBlurbs: urlRows.map((r) => ({
+      title: r.title ?? r.domain ?? r.url,
+      domain: r.domain ?? "",
+      summary: r.summary ?? r.summaryLines.join(" "),
+    })),
+  });
+
   await db
-    .delete(schema.compareBoards)
+    .delete(schema.insightProfiles)
     .where(
       and(
-        eq(schema.compareBoards.userId, userId),
+        eq(schema.insightProfiles.userId, userId),
         projectId
-          ? eq(schema.compareBoards.collectionId, projectId)
-          : isNull(schema.compareBoards.collectionId)
+          ? eq(schema.insightProfiles.projectId, projectId)
+          : isNull(schema.insightProfiles.projectId)
       )
     );
   const [row] = await db
-    .insert(schema.compareBoards)
+    .insert(schema.insightProfiles)
     .values({
       userId,
-      collectionId: projectId ?? null,
-      sources: items.map((it) => it.title),
-      axes: synth.axes,
-      summary: synth.summary,
-      candidateAxes: synth.candidateAxes,
+      projectId: projectId ?? null,
+      stats: stats as unknown as Record<string, unknown>,
+      profile: read.profile,
+      themes: read.themes,
+      leanings: read.leanings,
+      blindSpots: read.blindSpots,
+      nextSteps: read.nextSteps,
+      llm: read.llm,
+      updatedAt: new Date(),
     })
     .returning();
-  return toCompare(row);
-}
-
-// ── Graph ──────────────────────────────────────────────────
-const GRAPH_W = 840;
-const GRAPH_H = 600;
-
-/** Deterministic ring layout so re-renders don't jump nodes around. */
-function ringLayout(n: number, i: number, radius: number) {
-  if (n === 1) return { x: GRAPH_W / 2, y: GRAPH_H / 2 };
-  const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-  return {
-    x: Math.round(GRAPH_W / 2 + Math.cos(a) * radius),
-    y: Math.round(GRAPH_H / 2 + Math.sin(a) * radius),
-  };
-}
-
-export async function buildGraph(userId: string): Promise<GraphData> {
-  const notes = await listNotes(userId);
-  const sourceRows = await db.query.savedUrls.findMany({
-    where: (t, { and, eq }) => and(eq(t.userId, userId), eq(t.fetchStatus, "success")),
-    with: { collectionItems: true },
-    orderBy: (t, { desc }) => [desc(t.createdAt)],
-  });
-  const sources = sourceRows.map(toItem).slice(0, 12);
-
-  const noteIds = new Set(notes.map((n) => n.id));
-  const nodes: GraphData["nodes"] = [
-    ...notes.map((n, i) => ({
-      id: n.id,
-      label: n.title,
-      kind: "note" as const,
-      ...ringLayout(Math.max(notes.length, 1), i, notes.length > 3 ? 150 : 90),
-      r: 40,
-      focus: i === 0 && notes.length > 0,
-    })),
-    ...sources.map((s, i) => ({
-      id: s.id,
-      label: s.title,
-      kind: "source" as const,
-      ...ringLayout(Math.max(sources.length, 1), i, 250),
-      r: 26,
-    })),
-  ];
-
-  const edges: GraphData["edges"] = [];
-  // note → note links the user (or a prior AI pass) already recorded.
-  for (const n of notes) {
-    for (const l of n.links) {
-      if (noteIds.has(l.noteId) && n.id < l.noteId) {
-        edges.push({
-          id: `c-${n.id}-${l.noteId}`,
-          from: n.id,
-          to: l.noteId,
-          kind: "citation",
-          title: `${n.title} ↔ ${l.title}`,
-          reason: l.reason,
-        });
-      }
-    }
-  }
-  // source → note when the capture was filed against a note.
-  for (const s of sources) {
-    if (s.relatedNoteId && noteIds.has(s.relatedNoteId)) {
-      edges.push({
-        id: `c-${s.id}-${s.relatedNoteId}`,
-        from: s.id,
-        to: s.relatedNoteId,
-        kind: "citation",
-        title: `${s.title} → ノート`,
-      });
-    }
-  }
-  // AI-guessed connections between anything not already linked.
-  const linked = new Set(edges.flatMap((e) => [e.from, e.to]));
-  const guesses = await suggestConnections([
-    ...notes.map((n) => ({
-      id: n.id,
-      label: n.title,
-      text: deltaToPlainText(n.body),
-    })),
-    ...sources.map((s) => ({ id: s.id, label: s.title, text: s.summary.join(" ") })),
-  ]);
-  for (const g of guesses) {
-    const key = [g.from, g.to].sort().join("-");
-    if (edges.some((e) => [e.from, e.to].sort().join("-") === key)) continue;
-    edges.push({ id: `h-${key}`, from: g.from, to: g.to, kind: "hypothesis", reason: g.reason });
-    linked.add(g.from);
-    linked.add(g.to);
-  }
-
-  const isolated = [...notes, ...sources]
-    .filter((x) => !linked.has(x.id) && !edges.some((e) => e.from === x.id || e.to === x.id))
-    .map((x) => ("title" in x ? x.title : ""))
-    .filter(Boolean);
-
-  await db
-    .insert(schema.graphSnapshots)
-    .values({ userId, nodes, edges, isolated })
-    .onConflictDoUpdate({
-      target: schema.graphSnapshots.userId,
-      set: { nodes, edges, isolated, updatedAt: new Date() },
-    });
-  return { nodes, edges, isolated };
-}
-
-export async function getGraph(userId: string): Promise<GraphData> {
-  const row = await db.query.graphSnapshots.findFirst({
-    where: (t, { eq }) => eq(t.userId, userId),
-  });
-  if (row) {
-    return {
-      nodes: row.nodes as GraphData["nodes"],
-      edges: row.edges as GraphData["edges"],
-      isolated: row.isolated as string[],
-    };
-  }
-  return buildGraph(userId);
+  return toInsight(row);
 }
 
 // ── Export ─────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, CornerDownRight, Loader2, Sparkle, Trash2 } from "lucide-react";
+import type { AskCitationDTO, AskMessageDTO } from "@repo/api-client";
+import { ArrowUp, ArrowUpRight, ChevronLeft, Loader2, Sparkle, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -13,19 +14,18 @@ import {
   useDeleteAskThreadMutation,
 } from "@/hooks/use-ask";
 import { Link, useRouter } from "@/i18n/navigation";
-import type { AskCitationDTO, AskMessageDTO } from "@repo/api-client";
 
 function CitationCard({ citation }: { citation: AskCitationDTO }) {
   return (
     <Link
       href={`/item/${citation.savedUrlId}`}
-      className="flex items-center gap-2.5 rounded-md bg-card px-2.5 py-2 transition-colors hover:bg-secondary/60"
+      className="hz-interactive flex min-h-11 items-center gap-3 px-3.5 py-2.5"
     >
-      <span className="grid size-[18px] shrink-0 place-items-center rounded bg-secondary text-[10px] text-muted-foreground">
+      <span className="grid size-5 shrink-0 place-items-center rounded-md bg-secondary text-[10.5px] font-medium text-muted-foreground">
         {citation.rank}
       </span>
       <div className="flex min-w-0 flex-1 items-baseline gap-2">
-        <span className="truncate text-[13.5px] font-medium">{citation.title || citation.url}</span>
+        <span className="truncate text-[14px] font-medium">{citation.title || citation.url}</span>
         <span className="shrink-0 text-[11px] text-muted-foreground">{citation.domain}</span>
       </div>
       <ArrowUpRight className="size-3.5 shrink-0 text-muted-foreground" />
@@ -42,18 +42,20 @@ function AssistantMessage({
 }) {
   const citations = message.citations ?? [];
   return (
-    <div className="mb-8">
+    <div className="animate-hz-rise mb-10">
       <div className="mb-3 flex items-center gap-2">
-        <Sparkle className="size-3.5 text-primary" />
-        <span className="text-[10px] uppercase tracking-wide text-primary">{t("thinkingOf")}</span>
+        <span className="flex size-6 items-center justify-center rounded-full bg-primary/15">
+          <Sparkle className="size-3.5 text-primary" />
+        </span>
+        <span className="hz-eyebrow text-primary">{t("thinkingOf")}</span>
       </div>
-      <p className="mb-5 max-w-[64ch] text-[16px] leading-relaxed">{message.content}</p>
+      <p className="mb-5 max-w-[64ch] whitespace-pre-wrap text-[16px] leading-relaxed">
+        {message.content}
+      </p>
       {citations.length > 0 && (
         <>
-          <div className="mb-3 flex items-baseline gap-2 text-[10px] uppercase tracking-wide text-muted-foreground">
-            {t("fromLibrary")}
-          </div>
-          <div className="flex flex-col gap-1">
+          <h3 className="hz-eyebrow mb-2 px-1">{t("fromLibrary")}</h3>
+          <div className="hz-surface flex flex-col divide-y divide-border/70 overflow-hidden">
             {citations.map((c) => (
               <CitationCard key={c.savedUrlId} citation={c} />
             ))}
@@ -67,6 +69,7 @@ function AssistantMessage({
 export function AskThreadView({ threadId }: { threadId: string }) {
   const t = useTranslations("ask");
   const tCommon = useTranslations("common");
+  const tNav = useTranslations("nav");
   const { data, isLoading } = useAskThreadQuery(threadId);
   const followUp = useAskFollowUpMutation(threadId);
   const deleteThread = useDeleteAskThreadMutation();
@@ -100,9 +103,10 @@ export function AskThreadView({ threadId }: { threadId: string }) {
 
   if (isLoading) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-6 py-10">
+      <div className="hz-page max-w-2xl gap-4">
         <Skeleton className="h-6 w-2/3" />
-        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
       </div>
     );
   }
@@ -110,15 +114,24 @@ export function AskThreadView({ threadId }: { threadId: string }) {
   if (!data) return null;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-6 py-10">
+    <div className="hz-page max-w-2xl pb-0">
       <div className="mb-8 flex items-center gap-2">
-        <h1 className="min-w-0 flex-1 truncate text-lg font-medium text-muted-foreground">
-          {data.thread.title}
-        </h1>
+        <Button
+          asChild
+          variant="ghost"
+          size="icon"
+          className="-ml-2 shrink-0 text-muted-foreground"
+          aria-label={tNav("ask")}
+        >
+          <Link href="/ask">
+            <ChevronLeft className="size-5" />
+          </Link>
+        </Button>
+        <h1 className="min-w-0 flex-1 truncate text-lg font-medium">{data.thread.title}</h1>
         <Button
           type="button"
           variant="ghost"
-          size="icon-sm"
+          size="icon"
           className="shrink-0 text-muted-foreground hover:text-destructive"
           aria-label={tCommon("delete")}
           disabled={deleteThread.isPending}
@@ -132,22 +145,23 @@ export function AskThreadView({ threadId }: { threadId: string }) {
         message.role === "assistant" ? (
           <AssistantMessage key={message.id} message={message} t={t} />
         ) : (
-          <div
-            key={message.id}
-            className="mb-4 flex items-center gap-2 text-[15px] text-foreground/90"
-          >
-            <CornerDownRight className="size-3.5 shrink-0 text-muted-foreground" />
-            {message.content}
+          <div key={message.id} className="animate-hz-rise mb-6 flex justify-end">
+            <div className="max-w-[85%] rounded-2xl rounded-br-md bg-secondary px-4 py-2.5 text-[15px] leading-relaxed">
+              {message.content}
+            </div>
           </div>
         )
       )}
 
-      <form onSubmit={handleSubmit} className="mt-4 flex flex-col gap-2">
+      <form
+        onSubmit={handleSubmit}
+        className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-4 mt-auto flex flex-col gap-2 bg-gradient-to-t from-background from-70% to-transparent px-4 pt-6 pb-4 sm:bottom-0 sm:-mx-6 sm:px-6 sm:pb-6"
+      >
         <AttachedCollections
           selectedIds={collectionIds}
           onRemove={(id) => setCollectionIds((ids) => ids.filter((x) => x !== id))}
         />
-        <div className="flex items-center gap-2">
+        <div className="hz-surface flex items-center gap-2 py-1.5 pr-1.5 pl-3.5 transition-[box-shadow] focus-within:ring-2 focus-within:ring-primary/60">
           <CollectionMentionField
             value={question}
             onChange={setQuestion}
@@ -155,12 +169,22 @@ export function AskThreadView({ threadId }: { threadId: string }) {
             onAdd={(id) => setCollectionIds((ids) => [...ids, id])}
             placeholder={t("followUp")}
             className="flex-1"
-            inputClassName="h-8 rounded-lg border border-input px-2.5 text-sm focus-visible:border-ring"
+            inputClassName="h-9 text-[16px] placeholder:text-muted-foreground"
             menuPlacement="top"
             disabled={followUp.isPending}
           />
-          <Button type="submit" size="sm" disabled={followUp.isPending || !question.trim()}>
-            {followUp.isPending ? <Loader2 className="size-4 animate-spin" /> : t("followUp")}
+          <Button
+            type="submit"
+            size="icon"
+            className="size-9 shrink-0 rounded-full"
+            aria-label={t("followUp")}
+            disabled={followUp.isPending || !question.trim()}
+          >
+            {followUp.isPending ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <ArrowUp className="size-4" />
+            )}
           </Button>
         </div>
       </form>

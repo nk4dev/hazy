@@ -17,7 +17,7 @@ export default async function AuthLayout({
   const t = await getTranslations("auth");
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-4 py-12">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-8 bg-background px-4 py-12">
       <div className="flex items-center gap-2">
         <HazyMark size={28} />
         <span className="text-lg font-medium">Hazy</span>

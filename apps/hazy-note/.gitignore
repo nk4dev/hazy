@@ -7,3 +7,10 @@ next-env.d.ts
 .DS_Store
 .env*.local
 .dbtest.bundle.mjs
+
+# playwright
+/test-results
+/playwright-report
+/blob-report
+/playwright/.cache
+/e2e/.clerk

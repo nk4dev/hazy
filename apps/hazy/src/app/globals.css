@@ -131,8 +131,58 @@
     );
   }
 
+  /* Shared page frame — same gutters and rhythm on every screen. */
+  .hz-page {
+    @apply mx-auto flex w-full flex-1 flex-col px-4 pt-6 pb-10 sm:px-6 sm:pt-10;
+  }
+
+  /* Raised surface: card fill + hairline ring instead of a border. */
+  .hz-surface {
+    @apply rounded-xl bg-card ring-1 ring-border;
+  }
+
+  /* Small uppercase section label. */
+  .hz-eyebrow {
+    @apply text-[10.5px] font-medium tracking-[0.08em] text-muted-foreground uppercase;
+  }
+
+  /* Interactive rows/cards: hover tint on pointers, press feedback on touch. */
+  .hz-interactive {
+    @apply transition-[background-color,transform,box-shadow] duration-150 ease-out active:scale-[0.985] active:bg-secondary/60;
+  }
+  @media (hover: hover) {
+    .hz-interactive:hover {
+      @apply bg-secondary/40;
+    }
+    /* Row actions stay hidden until hover on pointer devices; always shown on touch. */
+    .hz-reveal {
+      @apply opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100;
+    }
+  }
+
+  .animate-hz-rise {
+    animation: hz-rise 260ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+
   .animate-hz-breathe {
     animation: hz-breathe 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes hz-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hz-rise,
+  .animate-hz-breathe {
+    animation: none;
+  }
+  .hz-interactive {
+    @apply active:scale-100;
   }
 }
 

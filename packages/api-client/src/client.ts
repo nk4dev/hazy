@@ -6,6 +6,8 @@ import type {
   CollectionDetailDTO,
   CollectionItemRefDTO,
   CollectionSummaryDTO,
+  ConnectCodeDTO,
+  ConnectedAppDTO,
   MeDTO,
   PaginatedResponse,
   ReadLaterQueueDTO,
@@ -47,6 +49,33 @@ type Envelope<T> =
   | { data: T }
   | { error: { code: string; message: string; details?: unknown } };
 
+/** Fetches a binary response (image download) rather than the `{ data }` JSON envelope. */
+function createBinaryRequest(config: HazyClientConfig) {
+  return async function requestBinary(
+    path: string
+  ): Promise<{ blob: Blob; contentType: string }> {
+    const url = new URL(`/v1${path}`, config.baseUrl);
+    const token = await config.getToken();
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) {
+      const json = (await res.json().catch(() => null)) as Envelope<never> | null;
+      if (json && "error" in json) {
+        throw new ApiClientError(
+          json.error.code,
+          json.error.message,
+          res.status,
+          json.error.details
+        );
+      }
+      throw new ApiClientError("internal_error", `Request failed (${res.status})`, res.status);
+    }
+    const blob = await res.blob();
+    return { blob, contentType: res.headers.get("content-type") ?? blob.type };
+  };
+}
+
 function createRequest(config: HazyClientConfig) {
   return async function request<T>(path: string, init: RequestInitLite = {}): Promise<T> {
     const url = new URL(`/v1${path}`, config.baseUrl);
@@ -78,6 +107,7 @@ function createRequest(config: HazyClientConfig) {
 
 export interface ItemPatch {
   title?: string | null;
+  domain?: string | null;
   summary?: string | null;
   tags?: string[];
 }
@@ -94,8 +124,16 @@ export interface AskInput {
   collectionIds?: string[];
 }
 
+export interface ConnectAuthorizeInput {
+  clientName: string;
+  redirectUri: string;
+  codeChallenge: string;
+  codeChallengeMethod: "S256";
+}
+
 export function createHazyClient(config: HazyClientConfig) {
   const request = createRequest(config);
+  const requestBinary = createBinaryRequest(config);
 
   return {
     items: {
@@ -113,6 +151,7 @@ export function createHazyClient(config: HazyClientConfig) {
         request<SavedUrlDTO>(`/items/${id}/refetch`, { method: "POST" }),
       summarize: (id: string) =>
         request<SavedUrlDTO>(`/items/${id}/summarize`, { method: "POST" }),
+      downloadImage: (id: string) => requestBinary(`/items/${id}/image`),
     },
 
     collections: {
@@ -176,6 +215,16 @@ export function createHazyClient(config: HazyClientConfig) {
       get: () => request<MeDTO>("/me"),
       updatePreferences: (patch: Partial<MeDTO["preferences"]>) =>
         request<MeDTO["preferences"]>("/me", { method: "PATCH", body: patch }),
+    },
+
+    // "Connect with Hazy" — needs a Clerk session (a connected app's own
+    // `hz_…` token gets 403 here). The code → token exchange is the public
+    // `POST /v1/connect/token`, called by the third-party client, not by hazy.
+    connect: {
+      authorize: (input: ConnectAuthorizeInput) =>
+        request<ConnectCodeDTO>("/connect/authorize", { method: "POST", body: input }),
+      apps: () => request<{ items: ConnectedAppDTO[] }>("/connect/apps"),
+      revoke: (id: string) => request<{ id: string }>(`/connect/apps/${id}`, { method: "DELETE" }),
     },
   };
 }

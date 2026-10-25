@@ -17,9 +17,11 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-dvh flex-col">
       <Header />
-      <main className="flex flex-1 flex-col pb-14 sm:pb-0">{children}</main>
+      <main className="flex flex-1 flex-col pt-[env(safe-area-inset-top)] pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pt-0 sm:pb-0">
+        {children}
+      </main>
       <MobileTabBar />
     </div>
   );

@@ -2,17 +2,10 @@
 
 import "quill/dist/quill.bubble.css";
 import type Quill from "quill";
-import {
-  forwardRef,
-  useEffect,
-  useImperativeHandle,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import type { Item } from "@/lib/types";
 import type { DeltaOp } from "@/lib/note-delta";
+import type { Item } from "@/lib/types";
 import { Icon } from "./icon";
 
 export type CiteTarget = { title: string; site: string; url: string };
@@ -98,11 +91,16 @@ export const NoteEditor = forwardRef<
   // ── mount Quill (dynamic import — Quill touches `document` at load) ──
   useEffect(() => {
     let quill: Quill | null = null;
+    let markdown: { destroy: () => void } | null = null;
     let debounce: ReturnType<typeof setTimeout> | null = null;
+    let scanTimer: ReturnType<typeof setTimeout> | null = null;
     let disposed = false;
 
     (async () => {
-      const { default: QuillCtor } = await import("quill");
+      const [{ default: QuillCtor }, { default: QuillMarkdown }] = await Promise.all([
+        import("quill"),
+        import("quilljs-markdown"),
+      ]);
       if (disposed || !holderRef.current) return;
 
       quill = new QuillCtor(holderRef.current, {
@@ -111,6 +109,16 @@ export const NoteEditor = forwardRef<
         modules: { toolbar: TOOLBAR },
       });
       quillRef.current = quill;
+
+      // Live markdown: `#`/`##`/`###`, `> `, `**bold**`, `*italic*`, `[t](url)`
+      // convert as you type. `- ` / `1. ` lists are handled by Quill's own
+      // keyboard defaults. Restricted to the formats the toolbar +
+      // lib/note-delta.ts round-trip — no h4–h6, strikethrough, or code blocks
+      // (they'd export as unstyled text).
+      markdown = new QuillMarkdown(quill, {
+        ignoreTags: ["h4", "h5", "h6", "strikethrough", "pre", "code"],
+      });
+
       if (value.length) quill.setContents({ ops: value } as never, "silent");
 
       const scan = () => {
@@ -122,11 +130,23 @@ export const NoteEditor = forwardRef<
         const at = range.index - m[0].length + m[0].indexOf("@");
         const b = quill.getBounds(range.index) ?? { top: 0, left: 0, height: 20 };
         setSel(0);
-        setMention({ at, len: range.index - at, query: m[1], top: b.top + b.height + 4, left: b.left });
+        setMention({
+          at,
+          len: range.index - at,
+          query: m[1],
+          top: b.top + b.height + 4,
+          left: b.left,
+        });
       };
 
       quill.on("text-change", (_d, _o, source) => {
-        scan();
+        // Deferred: on the very first edit to an empty document, Quill's own
+        // `getSelection()` still reports the pre-edit range synchronously here
+        // (e.g. typing "@" as the note's first character never opened the
+        // mention picker — `range.index` read back as 0, not 1). A tick later
+        // it's caught up.
+        if (scanTimer) clearTimeout(scanTimer);
+        scanTimer = setTimeout(scan, 0);
         if (source !== "user") return;
         if (debounce) clearTimeout(debounce);
         debounce = setTimeout(() => {
@@ -160,6 +180,8 @@ export const NoteEditor = forwardRef<
     return () => {
       disposed = true;
       if (debounce) clearTimeout(debounce);
+      if (scanTimer) clearTimeout(scanTimer);
+      markdown?.destroy();
       quill?.root.removeEventListener("keydown", onKeyDown, true);
       // flush a pending edit
       const q = quillRef.current;

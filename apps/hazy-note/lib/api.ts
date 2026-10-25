@@ -1,12 +1,12 @@
 import type {
-  CompareBoard,
-  Digest,
   ExportDraft,
   ExportFormat,
-  GraphData,
+  InsightProfile,
   Item,
   Note,
   Project,
+  ProjectDetail,
+  SearchChatAnswer,
   Tag,
 } from "./types";
 
@@ -23,8 +23,6 @@ const opts = (method: string, body?: unknown): RequestInit => ({
 });
 
 export const api = {
-  digest: () => fetch("/api/digest", { cache: "no-store" }).then(j<Digest>),
-
   items: () => fetch("/api/items", { cache: "no-store" }).then(j<Item[]>),
   importable: () => fetch("/api/items/importable", { cache: "no-store" }).then(j<Item[]>),
   item: (id: string) => fetch(`/api/items/${id}`, { cache: "no-store" }).then(j<Item>),
@@ -34,13 +32,16 @@ export const api = {
   updateItem: (id: string, patch: Partial<Item>) =>
     fetch(`/api/items/${id}`, opts("PATCH", patch)).then(j<Item>),
   deleteItem: (id: string) => fetch(`/api/items/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
-  autoSort: () => fetch("/api/items/sort", opts("POST")).then(j<{ moved: number }>),
 
   projects: () => fetch("/api/projects", { cache: "no-store" }).then(j<Project[]>),
-  addProject: (name: string, tone: "accent" | "neutral" = "neutral") =>
-    fetch("/api/projects", opts("POST", { name, tone })).then(j<Project>),
-  updateProject: (id: string, patch: { name?: string; tone?: "accent" | "neutral" }) =>
-    fetch(`/api/projects/${id}`, opts("PATCH", patch)).then(j<Project>),
+  project: (id: string) =>
+    fetch(`/api/projects/${id}`, { cache: "no-store" }).then(j<ProjectDetail>),
+  addProject: (name: string, patch: { description?: string; tone?: "accent" | "neutral" } = {}) =>
+    fetch("/api/projects", opts("POST", { name, ...patch })).then(j<Project>),
+  updateProject: (
+    id: string,
+    patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" }
+  ) => fetch(`/api/projects/${id}`, opts("PATCH", patch)).then(j<Project>),
   deleteProject: (id: string) =>
     fetch(`/api/projects/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
   tags: () => fetch("/api/tags", { cache: "no-store" }).then(j<Tag[]>),
@@ -57,7 +58,7 @@ export const api = {
       tags?: Note["tags"];
       status?: Note["status"];
       sources?: Note["sources"];
-    } = {},
+    } = {}
   ) => fetch("/api/notes", opts("POST", input)).then(j<Note>),
   updateNote: (id: string, patch: Partial<Note>) =>
     fetch(`/api/notes/${id}`, opts("PATCH", patch)).then(j<Note>),
@@ -67,12 +68,15 @@ export const api = {
   suggestion: (id: string, suggestionId: string, action: "accept" | "dismiss") =>
     fetch(`/api/notes/${id}/suggestion`, opts("POST", { id: suggestionId, action })).then(j<Note>),
 
-  compare: () => fetch("/api/compare", { cache: "no-store" }).then(j<CompareBoard>),
-  rebuildCompare: (projectId?: string) =>
-    fetch("/api/compare", opts("POST", projectId ? { projectId } : {})).then(j<CompareBoard>),
+  analyze: (projectId?: string) =>
+    fetch(`/api/analyze${projectId ? `?project=${projectId}` : ""}`, { cache: "no-store" }).then(
+      j<InsightProfile>
+    ),
+  rebuildAnalyze: (projectId?: string) =>
+    fetch("/api/analyze", opts("POST", projectId ? { projectId } : {})).then(j<InsightProfile>),
 
-  graph: () => fetch("/api/graph", { cache: "no-store" }).then(j<GraphData>),
-  rebuildGraph: () => fetch("/api/graph", opts("POST")).then(j<GraphData>),
+  searchChat: (query: string, history?: { role: "user" | "assistant"; content: string }[]) =>
+    fetch("/api/search/chat", opts("POST", { query, history })).then(j<SearchChatAnswer>),
 
   export: (noteId: string, format: ExportFormat) =>
     fetch(`/api/export?noteId=${noteId}&format=${format}`, {

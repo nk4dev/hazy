@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useBreadcrumb } from "@/components/breadcrumbs";
 import { Icon } from "@/components/icon";
 import { Button, Seg, Tag } from "@/components/ui";
 import { api } from "@/lib/api";
@@ -72,6 +73,8 @@ export function LibraryClient() {
       ? `#${tagFilter}`
       : "受信箱";
 
+  useBreadcrumb(projectFilter || tagFilter ? [{ label: heading }] : null);
+
   async function ingest() {
     if (!url.trim() || busy) return;
     setBusy(true);
@@ -90,15 +93,20 @@ export function LibraryClient() {
   }
 
   return (
-    <main className="flex flex-col gap-5 p-[26px_30px_40px]">
-      <header className="flex items-end gap-4">
+    <main className="flex flex-col gap-5 p-4 pb-10 sm:p-[26px_30px_40px]">
+      <header className="flex flex-wrap items-end gap-3">
         <div>
           <div className="mb-[5px] text-[11px] uppercase tracking-[0.1em] text-text/[0.42]">
             {projectFilter || tagFilter ? "フィルタ中" : "受信箱"}
           </div>
           <h3 className="tracking-[-0.02em]">{heading}</h3>
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {projectFilter && (
+            <Link href={`/projects/${projectFilter}`} className="btn btn-secondary text-[12px]">
+              <Icon name="folder-open" /> プロジェクトを開く
+            </Link>
+          )}
           {(projectFilter || tagFilter) && (
             <Link href="/library" className="btn btn-ghost text-[12px]">
               <Icon name="x" /> フィルタ解除
@@ -120,7 +128,7 @@ export function LibraryClient() {
         </div>
       </header>
 
-      <div className="flex gap-[9px] rounded-xl bg-surface p-[9px] shadow-[0_0_0_1px_var(--color-neutral-800),inset_0_0_44px_rgba(145,132,217,0.07)]">
+      <div className="flex flex-wrap gap-[9px] rounded-xl bg-surface p-[9px] shadow-[0_0_0_1px_var(--color-neutral-800),inset_0_0_44px_rgba(145,132,217,0.07)]">
         <Icon name="link" size={17} className="ml-[7px] self-center text-accent" />
         <input
           className="flex-1 self-center bg-transparent text-[14px] text-text outline-none placeholder:text-text/40"
@@ -228,7 +236,7 @@ function ItemCard({
         <span className="ml-auto">{item.addedLabel}</span>
       </div>
       <Link
-        href={item.relatedNoteId ? `/notes/${item.relatedNoteId}` : "/capture"}
+        href={`/library/${item.id}`}
         className="card-title text-text no-underline hover:text-accent-300"
       >
         {item.title}

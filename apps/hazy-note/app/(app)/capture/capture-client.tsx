@@ -94,7 +94,7 @@ export function CaptureClient() {
   }
 
   return (
-    <main className="flex flex-col items-center gap-6 p-[40px_30px]">
+    <main className="flex flex-col items-center gap-6 px-4 py-8 sm:p-[40px_30px]">
       <header className="w-full max-w-[440px]">
         <div className="mb-[5px] text-[11px] uppercase tracking-[0.1em] text-text/[0.42]">
           取り込み

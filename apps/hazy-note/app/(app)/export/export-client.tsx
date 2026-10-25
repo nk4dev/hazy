@@ -115,7 +115,7 @@ export function ExportClient() {
 
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[1fr_320px]">
-      <main className="flex flex-col gap-[18px] p-[28px_44px_34px]">
+      <main className="flex flex-col gap-[18px] p-4 pb-8 sm:p-[28px_44px_34px]">
         <div className="flex flex-wrap items-center gap-[10px]">
           <Seg
             name="exfmt"

@@ -30,7 +30,17 @@ export function fail(error: unknown): Response {
       { status: 400 }
     );
   }
-  console.error("Unhandled API error:", error);
+  // Log a compact summary first: a DrizzleQueryError's own `message` embeds
+  // the full SQL + params (which can be many KB for e.g. saved article text),
+  // and dumping that via console.error blows past the Workers tail log size
+  // limit — burying the one thing that's actually diagnostic, `cause` (the
+  // underlying driver/Postgres error, e.g. "value too long for type
+  // character varying(8)").
+  const err = error as { name?: string; cause?: unknown } | null;
+  console.error("Unhandled API error:", {
+    name: err?.name,
+    cause: err?.cause,
+  });
   return Response.json(
     { error: { code: "internal_error", message: "Something went wrong." } },
     { status: 500 }

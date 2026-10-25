@@ -22,7 +22,8 @@ for the route surface.
 
 - **Contract types live in `@repo/api-client`** (`packages/api-client/src/types.ts`),
   re-exported here as `@/types/api`. Add a DTO there, add the client method in
-  `packages/api-client/src/client.ts`, then the route here.
+  `packages/api-client/src/client.ts`, then the route here — and update the
+  matching genre file in `docs/ai/flutter/` (Flutter client reference).
 - DB via `getDb()` (`@/db` → `@repo/db`). Schema changes → `packages/db` only.
 - Runtime = workerd (prod) / Node (dev). `process.env` is populated from
   `wrangler.jsonc` vars + `wrangler secret`. Keep the `lib/*` code Workers-safe
