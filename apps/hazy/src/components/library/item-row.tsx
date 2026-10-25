@@ -6,6 +6,7 @@ import { Favicon } from "@/components/favicon";
 import { Button } from "@/components/ui/button";
 import { useSummarizeItemMutation } from "@/hooks/use-item";
 import { Link } from "@/i18n/navigation";
+import { plainPreview } from "@/lib/utils";
 
 export function ItemRow({
   item,
@@ -43,7 +44,7 @@ export function ItemRow({
           </div>
           {item.summary && (
             <div className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-foreground/75">
-              {item.summary}
+              {plainPreview(item.summary)}
             </div>
           )}
           {item.tags.length > 0 && (
