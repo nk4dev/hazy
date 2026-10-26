@@ -23,6 +23,17 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
+      - name: Require the deploy key
+        env:
+          KEY: ${{ secrets.HAZY_DASH_DEPLOY_KEY }}
+        run: |
+          # Without it, checkout falls back to the read-only GITHUB_TOKEN and the
+          # push fails with a 403 that doesn't say why.
+          if [ -z "$KEY" ]; then
+            echo "::error::Secret HAZY_DASH_DEPLOY_KEY is not set — add a write deploy key to nk4dev/hazy-dash and its private key as this secret."
+            exit 1
+          fi
+
       - name: Check out the monorepo
         uses: actions/checkout@v4
         with:
