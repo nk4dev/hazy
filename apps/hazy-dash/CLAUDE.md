@@ -33,4 +33,6 @@ Fonts come from a Google Fonts `<link>` in `layout.tsx`, not `next/font`: the
 `next/font/google` Turbopack dev loader failed intermittently here.
 
 `github.com/nk4dev/hazy-dash` is an export of this directory, not a second
-source: edit here, then copy the directory over and push there.
+source: edit here. `.github/workflows/export-hazy-dash.yml` copies the tracked
+files over and pushes on every master push that touches `apps/hazy-dash/**`
+(deploy key secret `HAZY_DASH_DEPLOY_KEY`; also runnable by hand).

@@ -1,0 +1,60 @@
+# Mirrors apps/hazy-dash into github.com/nk4dev/hazy-dash after every push to
+# master that touches it. The monorepo is the source of truth; the export repo
+# only ever receives commits from here (never force-pushed).
+#
+# Auth: a deploy key with write access on nk4dev/hazy-dash, its private half
+# stored in this repo as the HAZY_DASH_DEPLOY_KEY secret.
+name: Export hazy-dash
+
+on:
+  push:
+    branches: [master]
+    paths: ["apps/hazy-dash/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: export-hazy-dash
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the monorepo
+        uses: actions/checkout@v4
+        with:
+          path: mono
+
+      - name: Check out the export repo
+        uses: actions/checkout@v4
+        with:
+          repository: nk4dev/hazy-dash
+          ssh-key: ${{ secrets.HAZY_DASH_DEPLOY_KEY }}
+          path: export
+          fetch-depth: 1
+
+      - name: Copy apps/hazy-dash over the export
+        run: |
+          # Tracked files only (git archive), so ignored files like .env.local
+          # can never be exported even if they exist in the checkout.
+          find export -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          git -C mono archive HEAD apps/hazy-dash | tar -x -C "$RUNNER_TEMP"
+          cp -a "$RUNNER_TEMP/apps/hazy-dash/." export/
+
+      - name: Commit and push if anything changed
+        working-directory: export
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Export is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          short=$(git -C ../mono rev-parse --short HEAD)
+          git commit -m "chore: sync from nk4dev/hazy@${short} (apps/hazy-dash)" \
+            -m "https://github.com/nk4dev/hazy/commit/${GITHUB_SHA}"
+          git push origin HEAD:main
