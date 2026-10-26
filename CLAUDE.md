@@ -7,6 +7,7 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
 | `apps/api` | `hazy-api` — a **Hono Worker** at `api.hz.nknighta.me`. hazy's backend: `/v1/**` JSON API + the Clerk webhook. |
 | `apps/hazy` | `hz.nknighta.me` — a **pure frontend** (Next 16, Turbopack). No backend, no DB. Calls `apps/api` via `@repo/api-client`. |
 | `apps/hazy-note` | `note.hz.nknighta.me` — Next 16. Capture → notes (Quill editor) → search / analyze → export. **Still has its own `/api/*` route handlers** over `@repo/db` (migrating to `apps/api` is a follow-up). Search: client-side keyword/tag + on-device `@ternlight/base` semantic + an OpenRouter chat route. |
+| `apps/hazy-dash` | `dash.hz.nknighta.me` — home-screen dashboard (Next 16, client-only) — weather (Open-Meteo), today's three, week stats, recent saves, quick save, inline Ask. A **connected app**: gets an `hz_…` token via "Connect with Hazy" (`/connector/add`) and calls `apps/api` with it; no Clerk, no DB. |
 | `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types. The single source of truth for the API shape. `docs/ai/flutter/` re-documents this surface by genre for the Flutter hazy app — keep it in sync when the contract changes. |
 | `packages/db` | `@repo/db` — the one Drizzle schema + `getDb()` + migrations + search-vector trigger. |
 
@@ -19,11 +20,12 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
 - `apps/hazy` must never regain a `src/db` or `src/app/api` — data flows
   frontend → `@repo/api-client` → `apps/api`. Add API methods to
   `packages/api-client/src/client.ts` and the DTO to `src/types.ts`.
-- Three Workers, three custom domains, deployed independently. See each app's
+- Four Workers, four custom domains, deployed independently. See each app's
   README for the deploy + `wrangler secret put` steps. `apps/api` also needs the
   Clerk dashboard webhook pointed at `api.hz.nknighta.me/v1/webhooks/clerk`.
-- `bun run dev` starts all three: api :8787 (Node, `@hono/node-server`),
-  hazy-note :3000, hazy :3100. hazy needs `NEXT_PUBLIC_API_URL=http://localhost:8787`.
+- `bun run dev` starts all four: api :8787 (Node, `@hono/node-server`),
+  hazy-note :3000, hazy :3100, hazy-dash :3200. hazy needs `NEXT_PUBLIC_API_URL=http://localhost:8787`;
+  hazy-dash defaults to the production hazy + API (its approval page and tokens live there).
 - **Keep agent-facing docs in sync in the same change.** Any spec/behaviour
   change — a route added or removed, a nav item, an API endpoint, a schema
   table, a workflow step — must update the affected `CLAUDE.md` (root +

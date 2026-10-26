@@ -1,0 +1,23 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "hazy-dash",
+  "compatibility_date": "2026-08-14",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // NEXT_PUBLIC_* are inlined at build time; the defaults in src/lib/env.ts
+  // already point at production, and there are no secrets (the dash holds no
+  // keys — it gets an hz_ token per browser through "Connect with Hazy").
+  "routes": [{ "pattern": "dash.hz.nknighta.me", "custom_domain": true }],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      // Self-reference service binding, the service name must match the worker name
+      // see https://opennext.js.org/cloudflare/caching
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "hazy-dash"
+    }
+  ]
+}

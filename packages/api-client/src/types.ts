@@ -110,7 +110,7 @@ export type MeDTO = {
   preferences: UserPreferencesDTO;
 };
 
-/** POST /v1/connect/authorize — the one-shot code hazy's `/connect` page redirects back with. */
+/** POST /v1/connect/authorize — the one-shot code hazy's `/connector/add` page redirects back with. */
 export type ConnectCodeDTO = { code: string };
 
 /** GET /v1/connect/apps — one live connected-app token. */
