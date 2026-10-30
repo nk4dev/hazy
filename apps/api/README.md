@@ -18,6 +18,7 @@ on failure:
 | `read-later` | `GET /`, `GET /stats`, `PATCH /:itemId` |
 | `search` | `GET /` |
 | `me` | `GET /`, `PATCH /` |
+| `ai` | `POST /chat` |
 | `webhooks` | `POST /clerk` — Svix-verified, no auth middleware |
 
 `GET /health` is unauthenticated. The DTO shapes are the contract in
@@ -68,7 +69,7 @@ wrangler secret put NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 wrangler secret put OPENROUTER_API_KEY
 ```
 
-Non-secret config (`OPENROUTER_MODEL_ID`, `CORS_ALLOWED_ORIGINS`, …) is in
+Non-secret config (`OPENROUTER_MODEL_ID`, `OPENROUTER_FALLBACK_MODELS`, `CORS_ALLOWED_ORIGINS`, …) is in
 `wrangler.jsonc` `vars`. After deploy, set the Clerk dashboard webhook endpoint
 to `https://api.hz.nknighta.me/v1/webhooks/clerk`.
 

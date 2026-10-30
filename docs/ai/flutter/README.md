@@ -70,13 +70,14 @@ CORS はブラウザだけの制約。Flutter（モバイル / デスクトッ�
 | [`auth.md`](./auth.md) | 認証 | サインイン、トークン取得、401 リカバリ |
 | [`errors.md`](./errors.md) | エラー | `code` 一覧、Dart での分岐 |
 | [`models.md`](./models.md) | DTO | 全レスポンス型の Dart 対応表 |
-| [`items.md`](./items.md) | 保存 URL | URL 保存、一覧、編集、再取得、AI 要約 |
+| [`items.md`](./items.md) | 保存 URL | URL 保存、一覧、編集、再取得、AI 要約、画像ダウンロード |
 | [`collections.md`](./collections.md) | コレクション | 束ねる、メンバー操作、コレクション要約 |
 | [`ask.md`](./ask.md) | Ask（RAG） | 自分の保存記事に質問、スレッド継続 |
 | [`read-later.md`](./read-later.md) | あとで読む | 今日の3本 / 5分 / じっくり、既読化、週次統計 |
 | [`search.md`](./search.md) | 検索 | キーワード + `domain:` / `tag:` フィルタ |
 | [`me.md`](./me.md) | プロフィール | 自分の情報、UI 言語・通知設定 |
 | [`connect.md`](./connect.md) | 連携アプリ | 連携中アプリの一覧・解除（Connect with Hazy） |
+| [`ai.md`](./ai.md) | AI チャット | 汎用 AI チャット補完（フォールバック付き） |
 
 ## 最小の疎通確認（Dart）
 

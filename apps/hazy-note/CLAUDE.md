@@ -65,7 +65,7 @@ notes + non-note sources to `SearchDoc[]`; `textSearch` / `tagSearch` /
   Use the `/web` subpath — the bare `@ternlight/base` (`pkg-bundler`) breaks
   Turbopack (`type: commonjs` package.json over ESM files).
 - **チャット** → `POST /api/search/chat` → `repo.runSearchChat` →
-  `ai.answerSearchChat` (OpenRouter `chat()`, keyword-retrieved shortlist as
+  `ai.answerSearchChat` (`apps/api` `chat()`, keyword-retrieved shortlist as
   context, `[n]` citations parsed back to sources). Stateless — no `ask_*` rows.
 
 Tests: `lib/search.test.ts` (`bun test`), `e2e/*.spec.ts` (Playwright).

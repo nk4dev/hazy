@@ -1,52 +1,59 @@
-// Thin OpenRouter client. Every "AI" surface in the app (summaries, tag
-// suggestions, the tendency analysis, the export draft) goes through here.
-// Configure it in .env.local:
-//
-//   OPENROUTER_API_KEY   — required for any AI output
-//   OPENROUTER_MODEL_ID  — e.g. "mistralai/mistral-small-2603"
-//   OPENROUTER_SITE_URL  — sent as HTTP-Referer (OpenRouter attribution)
-//   OPENROUTER_APP_NAME  — sent as X-Title
-//
-// When the key is missing or a call fails, callers fall back to a small
-// deterministic stand-in so the app keeps working offline.
+// AI completions are centralized in `apps/api` (Hono Worker).
+// hazy-note delegates all chat completions to apps/api's /v1/ai/chat.
 
-const ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
+import { auth } from "@clerk/nextjs/server";
+
+const API_BASE_URL =
+  process.env.API_URL ??
+  process.env.NEXT_PUBLIC_API_URL ??
+  "http://localhost:8787";
+
+export class LLMError extends Error {}
 
 export function llmConfigured(): boolean {
-  return !!process.env.OPENROUTER_API_KEY;
+  return true;
 }
 
 type Msg = { role: "system" | "user" | "assistant"; content: string };
 
-export class LLMError extends Error {}
+async function resolveAuthToken(): Promise<string | null> {
+  try {
+    const session = await auth();
+    if (session?.getToken) {
+      const token = await session.getToken();
+      if (token) return token;
+    }
+  } catch {
+    // Called outside of a request context or in unit tests
+  }
+  return process.env.CLERK_SECRET_KEY ?? null;
+}
 
-/** One chat completion. Throws LLMError on any non-success. */
+/** One chat completion via apps/api (/v1/ai/chat). Throws LLMError on failure. */
 export async function chat(
   messages: Msg[],
-  opts: { json?: boolean; temperature?: number; maxTokens?: number } = {}
+  opts: { json?: boolean; temperature?: number; maxTokens?: number; model?: string } = {}
 ): Promise<string> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new LLMError("OPENROUTER_API_KEY is not set");
-
+  const token = await resolveAuthToken();
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), 30_000);
+  const timer = setTimeout(() => ctrl.abort(), 35_000);
+
   let res: Response;
   try {
-    res = await fetch(ENDPOINT, {
+    const url = new URL("/v1/ai/chat", API_BASE_URL);
+    res = await fetch(url, {
       method: "POST",
       signal: ctrl.signal,
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${key}`,
-        "HTTP-Referer": process.env.OPENROUTER_SITE_URL ?? "http://localhost:3000",
-        "X-Title": process.env.OPENROUTER_APP_NAME ?? "Hazy",
+        ...(token ? { authorization: `Bearer ${token}` } : {}),
       },
       body: JSON.stringify({
-        model: process.env.OPENROUTER_MODEL_ID ?? "mistralai/mistral-small-2603",
         messages,
-        temperature: opts.temperature ?? 0.4,
-        max_tokens: opts.maxTokens ?? 1200,
-        ...(opts.json ? { response_format: { type: "json_object" } } : {}),
+        temperature: opts.temperature,
+        maxTokens: opts.maxTokens,
+        model: opts.model,
+        json: opts.json,
       }),
     });
   } catch (e) {
@@ -57,12 +64,19 @@ export async function chat(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new LLMError(`openrouter ${res.status}: ${body.slice(0, 300)}`);
+    throw new LLMError(`API error ${res.status}: ${body.slice(0, 300)}`);
   }
-  const data = (await res.json()) as {
-    choices?: { message?: { content?: string } }[];
+
+  const json = (await res.json()) as {
+    data?: { content?: string; model?: string };
+    error?: { code: string; message: string };
   };
-  const text = data.choices?.[0]?.message?.content?.trim();
+
+  if (json.error) {
+    throw new LLMError(`AI service error: ${json.error.message}`);
+  }
+
+  const text = json.data?.content?.trim();
   if (!text) throw new LLMError("empty completion");
   return text;
 }
@@ -73,7 +87,7 @@ export async function chat(
  */
 export async function chatJSON<T>(
   messages: Msg[],
-  opts: { temperature?: number; maxTokens?: number } = {}
+  opts: { temperature?: number; maxTokens?: number; model?: string } = {}
 ): Promise<T> {
   const raw = await chat(messages, { ...opts, json: true });
   const cleaned = raw

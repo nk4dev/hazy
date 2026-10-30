@@ -17,6 +17,7 @@
 | `not_found` | 404 | 対象が存在しない、**または他ユーザーの所有物**（所有チェックは 404 を返す） | 「見つかりません」表示。一覧を再取得 |
 | `validation_error` | 400 | Zod のボディ / クエリ検証失敗。`details` は `error.flatten()`（`fieldErrors` / `formErrors`） | フォームのフィールドエラーに反映 |
 | `service_not_configured` | 503 | その機能の env 未設定。`details.service` に `"openrouter"` 等 | AI 機能を無効表示（`details.service` で判別） |
+| `image_fetch_failed` | 502 | [`GET /v1/items/:id/image`](./items.md#get-v1itemsidimage--プレビュー画像のダウンロード) が元画像の取得に失敗（タイムアウト / 非 200 等） | 「画像を取得できませんでした」＋リトライボタン |
 | `internal_error` | 500 | 予期しない例外 | 「時間をおいて再試行」＋リトライボタン |
 
 `service_not_configured` が出うるエンドポイント: `POST /v1/items/:id/summarize`、

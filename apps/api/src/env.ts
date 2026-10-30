@@ -24,6 +24,8 @@ const envSchema = z.object({
 
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL_ID: z.string().min(1).default("google/gemma-4-26b-a4b-it:free"),
+  /** Comma-separated fallback model IDs for OpenRouter */
+  OPENROUTER_FALLBACK_MODELS: z.string().optional(),
   OPENROUTER_SITE_URL: z.string().url().default("http://localhost:3100"),
   OPENROUTER_APP_NAME: z.string().min(1).default("Hazy"),
 });

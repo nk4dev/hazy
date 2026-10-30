@@ -85,7 +85,7 @@ async function runToolCallingAsk(
   priorMessages: { role: "user" | "assistant"; content: string }[],
   question: string,
   seedHits: SearchHit[] = []
-): Promise<{ answerText: string; hits: SearchHit[] }> {
+): Promise<{ answerText: string; hits: SearchHit[]; modelId?: string }> {
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
     ...priorMessages.map(
@@ -99,13 +99,17 @@ async function runToolCallingAsk(
   // numbers formatSearchResults assigns to anything the tool returns after.
   const hits: SearchHit[] = [...seedHits];
   const seenIds = new Set<string>(seedHits.map((hit) => hit.id));
+  let lastModelId: string | undefined;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
     const message = await createChatCompletion(messages, { tools: [SEARCH_SAVED_LINKS_TOOL] });
+    if (message.model) {
+      lastModelId = message.model;
+    }
 
     if (!message.tool_calls || message.tool_calls.length === 0) {
       if (!message.content) throw new Error("OpenRouter returned an empty response.");
-      return { answerText: message.content, hits };
+      return { answerText: message.content, hits, modelId: lastModelId };
     }
 
     messages.push({ role: "assistant", content: message.content, tool_calls: message.tool_calls });
@@ -214,6 +218,7 @@ export async function runAskPipeline(params: {
   let answerText: string;
   let usedFallback = false;
   let citationHits: SearchHit[] = fallbackCitationHits;
+  let resolvedModelId: string | null = null;
 
   const fallbackText = FALLBACK_TEXT[targetLanguage] ?? FALLBACK_TEXT.en;
 
@@ -232,6 +237,7 @@ export async function runAskPipeline(params: {
       );
       answerText = result.answerText;
       citationHits = result.hits;
+      resolvedModelId = result.modelId ?? null;
     } catch (error) {
       console.error("OpenRouter call failed, falling back:", error);
       usedFallback = true;
@@ -247,7 +253,7 @@ export async function runAskPipeline(params: {
       threadId: thread.id,
       role: "assistant",
       content: answerText,
-      modelId: usedFallback ? null : env.OPENROUTER_MODEL_ID,
+      modelId: usedFallback ? null : resolvedModelId ?? env.OPENROUTER_MODEL_ID,
       usedFallback,
     })
     .returning();

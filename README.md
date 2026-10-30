@@ -64,8 +64,8 @@ Three independent Cloudflare Workers, each on its own custom domain:
   `https://api.hz.nknighta.me/v1/webhooks/clerk`.
 - **`apps/hazy`** / **`apps/hazy-note`** — `bun run cf:deploy --filter=<app>`,
   then `wrangler secret put …` for `DATABASE_URL` (hazy-note only),
-  `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `OPENROUTER_API_KEY`
-  (hazy-note only). `NEXT_PUBLIC_*` (incl. hazy's `NEXT_PUBLIC_API_URL`) are
+  `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.
+  `NEXT_PUBLIC_*` (incl. `NEXT_PUBLIC_API_URL`) are
   inlined at build from `apps/<app>/.env.local` — the `wrangler.jsonc` `vars`
   mirror them for reference / server-side reads.
 

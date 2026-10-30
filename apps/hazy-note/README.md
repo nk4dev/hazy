@@ -13,8 +13,7 @@ URLの霧を、自分の言葉に落とすまでの一本道 — 取り込み �
   トークンベースのまま `@layer components` にポート。
 - **バックエンド** — `/app/api/*` の Route Handlers + Postgres。スキーマとクライアントは
   `@repo/db`（`packages/db`）。`lib/db/repo.ts` が旧 `lib/store.ts` の置き換え（関数名・
-  返り値そのまま、裏が Postgres）。「AI」は `OPENROUTER_API_KEY` があればモデル、
-  無ければ固定文にフォールバック。
+  返り値そのまま、裏が Postgres）。AI機能は `apps/api` の `/v1/ai/chat` に集約（OpenRouter の無料モデルフォールバック等はすべて `apps/api` 側で処理）。未接続やエラー時は固定文にフォールバック。
 - **hazy アプリと DB を共有** — 同じ Clerk・同じ `users` / `saved_urls` / `collections`。
   hazy で保存した URL が hazy-note の `/library` に出る（逆も）。スキーマは 1 つ
   （`@repo/db`）。詳細・マイグレーション手順は `packages/db/README.md`。
@@ -40,7 +39,7 @@ bun run dev --filter=hazy-note # この app だけ
 | `/capture` | s2 | 取り込みの3コマ（読み取り中 → 要約とタグの提案 → 保存後の次の一手）。`URL` タブ＝新規URL、`Hazyから追加` タブ＝接続中のDB(`saved_urls`)に入っている自分のURL一覧から選ぶ |
 | `/projects/[id]` | — | プロジェクト＝アイデアを練る場。hazy-note 専用の `projects` テーブル（hazy の `collections` とは別）。ユーザーが自分で作成し、`description` を書き、出典を集め（`saved_urls.project_id`）、ノートを紐づける（`notes.project_id`）。タグからの自動生成・自動振り分けは廃止 |
 | `/notes` , `/notes/[id]` | s3 | **主要機能。** Quill（bubble テーマ）のリッチテキストエディタ。本文は Delta として `notes.body` に保存（旧 `blocks` のノートは開いた時に変換）。`@` で保存済み URL を引用（リンク挿入＋出典登録）、タグ・状態編集、AI 提案は右サイドバー（本文に採る／消す） |
-| `/search` | — | ノート＋出典を横断検索。4 モード: **文字列**（`lib/search.ts` のキーワード一致・クライアント）／**タグ**（タグクラウド＋部分一致）／**AI検索**（`@ternlight/base/web` の端末内埋め込みで意味の近い順・初回に数MBの wasm 読み込み）／**チャット**（`/api/search/chat` → OpenRouter、自分の記録だけを資料に回答＋参照元）。文字列・タグ・AI はサーバーを介さない |
+| `/search` | — | ノート＋出典を横断検索。4 モード: **文字列**（`lib/search.ts` のキーワード一致・クライアント）／**タグ**（タグクラウド＋部分一致）／**AI検索**（`@ternlight/base/web` の端末内埋め込みで意味の近い順・初回に数MBの wasm 読み込み）／**チャット**（`/api/search/chat` → `apps/api` `/v1/ai/chat`、自分の記録だけを資料に回答＋参照元）。文字列・タグ・AI はサーバーを介さない |
 | `/analyze` | s4 | 傾向分析。ノート本文＋保存済み URL を集計し、関心テーマ／情報源のクセ／視点の偏り・死角／次の一歩を推定。`?project=<id>` でプロジェクト単位に絞れる。`(user, project|null)` ごとに 1 行キャッシュ（`insight_profiles`） |
 | `/export` | s6 | 書き出す。形式切替（ブログ／メモ／要点）、どこから来たかの対応表 |
 | `/tags` | — | タグ一覧。`saved_urls.tags` と `notes.tags` を横断して集計、件数順。クリックで `/library?tag=` か `/notes?tag=` に絞り込む |

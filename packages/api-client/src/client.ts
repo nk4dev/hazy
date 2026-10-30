@@ -1,4 +1,6 @@
 import type {
+  AiChatInput,
+  AiChatResponseDTO,
   AskResponseDTO,
   AskThreadDetailDTO,
   AskThreadListDTO,
@@ -225,6 +227,11 @@ export function createHazyClient(config: HazyClientConfig) {
         request<ConnectCodeDTO>("/connect/authorize", { method: "POST", body: input }),
       apps: () => request<{ items: ConnectedAppDTO[] }>("/connect/apps"),
       revoke: (id: string) => request<{ id: string }>(`/connect/apps/${id}`, { method: "DELETE" }),
+    },
+
+    ai: {
+      chat: (input: AiChatInput, signal?: AbortSignal) =>
+        request<AiChatResponseDTO>("/ai/chat", { method: "POST", body: input, signal }),
     },
   };
 }

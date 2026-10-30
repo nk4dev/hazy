@@ -23,11 +23,8 @@
   },
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://note.hz.nknighta.me",
-    "OPENROUTER_MODEL_ID": "mistralai/mistral-small-2603",
-    "OPENROUTER_SITE_URL": "https://note.hz.nknighta.me",
-    "OPENROUTER_APP_NAME": "Hazy Note"
+    "NEXT_PUBLIC_API_URL": "https://api.hz.nknighta.me"
   }
   // Secrets (set via `wrangler secret put` from apps/hazy-note/) — never commit:
-  //   DATABASE_URL (Neon), CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY,
-  //   OPENROUTER_API_KEY
+  //   DATABASE_URL (Neon), CLERK_SECRET_KEY, NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 }

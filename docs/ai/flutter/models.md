@@ -174,3 +174,4 @@ class SavedUrl {
 | `DELETE /v1/items/:id` ほか削除系 | `{ "id": "..." }` |
 | `POST /v1/collections/:id/items` | `{ "collectionId": "...", "savedUrlId": "..." }` |
 | `POST /v1/collections/:id/summarize` | `{ "summary": "...", "summaryUpdatedAt": "ISO" }` |
+| `POST /v1/ai/chat` | `{ "content": "...", "model": "..." }` |

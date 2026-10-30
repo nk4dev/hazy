@@ -36,9 +36,10 @@ export function fail(error: unknown): Response {
   // limit — burying the one thing that's actually diagnostic, `cause` (the
   // underlying driver/Postgres error, e.g. "value too long for type
   // character varying(8)").
-  const err = error as { name?: string; cause?: unknown } | null;
+  const err = error as { name?: string; cause?: unknown; message?: string } | null;
   console.error("Unhandled API error:", {
     name: err?.name,
+    message: err?.message ? err.message.slice(0, 300) : undefined,
     cause: err?.cause,
   });
   return Response.json(

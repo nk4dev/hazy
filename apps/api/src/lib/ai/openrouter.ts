@@ -3,6 +3,13 @@ import { env } from "@/env";
 
 let cached: OpenAI | null = null;
 
+export const DEFAULT_FREE_MODELS: readonly string[] = [
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "deepseek/deepseek-r1:free",
+  "google/gemini-2.0-flash-exp:free",
+  "mistralai/mistral-small-24b-instruct-2501:free",
+];
+
 /** Lazily built — never constructed at module load, so a missing
  * OPENROUTER_API_KEY never crashes the build or a keyless boot. */
 function getClient(): OpenAI {
@@ -17,6 +24,21 @@ function getClient(): OpenAI {
     });
   }
   return cached;
+}
+
+export function resolveModels(options?: { model?: string; models?: string[] }): string[] {
+  if (options?.models && options.models.length > 0) {
+    return options.models;
+  }
+  const configuredFallbacks = env.OPENROUTER_FALLBACK_MODELS
+    ? env.OPENROUTER_FALLBACK_MODELS.split(",").map((m) => m.trim()).filter(Boolean)
+    : [];
+
+  const fallbackList = configuredFallbacks.length > 0 ? configuredFallbacks : DEFAULT_FREE_MODELS;
+  const primary = options?.model ?? env.OPENROUTER_MODEL_ID;
+
+  // Ensure primary is first, then append fallbacks with deduplication
+  return [primary, ...fallbackList.filter((m) => m !== primary)];
 }
 
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -37,7 +59,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function extractMessage(completion: OpenAI.Chat.ChatCompletion): OpenAI.Chat.ChatCompletionMessage {
+export type ChatCompletionMessageWithModel = OpenAI.Chat.ChatCompletionMessage & {
+  model?: string;
+};
+
+function extractMessage(
+  completion: OpenAI.Chat.ChatCompletion
+): ChatCompletionMessageWithModel {
   if (!completion.choices) {
     // OpenRouter returns HTTP 200 with an `{ error }` body (no `choices`)
     // for cases the SDK doesn't treat as a thrown error — a deprecated/
@@ -51,22 +79,31 @@ function extractMessage(completion: OpenAI.Chat.ChatCompletion): OpenAI.Chat.Cha
   if (!message) {
     throw new Error("OpenRouter returned no message.");
   }
-  return message;
+  return Object.assign(message, { model: completion.model });
 }
 
+export type ChatCompletionOptions = {
+  tools?: OpenAI.Chat.ChatCompletionTool[];
+  model?: string;
+  models?: string[];
+  temperature?: number;
+};
+
 /** Single non-streaming call, optionally offering tools for the model to
- * invoke. Returns the raw response message (content and/or tool_calls) —
- * callers that need a tool-calling loop drive it themselves by feeding
- * tool results back in as `role: "tool"` messages and calling again. */
+ * invoke. Supports OpenRouter automated model fallback by passing an ordered
+ * list of models via the OpenRouter `models` parameter. */
 export async function createChatCompletion(
   messages: OpenAI.Chat.ChatCompletionMessageParam[],
-  options: { tools?: OpenAI.Chat.ChatCompletionTool[] } = {}
-): Promise<OpenAI.Chat.ChatCompletionMessage> {
+  options: ChatCompletionOptions = {}
+): Promise<ChatCompletionMessageWithModel> {
   const client = getClient();
+  const models = resolveModels(options);
+
   const body = {
-    model: env.OPENROUTER_MODEL_ID,
+    model: models[0],
+    models,
     messages,
-    temperature: 0.3,
+    temperature: options.temperature ?? 0.3,
     ...(options.tools ? { tools: options.tools, tool_choice: "auto" as const } : {}),
   };
 
@@ -87,9 +124,29 @@ export async function createChatCompletion(
 }
 
 export async function askOpenRouter(
-  messages: OpenAI.Chat.ChatCompletionMessageParam[]
+  messages: OpenAI.Chat.ChatCompletionMessageParam[],
+  options?: ChatCompletionOptions
 ): Promise<string> {
-  const message = await createChatCompletion(messages);
+  const message = await createChatCompletion(messages, options);
+  const content = message.content;
+  if (!content) {
+    throw new Error("OpenRouter returned an empty response.");
+  }
+  return content;
+}
+
+/**
+ * Asks a user prompt using free models with OpenRouter's sequential fallback.
+ */
+export async function askFreeModel(
+  prompt: string,
+  models?: string[]
+): Promise<string> {
+  const freeModels = models && models.length > 0 ? models : resolveModels();
+  const message = await createChatCompletion(
+    [{ role: "user", content: prompt }],
+    { models: freeModels }
+  );
   const content = message.content;
   if (!content) {
     throw new Error("OpenRouter returned an empty response.");

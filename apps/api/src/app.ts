@@ -4,6 +4,7 @@ import { env } from "@/env";
 import { fail } from "@/lib/api/response";
 import { isConnectedOrigin } from "@/lib/auth/api-token";
 import { authMiddleware } from "@/middleware/auth";
+import { ai } from "@/routes/ai";
 import { ask } from "@/routes/ask";
 import { collections_ } from "@/routes/collections";
 import { connect, connectToken } from "@/routes/connect";
@@ -18,6 +19,11 @@ function allowedOrigins(): string[] {
   return [
     env.NEXT_PUBLIC_APP_URL,
     "http://localhost:3100",
+    "http://localhost:3000",
+    "https://hz.nknighta.me",
+    "https://note.hz.nknighta.me",
+    "https://pctunnel.nknighta.me",
+    "https://pctunnel-api.nknighta.me",
     ...(env.CORS_ALLOWED_ORIGINS?.split(",")
       .map((s) => s.trim())
       .filter(Boolean) ?? []),
@@ -65,6 +71,7 @@ export function createApp() {
   v1.route("/search", search);
   v1.route("/me", me);
   v1.route("/connect", connect);
+  v1.route("/ai", ai);
   app.route("/v1", v1);
 
   return app;

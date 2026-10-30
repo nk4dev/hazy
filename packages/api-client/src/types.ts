@@ -153,3 +153,19 @@ export type ReadLaterStateDTO = {
 export type SearchResponseDTO = { query: string; items: SavedUrlDTO[] };
 
 export type ReadLaterStatus = "inbox" | "snoozed" | "read" | "archived";
+
+/** POST /v1/ai/chat input */
+export type AiChatInput = {
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+  temperature?: number;
+  maxTokens?: number;
+  model?: string;
+  models?: string[];
+  json?: boolean;
+};
+
+/** POST /v1/ai/chat response */
+export type AiChatResponseDTO = {
+  content: string;
+  model?: string;
+};

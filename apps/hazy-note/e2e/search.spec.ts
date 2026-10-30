@@ -45,7 +45,7 @@ test("chat mode shows the grounding note and a submit button", async ({ page }) 
   await expect(page.getByRole("button", { name: "質問" })).toBeVisible();
 });
 
-// Opt-in: hits OpenRouter. Run with E2E_CHAT=1.
+// Opt-in: hits apps/api. Run with E2E_CHAT=1.
 test("chat search returns a grounded answer", async ({ page }) => {
   test.skip(!process.env.E2E_CHAT, "set E2E_CHAT=1 to exercise the live chat endpoint");
   await pickMode(page, "チャット");

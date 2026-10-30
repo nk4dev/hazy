@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 
 // Playwright runs as a bare script — load the app's own .env.local so the
-// Clerk keys (+ OPENROUTER_API_KEY for the chat spec) are available.
+// Clerk keys are available.
 if (existsSync(".env.local")) {
   process.loadEnvFile(".env.local");
 }

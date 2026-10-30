@@ -19,10 +19,15 @@ function clerk() {
   return cachedClerk;
 }
 
+export const SYSTEM_USER_CLERK_ID = "system_internal_service";
+
 /**
  * Verifies the request's `Authorization: Bearer <session-jwt>` and returns the
  * Clerk user id, or null when there's no valid session. Replaces
  * `@clerk/nextjs/server`'s `auth()` for the standalone Worker.
+ *
+ * Also accepts `Authorization: Bearer <CLERK_SECRET_KEY>` for trusted
+ * internal server-to-server calls.
  *
  * No `authorizedParties` here: that option checks the token's `azp` claim
  * against a list of web origins, which is a CSRF guard for cookie-based
@@ -33,6 +38,16 @@ function clerk() {
  */
 export async function authenticate(request: Request): Promise<string | null> {
   if (!isClerkConfigured()) return null;
+
+  const authHeader = request.headers.get("authorization");
+  if (
+    env.CLERK_SECRET_KEY &&
+    authHeader &&
+    authHeader === `Bearer ${env.CLERK_SECRET_KEY}`
+  ) {
+    return SYSTEM_USER_CLERK_ID;
+  }
+
   const state = await clerk().authenticateRequest(request);
   if (!state.isAuthenticated) return null;
   return state.toAuth().userId ?? null;
@@ -50,6 +65,28 @@ export async function resolveUser(clerkId: string): Promise<AppUser> {
   const db = getDb();
   const existing = await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) });
   if (existing) return existing;
+
+  if (clerkId === SYSTEM_USER_CLERK_ID) {
+    const [created] = await db
+      .insert(users)
+      .values({
+        clerkId,
+        email: "system@internal.service",
+        displayName: "Internal System",
+      })
+      .onConflictDoNothing({ target: users.clerkId })
+      .returning();
+
+    const systemUser =
+      created ?? (await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) }));
+    if (systemUser) {
+      await db
+        .insert(userPreferences)
+        .values({ userId: systemUser.id })
+        .onConflictDoNothing({ target: userPreferences.userId });
+      return systemUser;
+    }
+  }
 
   const clerkUser = await clerk()
     .users.getUser(clerkId)
