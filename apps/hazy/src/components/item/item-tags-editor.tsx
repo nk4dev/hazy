@@ -58,10 +58,10 @@ export function ItemTagsEditor({ item }: { item: SavedUrlDTO }) {
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         {tags.map((tag) => (
-          <Badge key={tag} variant="secondary" className="gap-1 pr-1">
+          <Badge key={tag} variant="secondary" className="h-8 gap-0 py-0 pl-0 pr-1 text-sm">
             <button
               type="button"
-              className="max-w-[12rem] truncate hover:underline"
+              className="h-full max-w-[14rem] truncate pl-3 pr-1.5 hover:underline"
               onClick={() => router.push(`/library?q=${encodeURIComponent(`tag:${tag}`)}`)}
             >
               {tag}
@@ -69,10 +69,10 @@ export function ItemTagsEditor({ item }: { item: SavedUrlDTO }) {
             <button
               type="button"
               aria-label={t("removeTag", { tag })}
-              className="text-muted-foreground hover:text-foreground"
+              className="flex size-6 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
               onClick={() => removeTag(tag)}
             >
-              <X className="size-3" />
+              <X className="size-3.5" />
             </button>
           </Badge>
         ))}
@@ -83,17 +83,17 @@ export function ItemTagsEditor({ item }: { item: SavedUrlDTO }) {
             onKeyDown={onKeyDown}
             onBlur={addTag}
             placeholder={t("addTag")}
-            className="h-7 w-32 text-xs"
+            className="h-8 w-36 text-sm"
           />
           <Button
             type="button"
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             aria-label={t("addTag")}
             disabled={!draft.trim()}
             onClick={addTag}
           >
-            <Plus className="size-3.5" />
+            <Plus className="size-4" />
           </Button>
         </div>
       </div>
