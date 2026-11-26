@@ -24,9 +24,35 @@ const envSchema = z.object({
 
   OPENROUTER_API_KEY: z.string().min(1).optional(),
   OPENROUTER_MODEL_ID: z.string().min(1).default("google/gemma-4-26b-a4b-it:free"),
+  OPENROUTER_FALLBACK_MODELS: z
+    .string()
+    .default("meta-llama/llama-3.3-70b-instruct:free,openrouter/free"),
+  OPENROUTER_NOTE_MODEL_ID: z.string().min(1).default("mistralai/mistral-small-2603"),
+  OPENROUTER_NOTE_FALLBACK_MODELS: z
+    .string()
+    .default("google/gemma-4-26b-a4b-it:free,openrouter/free"),
+  OPENROUTER_TIMEOUT_MS: z.coerce.number().int().min(3000).max(60000).default(20000),
   OPENROUTER_SITE_URL: z.string().url().default("http://localhost:3100"),
   OPENROUTER_APP_NAME: z.string().min(1).default("Hazy"),
 });
+
+/** Deduplicate and preserve priority order for a primary model + comma-separated fallbacks. */
+export function parseModelList(primary: string, fallbacksCsv?: string): string[] {
+  const raw = [
+    primary,
+    ...(fallbacksCsv ? fallbacksCsv.split(",") : []),
+  ];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    const trimmed = item.trim();
+    if (trimmed && !seen.has(trimmed)) {
+      seen.add(trimmed);
+      out.push(trimmed);
+    }
+  }
+  return out;
+}
 
 /**
  * An unset-but-declared var comes through as `""`, which fails every `.min(1)`

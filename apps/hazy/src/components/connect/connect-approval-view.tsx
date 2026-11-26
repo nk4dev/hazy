@@ -1,11 +1,11 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useSearchParams } from "react-router";
+import { Button } from "@repo/ui/components/ui/button";
 import { useAuthorizeConnectMutation } from "@/hooks/use-connected-apps";
+import { useTranslations } from "@/i18n";
 
 /** Mirrors the API's `redirectUriSchema` — the server re-validates, this just avoids a dead-end click. */
 function parseRedirectUri(raw: string | null): URL | null {
@@ -32,7 +32,7 @@ function redirectBack(base: URL, params: Record<string, string>) {
 
 export function ConnectApprovalView() {
   const t = useTranslations("connect");
-  const search = useSearchParams();
+  const [search] = useSearchParams();
   const authorize = useAuthorizeConnectMutation();
   const [failed, setFailed] = useState(false);
 

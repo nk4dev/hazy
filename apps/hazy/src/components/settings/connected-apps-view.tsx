@@ -3,11 +3,11 @@
 import { formatDistanceToNow } from "date-fns";
 import { ja } from "date-fns/locale";
 import { Plug } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "@/i18n";
 import { toast } from "sonner";
-import { Favicon } from "@/components/favicon";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Favicon } from "@repo/ui/components/favicon";
+import { Button } from "@repo/ui/components/ui/button";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { useConnectedAppsQuery, useRevokeConnectedAppMutation } from "@/hooks/use-connected-apps";
 
 export function ConnectedAppsView() {

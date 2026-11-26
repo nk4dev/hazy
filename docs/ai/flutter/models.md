@@ -22,6 +22,7 @@
 | `fetchError` | `String?` | `fetchStatus == "error"` のとき理由 |
 | `createdAt` / `updatedAt` | `DateTime` | ISO 文字列 |
 | `readLaterStatus` | `String?` | `inbox` \| `snoozed` \| `read` \| `archived` \| `null` |
+| `collectionIds` | `List<String>` | 所属するコレクション ID の配列 |
 
 ```dart
 class SavedUrl {
@@ -35,6 +36,7 @@ class SavedUrl {
   final String? fetchError;
   final DateTime createdAt, updatedAt;
   final String? readLaterStatus;
+  final List<String> collectionIds;
 
   SavedUrl.fromJson(Map<String, dynamic> j)
       : id = j['id'],
@@ -52,7 +54,8 @@ class SavedUrl {
         fetchError = j['fetchError'],
         createdAt = DateTime.parse(j['createdAt']),
         updatedAt = DateTime.parse(j['updatedAt']),
-        readLaterStatus = j['readLaterStatus'];
+        readLaterStatus = j['readLaterStatus'],
+        collectionIds = (j['collectionIds'] as List? ?? const []).cast<String>();
 }
 ```
 

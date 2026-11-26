@@ -1,11 +1,10 @@
-import { existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
+import { loadMonorepoEnv } from "../../scripts/load-env";
 
-// Playwright runs as a bare script — load the app's own .env.local so the
-// Clerk keys (+ OPENROUTER_API_KEY for the chat spec) are available.
-if (existsSync(".env.local")) {
-  process.loadEnvFile(".env.local");
-}
+const appRoot = dirname(fileURLToPath(import.meta.url));
+loadMonorepoEnv(appRoot);
 
 const PORT = 3000;
 const baseURL = `http://localhost:${PORT}`;

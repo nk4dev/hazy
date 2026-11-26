@@ -13,12 +13,8 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
-
 # production
-/build
+/dist
 
 # misc
 .DS_Store
@@ -42,9 +38,6 @@ yarn-error.log*
 next-env.d.ts
 
 certificates
-# OpenNext
-.open-next
-
 # wrangler files
 .wrangler
 .dev.vars*

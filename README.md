@@ -15,6 +15,7 @@ Every commit here is agent-authored.
 | `apps/api` | The hazy backend — a **Hono Worker** for `api.hz.nknighta.me`. Serves hazy's `/v1/**` JSON API + the Clerk webhook. See `apps/api/README.md`. |
 | `packages/api-client` | `@repo/api-client` — the typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types, shared by hazy and any future native client. |
 | `packages/db` | `@repo/db` — the single Drizzle schema + client + migrations + search-vector trigger. See `packages/db/README.md`. |
+| `packages/ui` | `@repo/ui` — shared Nocturne Tailwind v4 theme + shadcn/ui & common components (`HazyMark`, `Favicon`). |
 
 Both apps resolve the signed-in Clerk user to a `users` row by `clerk_id`; same
 Clerk instance → same `users.id` → `saved_urls` / `collections` are shared. A URL

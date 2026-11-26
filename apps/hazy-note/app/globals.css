@@ -1,8 +1,4 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-@custom-variant dark (&:is(.dark *));
+@import "@repo/ui/styles.css";
 
 /* ─────────────────────────────────────────────────────────────
    Nocturne design tokens → Tailwind theme
@@ -564,18 +560,7 @@
 }
 
 /* ── 表示密度: 「行間を詰める」 ──────────────────────────────
-   Toggled by <html class="density-compact"> (components/density-toggle.tsx).
-   Tightens the reading surfaces: the note editor body and the notes-list
-   card excerpts. */
-.density-compact .note-editor .ql-editor {
-  line-height: 1.5;
-}
-.density-compact .note-editor .ql-editor > * {
-  margin-bottom: 8px;
-}
-.density-compact .card-body {
-  line-height: 1.4;
-}
+   (.density-compact rules are provided by @repo/ui/styles.css) */
 
 /* shadcn/ui token layer (preset). Nocturne keeps `--color-accent` and
    `--radius-sm|md|lg` — those are intentionally not re-mapped here. */

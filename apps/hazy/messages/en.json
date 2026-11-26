@@ -46,7 +46,8 @@
     "empty": "Nothing saved yet. Save your first link to get started.",
     "sortOldest": "Oldest first",
     "sortNewest": "Newest first",
-    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "itemCount_one": "{count} item",
+    "itemCount_other": "{count} items",
     "more": "Load more"
   },
   "save": {
@@ -58,7 +59,8 @@
     "fxtwitterHint": "Want the images? Open this post on fxtwitter",
     "paste": "Paste",
     "pasteEmpty": "The clipboard is empty.",
-    "pasteFailed": "Couldn't read the clipboard. Paste into the field instead."
+    "pasteFailed": "Couldn't read the clipboard. Paste into the field instead.",
+    "collectionsLabel": "Collections (optional)"
   },
   "item": {
     "openOriginal": "Open original",
@@ -74,7 +76,9 @@
     "editField": "Edit {field}",
     "tags": "Tags",
     "addTag": "Add tag",
-    "removeTag": "Remove tag {tag}"
+    "removeTag": "Remove tag {tag}",
+    "collectionsUpdated": "Collections updated",
+    "collectionsSaveFailed": "Could not update collections."
   },
   "ask": {
     "placeholder": "Ask about something you saved…",
@@ -88,7 +92,8 @@
     "aiUnavailable": "AI answers aren't configured yet — here's what matched your library.",
     "noResults": "Nothing in your library matches that yet.",
     "mentionHint": "Type @ to attach a collection's links to your question",
-    "mentionItemCount": "{count, plural, one {# link} other {# links}}",
+    "mentionItemCount_one": "{count} link",
+    "mentionItemCount_other": "{count} links",
     "mentionRemove": "Remove collection",
     "mentionPreviewTitle": "Links in this collection",
     "mentionPreviewLoading": "Loading…",
@@ -97,14 +102,16 @@
   },
   "search": {
     "placeholder": "Search your library",
-    "resultCount": "{count, plural, one {# match} other {# matches}}",
+    "resultCount_one": "{count} match",
+    "resultCount_other": "{count} matches",
     "noResults": "No matches.",
     "filterHint": "Filter with domain:example.com or tag:research"
   },
   "collections": {
     "title": "Collections",
     "empty": "No collections yet.",
-    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "itemCount_one": "{count} item",
+    "itemCount_other": "{count} items",
     "create": "New collection",
     "namePlaceholder": "Collection name",
     "remove": "Remove from collection",

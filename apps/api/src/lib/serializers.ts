@@ -5,7 +5,11 @@ type SavedUrlRow = typeof savedUrls.$inferSelect;
 type ReadLaterRow = typeof readLaterState.$inferSelect;
 type CollectionRow = typeof collections.$inferSelect;
 
-export function serializeSavedUrl(row: SavedUrlRow, readLater?: ReadLaterRow | null): SavedUrlDTO {
+export function serializeSavedUrl(
+  row: SavedUrlRow,
+  readLater?: ReadLaterRow | null,
+  collectionIds: string[] = []
+): SavedUrlDTO {
   return {
     id: row.id,
     url: row.url,
@@ -23,6 +27,7 @@ export function serializeSavedUrl(row: SavedUrlRow, readLater?: ReadLaterRow | n
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
     readLaterStatus: readLater?.status ?? null,
+    collectionIds,
   };
 }
 

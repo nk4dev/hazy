@@ -9,14 +9,15 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
+import { env } from "@/lib/env";
 import { toast } from "sonner";
-import { Favicon } from "@/components/favicon";
+import { Favicon } from "@repo/ui/components/favicon";
 import { AddToCollectionButton } from "@/components/item/add-to-collection-button";
 import { EditableField } from "@/components/item/editable-field";
 import { ItemTagsEditor } from "@/components/item/item-tags-editor";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@repo/ui/components/ui/button";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import {
   useDownloadItemImageMutation,
   useItemQuery,
@@ -94,7 +95,7 @@ export function ItemDetailView({ id }: { id: string }) {
 
   // hazy-note is a separate app on the same database — the saved_urls row has
   // the same id there. Deep-link into its capture flow for this item.
-  const hazyNoteUrl = process.env.NEXT_PUBLIC_HAZY_NOTE_URL || "http://localhost:3000";
+  const hazyNoteUrl = env.HAZY_NOTE_URL;
 
   return (
     <div className="mx-auto flex w-full min-w-0 max-w-2xl flex-col px-4 py-8 sm:px-6 sm:py-10">
@@ -179,7 +180,7 @@ export function ItemDetailView({ id }: { id: string }) {
           <Clock className="size-3.5" />
           {t("readLater")}
         </Button>
-        <AddToCollectionButton savedUrlId={id} />
+        <AddToCollectionButton savedUrlId={id} collectionIds={item.collectionIds} />
         {item.domain && X_DOMAINS.has(item.domain) && (
           <Button
             variant="outline"

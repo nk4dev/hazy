@@ -10,7 +10,7 @@ for the route surface.
   `apps/hazy/src/lib` keep their imports because of this.
 - `src/app.ts` builds the Hono app (CORS, `onError`, routers). `src/index.ts` is
   the Worker entry; `src/server.ts` is local dev on `@hono/node-server`.
-- `src/routes/*` — one Hono sub-app per group. Ported route handlers: `c.get("user")`
+- `src/routes/*` — one Hono sub-app per group (including `/v1/note/**` for `hazy-note`). Ported route handlers: `c.get("user")`
   for the auth'd user, `c.req.param()/.query()/.json()`, `zod .parse()` (caught by
   `onError`), `return ok(data, { status })`.
 - `src/middleware/auth.ts` — `@clerk/backend` verifies the `Authorization: Bearer`
@@ -28,9 +28,10 @@ for the route surface.
 - Runtime = workerd (prod) / Node (dev). `process.env` is populated from
   `wrangler.jsonc` vars + `wrangler secret`. Keep the `lib/*` code Workers-safe
   (no `fs`, no `node:*` beyond what's already there).
-- `bun run dev --filter=api` (Node, :8787, reads `.dev.vars`).
+- `bun run dev --filter=api` (Node, :8787, reads root `.env.local` / `.env` and optional `.dev.vars`).
   `bun run deploy --filter=api` = `wrangler deploy`. Secrets: `wrangler secret put`
   from `apps/api/` (never in `wrangler.jsonc`).
+- OpenRouter resilience (`src/lib/ai/openrouter.ts`): supports model fallback chains (`OPENROUTER_FALLBACK_MODELS`, `OPENROUTER_NOTE_FALLBACK_MODELS`), per-model in-memory cooldowns, HTTP 200 `{ error }` detection, JSON `response_format` auto-downgrade, and `OpenRouterError` (`429 ai_rate_limited` / `504 ai_timeout` / `503|502 ai_unavailable`).
 
 # Package manager
 

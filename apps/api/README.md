@@ -12,12 +12,14 @@ on failure:
 
 | Group | Routes |
 |---|---|
-| `items` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/refetch`, `POST /:id/summarize`, `GET /:id/image` |
+| `items` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/refetch`, `POST /:id/summarize`, `PUT /:id/collections`, `GET /:id/image` |
 | `collections` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/items`, `DELETE /:id/items/:savedUrlId`, `POST /:id/summarize` |
 | `ask` | `POST /`, `GET /threads`, `GET/DELETE /threads/:id`, `POST /threads/:id/messages` |
 | `read-later` | `GET /`, `GET /stats`, `PATCH /:itemId` |
 | `search` | `GET /` |
 | `me` | `GET /`, `PATCH /` |
+| `connect` | `POST /authorize`, `GET /apps`, `DELETE /apps/:id`, `POST /token` (public PKCE) |
+| `note` | `/note/items/*`, `/note/notes/*`, `/note/projects/*`, `/note/tags`, `/note/search/chat`, `/note/analyze`, `/note/export` |
 | `webhooks` | `POST /clerk` — Svix-verified, no auth middleware |
 
 `GET /health` is unauthenticated. The DTO shapes are the contract in
@@ -48,7 +50,7 @@ src/
 ## Dev / deploy
 
 ```bash
-bun run dev --filter=api      # tsx watch, real Node, :8787, reads .dev.vars
+bun run dev --filter=api      # tsx watch, real Node, :8787, reads root .env.local/.env (and optional .dev.vars)
 bun run preview --filter=api  # wrangler dev (workerd) — point .dev.vars DATABASE_URL at a Neon branch
 bun run deploy --filter=api   # wrangler deploy
 ```
@@ -68,11 +70,21 @@ wrangler secret put NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 wrangler secret put OPENROUTER_API_KEY
 ```
 
-Non-secret config (`OPENROUTER_MODEL_ID`, `CORS_ALLOWED_ORIGINS`, …) is in
+Non-secret config (`OPENROUTER_MODEL_ID`, `OPENROUTER_FALLBACK_MODELS`,
+`OPENROUTER_NOTE_MODEL_ID`, `OPENROUTER_NOTE_FALLBACK_MODELS`,
+`OPENROUTER_TIMEOUT_MS`, `CORS_ALLOWED_ORIGINS`, …) is in
 `wrangler.jsonc` `vars`. After deploy, set the Clerk dashboard webhook endpoint
 to `https://api.hz.nknighta.me/v1/webhooks/clerk`.
 
 ## Notes
+
+- **OpenRouter resilience (`src/lib/ai/openrouter.ts`)**: automatically retries
+  transient 429/5xx/timeout errors with jittered backoff (and `Retry-After`
+  support), detects HTTP 200 `{ error }` bodies, tracks per-model in-memory
+  cooldowns to bypass failing models, falls back across
+  `OPENROUTER_FALLBACK_MODELS` (or `OPENROUTER_NOTE_FALLBACK_MODELS`), and maps
+  exhausted failures to `OpenRouterError` (`429 ai_rate_limited`,
+  `504 ai_timeout`, `502/503 ai_unavailable`).
 
 - `compatibility_flags: ["nodejs_compat", "global_fetch_strictly_public"]` — the
   second is the SSRF guard for `fetchUrlMetadata`'s outbound requests.

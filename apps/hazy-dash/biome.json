@@ -7,17 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": [
-      "**",
-      "!.next",
-      "!out",
-      "!build",
-      "!next-env.d.ts",
-      "!.open-next",
-      "!.wrangler",
-      "!cloudflare-env.d.ts",
-      "!public"
-    ]
+    "includes": ["**", "!dist", "!.wrangler", "!public"]
   },
   "formatter": {
     "enabled": true,

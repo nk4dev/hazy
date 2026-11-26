@@ -1,9 +1,9 @@
 import type { SavedUrlDTO } from "@repo/api-client";
 import { ArrowUpRight, Loader2, Sparkles, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { toast } from "sonner";
-import { Favicon } from "@/components/favicon";
-import { Button } from "@/components/ui/button";
+import { Favicon } from "@repo/ui/components/favicon";
+import { Button } from "@repo/ui/components/ui/button";
 import { useSummarizeItemMutation } from "@/hooks/use-item";
 import { Link } from "@/i18n/navigation";
 import { plainPreview } from "@/lib/utils";

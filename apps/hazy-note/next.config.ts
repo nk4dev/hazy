@@ -2,6 +2,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
+import { loadMonorepoEnv } from "../../scripts/load-env";
+
+loadMonorepoEnv();
 
 // Monorepo root (hazy-repo/) — two levels up. Pin it so Next's output file
 // tracing for the Cloudflare Workers bundle walks the hoisted workspace
@@ -13,6 +16,7 @@ export default function config(phase: string): NextConfig {
 
   return {
     outputFileTracingRoot: repoRoot,
+    transpilePackages: ["@repo/ui"],
 
     // Keep the dev build indicator out of the sidebar's bottom-left corner.
     devIndicators: { position: "bottom-right" },

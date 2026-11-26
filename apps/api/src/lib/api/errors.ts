@@ -44,3 +44,28 @@ export class ValidationError extends ApiError {
     this.name = "ValidationError";
   }
 }
+
+export type OpenRouterErrorCode = "ai_rate_limited" | "ai_timeout" | "ai_unavailable";
+
+export class OpenRouterError extends ApiError {
+  public readonly upstreamStatus?: number;
+  public readonly model?: string;
+
+  constructor(opts: {
+    status: 429 | 502 | 503 | 504;
+    code: OpenRouterErrorCode;
+    message: string;
+    upstreamStatus?: number;
+    model?: string;
+    details?: unknown;
+    cause?: unknown;
+  }) {
+    super(opts.status, opts.code, opts.message, opts.details);
+    this.name = "OpenRouterError";
+    this.upstreamStatus = opts.upstreamStatus;
+    this.model = opts.model;
+    if (opts.cause !== undefined) {
+      (this as { cause?: unknown }).cause = opts.cause;
+    }
+  }
+}

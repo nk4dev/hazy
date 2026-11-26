@@ -1,13 +1,13 @@
 "use client";
 
 import { Loader2, Sparkles } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { toast } from "sonner";
 import { CollectionPreview } from "@/components/collections/collection-preview";
 import { ItemCard } from "@/components/library/item-card";
 import { ItemRow } from "@/components/library/item-row";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@repo/ui/components/ui/button";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
 import {
   useCollectionQuery,

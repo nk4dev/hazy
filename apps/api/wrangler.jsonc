@@ -12,8 +12,11 @@
   "observability": { "enabled": true },
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://hz.nknighta.me",
-    "CORS_ALLOWED_ORIGINS": "https://hz.nknighta.me",
+    "CORS_ALLOWED_ORIGINS": "https://hz.nknighta.me,https://note.hz.nknighta.me",
     "OPENROUTER_MODEL_ID": "google/gemma-4-26b-a4b-it:free",
+    "OPENROUTER_FALLBACK_MODELS": "meta-llama/llama-3.3-70b-instruct:free,openrouter/free",
+    "OPENROUTER_NOTE_MODEL_ID": "mistralai/mistral-small-2603",
+    "OPENROUTER_NOTE_FALLBACK_MODELS": "google/gemma-4-26b-a4b-it:free,openrouter/free",
     "OPENROUTER_SITE_URL": "https://hz.nknighta.me",
     "OPENROUTER_APP_NAME": "Hazy"
   }

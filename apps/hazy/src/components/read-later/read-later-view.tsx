@@ -1,12 +1,12 @@
 "use client";
 
 import { Check, Clock, GripVertical, Sparkle } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { toast } from "sonner";
-import { Favicon } from "@/components/favicon";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
+import { Favicon } from "@repo/ui/components/favicon";
+import { Button } from "@repo/ui/components/ui/button";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
+import { Switch } from "@repo/ui/components/ui/switch";
 import {
   useReadLaterQuery,
   useReadLaterStatsQuery,

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useLocale } from "next-intl";
+import { useLocale } from "@/i18n";
 import { useHazyClient } from "@repo/api-client/react";
-import type { CollectionDetailDTO, CollectionSummaryDTO } from "@repo/api-client";
+import type { CollectionDetailDTO, CollectionSummaryDTO, SavedUrlDTO } from "@repo/api-client";
 
 export function useCollectionsQuery() {
   const client = useHazyClient();
@@ -41,6 +41,23 @@ export function useAddToCollectionMutation() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
+      queryClient.invalidateQueries({ queryKey: ["item", variables.savedUrlId] });
+    },
+  });
+}
+
+export function useSetItemCollectionsMutation(savedUrlId: string) {
+  const client = useHazyClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (collectionIds: string[]) =>
+      client.items.setCollections(savedUrlId, collectionIds),
+    onSuccess: (data) => {
+      queryClient.setQueryData<SavedUrlDTO>(["item", savedUrlId], (prev) =>
+        prev ? { ...prev, collectionIds: data.collectionIds } : prev
+      );
+      queryClient.invalidateQueries({ queryKey: ["items"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
   });
 }
@@ -70,6 +87,7 @@ export function useRemoveFromCollectionMutation() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["collections"] });
       queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
+      queryClient.invalidateQueries({ queryKey: ["item", variables.savedUrlId] });
     },
   });
 }

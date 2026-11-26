@@ -8,7 +8,23 @@ import type {
   CollectionSummaryDTO,
   ConnectCodeDTO,
   ConnectedAppDTO,
+  ItemCollectionsDTO,
   MeDTO,
+  NoteDTO,
+  NoteExportDraftDTO,
+  NoteExportFormat,
+  NoteExportResultDTO,
+  NoteInsightProfileDTO,
+  NoteItemDTO,
+  NoteProjectDTO,
+  NoteProjectDetailDTO,
+  NoteSearchChatAnswerDTO,
+  NoteSearchChatTurnDTO,
+  NoteSourceRefDTO,
+  NoteStatus,
+  NoteSuggestionDTO,
+  NoteTagBadgeDTO,
+  NoteTagDTO,
   PaginatedResponse,
   ReadLaterQueueDTO,
   ReadLaterStateDTO,
@@ -131,6 +147,46 @@ export interface ConnectAuthorizeInput {
   codeChallengeMethod: "S256";
 }
 
+export interface NoteItemPatch {
+  tags?: string[];
+  projectId?: string | null;
+  title?: string;
+  summary?: string[];
+}
+
+export interface NoteCreateInput {
+  title?: string;
+  projectId?: string;
+  text?: string;
+  body?: NoteDTO["body"];
+  suggestions?: NoteSuggestionDTO[];
+  tags?: NoteTagBadgeDTO[];
+  status?: NoteStatus;
+  sources?: NoteSourceRefDTO[];
+}
+
+export interface NotePatch {
+  title?: string;
+  status?: NoteStatus;
+  projectId?: string | null;
+  body?: NoteDTO["body"];
+  suggestions?: NoteSuggestionDTO[];
+  tags?: NoteTagBadgeDTO[];
+  sources?: NoteSourceRefDTO[];
+}
+
+export interface NoteProjectCreateInput {
+  name: string;
+  description?: string;
+  tone?: "accent" | "neutral";
+}
+
+export interface NoteProjectPatch {
+  name?: string;
+  description?: string | null;
+  tone?: "accent" | "neutral";
+}
+
 export function createHazyClient(config: HazyClientConfig) {
   const request = createRequest(config);
   const requestBinary = createBinaryRequest(config);
@@ -141,7 +197,14 @@ export function createHazyClient(config: HazyClientConfig) {
         query: { sort?: "newest" | "oldest"; cursor?: string; limit?: number } = {},
         signal?: AbortSignal
       ) => request<PaginatedResponse<SavedUrlDTO>>("/items", { query, signal }),
-      save: (url: string) => request<SavedUrlDTO>("/items", { method: "POST", body: { url } }),
+      save: (url: string, options?: { collectionIds?: string[] }) =>
+        request<SavedUrlDTO>("/items", {
+          method: "POST",
+          body:
+            options?.collectionIds && options.collectionIds.length > 0
+              ? { url, collectionIds: options.collectionIds }
+              : { url },
+        }),
       get: (id: string, signal?: AbortSignal) =>
         request<SavedUrlDTO>(`/items/${id}`, { signal }),
       update: (id: string, patch: ItemPatch) =>
@@ -151,6 +214,11 @@ export function createHazyClient(config: HazyClientConfig) {
         request<SavedUrlDTO>(`/items/${id}/refetch`, { method: "POST" }),
       summarize: (id: string) =>
         request<SavedUrlDTO>(`/items/${id}/summarize`, { method: "POST" }),
+      setCollections: (id: string, collectionIds: string[]) =>
+        request<ItemCollectionsDTO>(`/items/${id}/collections`, {
+          method: "PUT",
+          body: { collectionIds },
+        }),
       downloadImage: (id: string) => requestBinary(`/items/${id}/image`),
     },
 
@@ -225,6 +293,74 @@ export function createHazyClient(config: HazyClientConfig) {
         request<ConnectCodeDTO>("/connect/authorize", { method: "POST", body: input }),
       apps: () => request<{ items: ConnectedAppDTO[] }>("/connect/apps"),
       revoke: (id: string) => request<{ id: string }>(`/connect/apps/${id}`, { method: "DELETE" }),
+    },
+
+    note: {
+      items: {
+        list: () => request<NoteItemDTO[]>("/note/items"),
+        importable: () => request<NoteItemDTO[]>("/note/items/importable"),
+        get: (id: string) => request<NoteItemDTO>(`/note/items/${id}`),
+        addUrl: (url: string) => request<NoteItemDTO>("/note/items", { method: "POST", body: { url } }),
+        addMemo: (text: string) =>
+          request<NoteItemDTO>("/note/items", { method: "POST", body: { text } }),
+        finishReading: (id: string) =>
+          request<NoteItemDTO>(`/note/items/${id}/read`, { method: "POST" }),
+        update: (id: string, patch: NoteItemPatch) =>
+          request<NoteItemDTO>(`/note/items/${id}`, { method: "PATCH", body: patch }),
+        remove: (id: string) => request<{ id: string }>(`/note/items/${id}`, { method: "DELETE" }),
+      },
+      notes: {
+        list: () => request<NoteDTO[]>("/note/notes"),
+        get: (id: string) => request<NoteDTO>(`/note/notes/${id}`),
+        create: (input: NoteCreateInput = {}) =>
+          request<NoteDTO>("/note/notes", { method: "POST", body: input }),
+        update: (id: string, patch: NotePatch) =>
+          request<NoteDTO>(`/note/notes/${id}`, { method: "PATCH", body: patch }),
+        appendParagraph: (id: string, text: string) =>
+          request<NoteDTO>(`/note/notes/${id}`, { method: "PATCH", body: { text } }),
+        remove: (id: string) => request<{ id: string }>(`/note/notes/${id}`, { method: "DELETE" }),
+        suggestion: (id: string, suggestionId: string, action: "accept" | "dismiss") =>
+          request<NoteDTO>(`/note/notes/${id}/suggestion`, {
+            method: "POST",
+            body: { id: suggestionId, action },
+          }),
+      },
+      projects: {
+        list: () => request<NoteProjectDTO[]>("/note/projects"),
+        get: (id: string) => request<NoteProjectDetailDTO>(`/note/projects/${id}`),
+        create: (input: NoteProjectCreateInput) =>
+          request<NoteProjectDTO>("/note/projects", { method: "POST", body: input }),
+        update: (id: string, patch: NoteProjectPatch) =>
+          request<NoteProjectDTO>(`/note/projects/${id}`, { method: "PATCH", body: patch }),
+        remove: (id: string) =>
+          request<{ id: string }>(`/note/projects/${id}`, { method: "DELETE" }),
+      },
+      tags: {
+        list: () => request<NoteTagDTO[]>("/note/tags"),
+      },
+      searchChat: (query: string, history?: NoteSearchChatTurnDTO[]) =>
+        request<NoteSearchChatAnswerDTO>("/note/search/chat", {
+          method: "POST",
+          body: { query, history },
+        }),
+      analyze: {
+        get: (projectId?: string) =>
+          request<NoteInsightProfileDTO>("/note/analyze", { query: { project: projectId } }),
+        rebuild: (projectId?: string) =>
+          request<NoteInsightProfileDTO>("/note/analyze", {
+            method: "POST",
+            body: projectId ? { projectId } : {},
+          }),
+      },
+      export: {
+        preview: (noteId: string, format: NoteExportFormat) =>
+          request<NoteExportDraftDTO>("/note/export", { query: { noteId, format } }),
+        run: (noteId: string, format: NoteExportFormat) =>
+          request<NoteExportResultDTO>("/note/export", {
+            method: "POST",
+            body: { noteId, format },
+          }),
+      },
     },
   };
 }

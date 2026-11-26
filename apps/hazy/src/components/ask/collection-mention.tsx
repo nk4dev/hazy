@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowUpRight, Layers, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useCollectionQuery, useCollectionsQuery } from "@/hooks/use-collections";
 import { cn } from "@/lib/utils";

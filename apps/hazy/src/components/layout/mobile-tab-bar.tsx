@@ -1,6 +1,6 @@
 "use client";
 
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/clerk-react";
 import {
   ChevronRight,
   CircleUser,
@@ -14,10 +14,10 @@ import {
   Settings,
   Sparkle,
 } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "@/i18n";
 import { useState } from "react";
 import { SaveUrlDialog } from "@/components/save/save-url-dialog";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@repo/ui/components/ui/sheet";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 

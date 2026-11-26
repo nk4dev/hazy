@@ -37,7 +37,10 @@ Future<(List<SavedUrl>, String?)> listItems({String? cursor, int limit = 30}) as
 
 ### ボディ
 ```json
-{ "url": "https://example.com/article" }
+{
+  "url": "https://example.com/article",
+  "collectionIds": ["uuid-1", "uuid-2"]   // 任意、最大 100
+}
 ```
 
 サーバーが URL を正規化し、その場でメタデータ（title / description / favicon /
@@ -54,7 +57,7 @@ og:image / 本文抜粋 / 読了目安）を取得する。既に同じ正規化
 
 ## GET `/v1/items/:id` — 1 件取得
 
-`data`: `SavedUrlDTO`（`readLaterStatus` 込み）。無い / 他人の → `404 not_found`。
+`data`: `SavedUrlDTO`（`readLaterStatus`・`collectionIds` 込み）。無い / 他人の → `404 not_found`。
 
 ---
 
@@ -101,6 +104,24 @@ Future<SavedUrl> summarize(String id) async {
   return unwrap(res, (d) => SavedUrl.fromJson(d as Map<String, dynamic>));
 }
 ```
+
+---
+
+## PUT `/v1/items/:id/collections` — 所属コレクションの一括更新
+
+アイテムが所属するコレクションを `collectionIds` の配列で置き換える（複数コレクションへの同時保存・解除）。
+
+### ボディ
+```json
+{ "collectionIds": ["uuid-1", "uuid-2"] }
+```
+
+### レスポンス `data`
+```json
+{ "savedUrlId": "uuid", "collectionIds": ["uuid-1", "uuid-2"] }
+```
+
+他人の / 存在しないコレクション ID が含まれる場合は `404 not_found`。
 
 ---
 

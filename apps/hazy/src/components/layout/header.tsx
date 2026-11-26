@@ -1,14 +1,14 @@
-import { UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/clerk-react";
+import { HazyMark } from "@repo/ui/components/hazy-mark";
+import { Button } from "@repo/ui/components/ui/button";
 import { Settings } from "lucide-react";
-import { getTranslations } from "next-intl/server";
-import { HazyMark } from "@/components/hazy-mark";
 import { NavLinks } from "@/components/layout/nav-links";
 import { SaveUrlDialog } from "@/components/save/save-url-dialog";
-import { Button } from "@/components/ui/button";
+import { useTranslations } from "@/i18n";
 import { Link } from "@/i18n/navigation";
 
-export async function Header() {
-  const t = await getTranslations("common");
+export function Header() {
+  const t = useTranslations("common");
 
   return (
     <header className="sticky top-0 z-20 hidden border-b sm:block border-border/70 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">

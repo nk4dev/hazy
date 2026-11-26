@@ -18,10 +18,14 @@ export function useSaveUrlMutation() {
   const client = useHazyClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (url: string) => client.items.save(url),
+    mutationFn: (input: string | { url: string; collectionIds?: string[] }) =>
+      typeof input === "string"
+        ? client.items.save(input)
+        : client.items.save(input.url, { collectionIds: input.collectionIds }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["items"] });
       queryClient.invalidateQueries({ queryKey: ["read-later"] });
+      queryClient.invalidateQueries({ queryKey: ["collections"] });
     },
   });
 }

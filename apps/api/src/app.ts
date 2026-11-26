@@ -9,6 +9,7 @@ import { collections_ } from "@/routes/collections";
 import { connect, connectToken } from "@/routes/connect";
 import { items } from "@/routes/items";
 import { me } from "@/routes/me";
+import { noteRoutes } from "@/routes/note";
 import { readLater } from "@/routes/read-later";
 import { search } from "@/routes/search";
 import { webhooks } from "@/routes/webhooks";
@@ -18,6 +19,7 @@ function allowedOrigins(): string[] {
   return [
     env.NEXT_PUBLIC_APP_URL,
     "http://localhost:3100",
+    "http://localhost:3000",
     ...(env.CORS_ALLOWED_ORIGINS?.split(",")
       .map((s) => s.trim())
       .filter(Boolean) ?? []),
@@ -38,7 +40,7 @@ export function createApp() {
         if (c.req.path === "/v1/connect/token") return origin;
         return (await isConnectedOrigin(origin)) ? origin : null;
       },
-      allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+      allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowHeaders: ["Content-Type", "Authorization"],
       credentials: false,
       maxAge: 86400,
@@ -65,6 +67,7 @@ export function createApp() {
   v1.route("/search", search);
   v1.route("/me", me);
   v1.route("/connect", connect);
+  v1.route("/note", noteRoutes);
   app.route("/v1", v1);
 
   return app;

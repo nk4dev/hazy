@@ -2,12 +2,12 @@
 
 import type { SavedUrlDTO } from "@repo/api-client";
 import { Loader2, Plus, Tag, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { type KeyboardEvent, useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@repo/ui/components/ui/badge";
+import { Button } from "@repo/ui/components/ui/button";
+import { Input } from "@repo/ui/components/ui/input";
 import { useUpdateItemMutation } from "@/hooks/use-item";
 import { useRouter } from "@/i18n/navigation";
 

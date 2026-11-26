@@ -18,11 +18,13 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 # --- resolve the Neon URL ---
 NEON_URL="${NEON_DATABASE_URL:-}"
-if [ -z "$NEON_URL" ] && [ -f "$REPO_ROOT/packages/db/.env.local" ]; then
-  NEON_URL="$(grep -oE 'postgres(ql)?://[^ ]*neon\.tech[^ ]*' "$REPO_ROOT/packages/db/.env.local" | head -1 || true)"
-fi
+for env_file in "$REPO_ROOT/.env.local" "$REPO_ROOT/.env" "$REPO_ROOT/packages/db/.env.local"; do
+  if [ -z "$NEON_URL" ] && [ -f "$env_file" ]; then
+    NEON_URL="$(grep -oE 'postgres(ql)?://[^ ]*neon\.tech[^ ]*' "$env_file" | head -1 || true)"
+  fi
+done
 if [ -z "$NEON_URL" ]; then
-  echo "error: set NEON_DATABASE_URL (or add a neon.tech line to packages/db/.env.local)" >&2
+  echo "error: set NEON_DATABASE_URL (or add a neon.tech line to .env.local / .env / packages/db/.env.local)" >&2
   exit 1
 fi
 
