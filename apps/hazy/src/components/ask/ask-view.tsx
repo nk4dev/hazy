@@ -3,12 +3,12 @@
 import { formatDistanceToNowStrict } from "date-fns";
 import { ja } from "date-fns/locale";
 import { ArrowUp, Loader2, MessageCircleQuestion, Search, Trash2 } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "@/i18n";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AttachedCollections, CollectionMentionField } from "@/components/ask/collection-mention";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@repo/ui/components/ui/button";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { useAskMutation, useAskThreadsQuery, useDeleteAskThreadMutation } from "@/hooks/use-ask";
 import { Link, useRouter } from "@/i18n/navigation";
 

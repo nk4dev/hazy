@@ -1,8 +1,8 @@
 "use client";
 
 import { Check } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslations } from "@/i18n";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { useMeQuery, useUpdatePreferencesMutation } from "@/hooks/use-me";
 import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";

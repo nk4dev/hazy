@@ -37,9 +37,15 @@
     "restart": "キーを追加したら開発サーバーを再起動してください。"
   },
   "auth": {
-    "signInTitle": "おかえりなさい",
-    "signUpTitle": "アカウントを作成",
-    "tagline": "保存したURLの記憶。"
+    "signInTitle": "Hazy にサインイン",
+    "tagline": "保存したURLの記憶。",
+    "continueWithPasskey": "パスキーでサインイン",
+    "continueWithGithub": "GitHub で続行",
+    "githubNotConfigured": "API サーバー側で GitHub OAuth が未設定です。",
+    "signingIn": "サインイン中…",
+    "signInError": "サインインに失敗したか、許可されていないアカウントです。",
+    "passkeyError": "パスキーでのサインインがキャンセルされたか失敗しました。",
+    "restrictedHint": "個人用ワークスペースのため、許可されたオーナーアカウントのみサインインできます。"
   },
   "library": {
     "title": "ライブラリ",
@@ -58,7 +64,8 @@
     "fxtwitterHint": "画像をダウンロードするなら fxtwitter で開く",
     "paste": "貼り付け",
     "pasteEmpty": "クリップボードが空です。",
-    "pasteFailed": "クリップボードを読み取れませんでした。入力欄に直接貼り付けてください。"
+    "pasteFailed": "クリップボードを読み取れませんでした。入力欄に直接貼り付けてください。",
+    "collectionsLabel": "コレクション（任意）"
   },
   "item": {
     "openOriginal": "元のページを開く",
@@ -74,7 +81,9 @@
     "editField": "{field}を編集",
     "tags": "タグ",
     "addTag": "タグを追加",
-    "removeTag": "タグ「{tag}」を削除"
+    "removeTag": "タグ「{tag}」を削除",
+    "collectionsUpdated": "コレクションを更新しました",
+    "collectionsSaveFailed": "コレクションを更新できませんでした。"
   },
   "ask": {
     "placeholder": "保存したものについて聞いてみましょう…",
@@ -139,7 +148,25 @@
     },
     "nav": {
       "language": "言語",
-      "connections": "連携アプリ"
+      "connections": "連携アプリ",
+      "passkeys": "パスキー"
+    },
+    "passkeys": {
+      "title": "パスキー",
+      "note": "GitHub でサインインした後、この端末にパスキーを登録すると次回からパスキーだけでサインインできます。",
+      "namePlaceholder": "端末名（任意）",
+      "add": "パスキーを追加",
+      "adding": "登録中…",
+      "added": "パスキーを登録しました。",
+      "addFailed": "パスキーを登録できませんでした。",
+      "loading": "読み込み中…",
+      "loadFailed": "パスキーを読み込めませんでした。",
+      "retry": "再試行",
+      "empty": "登録済みのパスキーはありません。",
+      "unnamed": "名称未設定のパスキー",
+      "delete": "削除",
+      "deleted": "パスキーを削除しました。",
+      "deleteFailed": "パスキーを削除できませんでした。"
     },
     "connections": {
       "title": "連携アプリ",

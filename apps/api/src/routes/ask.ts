@@ -6,7 +6,7 @@ import { askMessages, askThreads } from "@/db/schema";
 import { runAskPipeline } from "@/lib/ai/ask-pipeline";
 import { NotFoundError, ValidationError } from "@/lib/api/errors";
 import { ok } from "@/lib/api/response";
-import { serializeSavedUrl } from "@/lib/serializers";
+import { SAVED_URL_SUMMARY_COLUMNS, serializeSavedUrl } from "@/lib/serializers";
 import type { AppEnv } from "@/types/hono";
 
 export const ask = new Hono<AppEnv>();
@@ -61,7 +61,7 @@ ask.get("/threads/:id", async (c) => {
   const messages = await db.query.askMessages.findMany({
     where: eq(askMessages.threadId, id),
     orderBy: [asc(askMessages.createdAt)],
-    with: { citations: { with: { savedUrl: true } } },
+    with: { citations: { with: { savedUrl: { columns: SAVED_URL_SUMMARY_COLUMNS } } } },
   });
 
   return ok({

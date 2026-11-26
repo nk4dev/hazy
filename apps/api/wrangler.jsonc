@@ -12,12 +12,21 @@
   "observability": { "enabled": true },
   "vars": {
     "NEXT_PUBLIC_APP_URL": "https://hz.nknighta.me",
-    "CORS_ALLOWED_ORIGINS": "https://hz.nknighta.me",
+    "CORS_ALLOWED_ORIGINS": "https://hz.nknighta.me,https://note.hz.nknighta.me",
+    "BETTER_AUTH_URL": "https://api.hz.nknighta.me",
+    "BETTER_AUTH_COOKIE_DOMAIN": ".hz.nknighta.me",
+    "PASSKEY_RP_ID": "hz.nknighta.me",
+    "PASSKEY_RP_NAME": "Hazy",
     "OPENROUTER_MODEL_ID": "google/gemma-4-26b-a4b-it:free",
+    "OPENROUTER_FALLBACK_MODELS": "meta-llama/llama-3.3-70b-instruct:free,openrouter/free",
+    "OPENROUTER_NOTE_MODEL_ID": "mistralai/mistral-small-2603",
+    "OPENROUTER_NOTE_FALLBACK_MODELS": "google/gemma-4-26b-a4b-it:free,openrouter/free",
     "OPENROUTER_SITE_URL": "https://hz.nknighta.me",
     "OPENROUTER_APP_NAME": "Hazy"
   }
   // Secrets (set via `wrangler secret put` from apps/api/) — never commit these:
-  //   DATABASE_URL, CLERK_SECRET_KEY, CLERK_WEBHOOK_SIGNING_SECRET,
+  //   DATABASE_URL, BETTER_AUTH_SECRET, ADMIN_EMAIL,
+  //   GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET,
+  //   CLERK_SECRET_KEY, CLERK_WEBHOOK_SIGNING_SECRET,
   //   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY, OPENROUTER_API_KEY
 }

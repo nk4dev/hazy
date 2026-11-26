@@ -1,10 +1,10 @@
 "use client";
 
 import { FolderPlus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { useState } from "react";
 import { CollectionPreview } from "@/components/collections/collection-preview";
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -12,9 +12,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@repo/ui/components/ui/dialog";
+import { Input } from "@repo/ui/components/ui/input";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { useCollectionsQuery, useCreateCollectionMutation } from "@/hooks/use-collections";
 import { Link } from "@/i18n/navigation";
 import type { CollectionDTO } from "@repo/api-client";

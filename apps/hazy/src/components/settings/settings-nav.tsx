@@ -1,12 +1,13 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/settings/language", key: "language" },
   { href: "/settings/connections", key: "connections" },
+  { href: "/settings/passkeys", key: "passkeys" },
 ] as const;
 
 export function SettingsNav() {

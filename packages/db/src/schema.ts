@@ -53,9 +53,100 @@ export const sourceKindEnum = pgEnum("source_kind", [
 ]);
 export const noteStatusEnum = pgEnum("note_status", ["draft", "done"]);
 
+// ── Better Auth tables ────────────────────────────────────────────────
+// Prefixed `auth_*` so they never collide with `users`. The domain `users.id`
+// (UUID) remains the foreign-key root for all user data.
+export const authUser = pgTable("auth_user", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email").notNull().unique(),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  image: text("image"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const authSession = pgTable(
+  "auth_session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUser.id, { onDelete: "cascade" }),
+  },
+  (t) => [index("auth_session_user_id_idx").on(t.userId)]
+);
+
+export const authAccount = pgTable(
+  "auth_account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUser.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", { withTimezone: true }),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("auth_account_user_id_idx").on(t.userId)]
+);
+
+export const authVerification = pgTable(
+  "auth_verification",
+  {
+    id: text("id").primaryKey(),
+    identifier: text("identifier").notNull(),
+    value: text("value").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("auth_verification_identifier_idx").on(t.identifier)]
+);
+
+export const authPasskey = pgTable(
+  "auth_passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUser.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull().unique(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    aaguid: text("aaguid"),
+  },
+  (t) => [
+    index("auth_passkey_user_id_idx").on(t.userId),
+    index("auth_passkey_credential_id_idx").on(t.credentialID),
+  ]
+);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
-  clerkId: varchar("clerk_id", { length: 191 }).notNull().unique(),
+  clerkId: varchar("clerk_id", { length: 191 }).unique(),
+  authUserId: text("auth_user_id")
+    .unique()
+    .references(() => authUser.id, { onDelete: "set null" }),
   email: varchar("email", { length: 320 }),
   displayName: varchar("display_name", { length: 255 }),
   avatarUrl: text("avatar_url"),
@@ -431,6 +522,10 @@ export const apiTokens = pgTable(
 );
 
 export const usersRelations = relations(users, ({ one, many }) => ({
+  authUser: one(authUser, {
+    fields: [users.authUserId],
+    references: [authUser.id],
+  }),
   preferences: one(userPreferences, {
     fields: [users.id],
     references: [userPreferences.userId],

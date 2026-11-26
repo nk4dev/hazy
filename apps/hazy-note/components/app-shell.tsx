@@ -1,9 +1,7 @@
-"use client";
-
-import { UserButton } from "@clerk/nextjs";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { NoteLink } from "@/lib/navigation";
+import { AccountMenu } from "@/src/components/account-menu";
 import { BreadcrumbProvider, Breadcrumbs } from "./breadcrumbs";
 import { Icon } from "./icon";
 import { Sidebar } from "./sidebar";
@@ -11,11 +9,16 @@ import { Sidebar } from "./sidebar";
 /** App layout: a static sidebar on ≥lg, an off-canvas drawer + top bar below. */
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
-  const pathname = usePathname();
+  const pathname = useLocation().pathname;
+  const prevPathRef = useRef(pathname);
 
-  // Close the drawer on navigation and on Escape.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: close on path change
-  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (prevPathRef.current !== pathname) {
+      prevPathRef.current = pathname;
+      setOpen(false);
+    }
+  }, [pathname]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
@@ -35,12 +38,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <Icon name="list" size={22} />
           </button>
-          <Link href="/notes" className="flex items-center gap-2 no-underline">
+          <NoteLink href="/notes" className="flex items-center gap-2 no-underline">
             <span className="h-[18px] w-[18px] rounded-[6px] bg-[radial-gradient(circle_at_30%_25%,var(--color-accent-400),var(--color-accent-700))]" />
             <span className="text-[14px] font-medium text-text">hazy note</span>
-          </Link>
+          </NoteLink>
           <div className="ml-auto">
-            <UserButton />
+            <AccountMenu />
           </div>
         </header>
 

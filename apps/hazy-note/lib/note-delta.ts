@@ -1,7 +1,7 @@
 // Helpers for the Quill note body (stored as `notes.body` — the bare Delta
 // `ops` array). Pure functions, safe on the server (repo.ts) and the client.
 
-import type { DeltaOp } from "@repo/db";
+import type { NoteDeltaOp as DeltaOp } from "@repo/api-client";
 import type { NoteSuggestion } from "./types";
 
 export type { DeltaOp };

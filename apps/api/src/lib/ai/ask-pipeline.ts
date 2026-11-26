@@ -8,7 +8,7 @@ import {
   SEARCH_SAVED_LINKS_TOOL_NAME,
 } from "@/lib/ai/ask-tools";
 import { loadCollectionSources } from "@/lib/ai/collection-sources";
-import { createChatCompletion } from "@/lib/ai/openrouter";
+import { createChatCompletionWithMeta } from "@/lib/ai/openrouter";
 import {
   buildAskSystemPrompt,
   buildAttachedSourcesBlock,
@@ -85,7 +85,7 @@ async function runToolCallingAsk(
   priorMessages: { role: "user" | "assistant"; content: string }[],
   question: string,
   seedHits: SearchHit[] = []
-): Promise<{ answerText: string; hits: SearchHit[] }> {
+): Promise<{ answerText: string; hits: SearchHit[]; modelId: string }> {
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
     { role: "system", content: systemPrompt },
     ...priorMessages.map(
@@ -101,11 +101,13 @@ async function runToolCallingAsk(
   const seenIds = new Set<string>(seedHits.map((hit) => hit.id));
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
-    const message = await createChatCompletion(messages, { tools: [SEARCH_SAVED_LINKS_TOOL] });
+    const { message, model } = await createChatCompletionWithMeta(messages, {
+      tools: [SEARCH_SAVED_LINKS_TOOL],
+    });
 
     if (!message.tool_calls || message.tool_calls.length === 0) {
       if (!message.content) throw new Error("OpenRouter returned an empty response.");
-      return { answerText: message.content, hits };
+      return { answerText: message.content, hits, modelId: model };
     }
 
     messages.push({ role: "assistant", content: message.content, tool_calls: message.tool_calls });
@@ -129,7 +131,18 @@ async function runToolCallingAsk(
     }
   }
 
-  throw new Error("OpenRouter tool-calling loop exceeded max rounds without a final answer.");
+  // Max tool rounds reached while still requesting tools: force one final answer
+  // without tools so gathered citations and context are not discarded.
+  messages.push({
+    role: "user",
+    content:
+      "Produce your final answer now based only on the search results already gathered above, without calling any more tools.",
+  });
+  const finalResult = await createChatCompletionWithMeta(messages);
+  if (!finalResult.message.content) {
+    throw new Error("OpenRouter returned an empty final answer after max tool rounds.");
+  }
+  return { answerText: finalResult.message.content, hits, modelId: finalResult.model };
 }
 
 export async function runAskPipeline(params: {
@@ -213,6 +226,7 @@ export async function runAskPipeline(params: {
 
   let answerText: string;
   let usedFallback = false;
+  let usedModelId: string | null = null;
   let citationHits: SearchHit[] = fallbackCitationHits;
 
   const fallbackText = FALLBACK_TEXT[targetLanguage] ?? FALLBACK_TEXT.en;
@@ -231,6 +245,7 @@ export async function runAskPipeline(params: {
         attached.hits
       );
       answerText = result.answerText;
+      usedModelId = result.modelId;
       citationHits = result.hits;
     } catch (error) {
       console.error("OpenRouter call failed, falling back:", error);
@@ -247,7 +262,7 @@ export async function runAskPipeline(params: {
       threadId: thread.id,
       role: "assistant",
       content: answerText,
-      modelId: usedFallback ? null : env.OPENROUTER_MODEL_ID,
+      modelId: usedFallback ? null : (usedModelId ?? env.OPENROUTER_MODEL_ID),
       usedFallback,
     })
     .returning();

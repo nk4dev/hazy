@@ -1,15 +1,15 @@
-import { and, asc, desc, eq, gt, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gt, inArray, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { readLaterState, savedUrls } from "@/db/schema";
+import { collectionItems, collections, readLaterState, savedUrls } from "@/db/schema";
 import { summarizeItem } from "@/lib/ai/summarize-item";
 import { ApiError, NotFoundError } from "@/lib/api/errors";
 import { ok } from "@/lib/api/response";
 import { fetchUrlMetadata } from "@/lib/metadata/fetch-metadata";
 import { parseAndNormalizeUrl } from "@/lib/metadata/normalize-url";
 import { toFxTwitterUrl } from "@/lib/metadata/x-fallback";
-import { serializeSavedUrl } from "@/lib/serializers";
+import { SAVED_URL_SUMMARY_COLUMNS, serializeSavedUrl } from "@/lib/serializers";
 import type { AppEnv } from "@/types/hono";
 
 export const items = new Hono<AppEnv>();
@@ -18,10 +18,28 @@ async function loadOwnedItem(userId: string, id: string) {
   const db = getDb();
   const row = await db.query.savedUrls.findFirst({
     where: and(eq(savedUrls.id, id), eq(savedUrls.userId, userId)),
-    with: { readLaterState: true },
+    columns: SAVED_URL_SUMMARY_COLUMNS,
+    with: { readLaterState: true, collectionItems: true },
   });
   if (!row) throw new NotFoundError("Saved URL");
   return row;
+}
+
+async function assertOwnedCollections(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  collectionIds: string[]
+): Promise<string[]> {
+  const uniqueIds = [...new Set(collectionIds)];
+  if (uniqueIds.length === 0) return [];
+  const owned = await db
+    .select({ id: collections.id })
+    .from(collections)
+    .where(and(eq(collections.userId, userId), inArray(collections.id, uniqueIds)));
+  if (owned.length !== uniqueIds.length) {
+    throw new NotFoundError("Collection");
+  }
+  return uniqueIds;
 }
 
 /** Lowercase, trim, drop blanks/overlong entries, de-dupe, cap the list. */
@@ -51,7 +69,10 @@ items.get("/", async (c) => {
 
   let cursorCreatedAt: Date | undefined;
   if (cursor) {
-    const cursorRow = await db.query.savedUrls.findFirst({ where: eq(savedUrls.id, cursor) });
+    const cursorRow = await db.query.savedUrls.findFirst({
+      where: and(eq(savedUrls.id, cursor), eq(savedUrls.userId, user.id)),
+      columns: { createdAt: true },
+    });
     cursorCreatedAt = cursorRow?.createdAt;
   }
 
@@ -66,33 +87,68 @@ items.get("/", async (c) => {
 
   const rows = await db.query.savedUrls.findMany({
     where: and(...conditions),
+    columns: SAVED_URL_SUMMARY_COLUMNS,
     orderBy: sort === "newest" ? [desc(savedUrls.createdAt)] : [asc(savedUrls.createdAt)],
     limit: limit + 1,
-    with: { readLaterState: true },
+    with: { readLaterState: true, collectionItems: true },
   });
 
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
 
   return ok({
-    items: page.map((row) => serializeSavedUrl(row, row.readLaterState)),
+    items: page.map((row) =>
+      serializeSavedUrl(
+        row,
+        row.readLaterState,
+        row.collectionItems.map((ci) => ci.collectionId)
+      )
+    ),
     nextCursor: hasMore ? page[page.length - 1].id : null,
   });
 });
 
-const createSchema = z.object({ url: z.string().min(1) });
+const createSchema = z.object({
+  url: z.string().min(1),
+  collectionIds: z.array(z.string().uuid()).max(100).optional(),
+});
 
 items.post("/", async (c) => {
   const user = c.get("user");
-  const { url } = createSchema.parse(await c.req.json());
+  const { url, collectionIds } = createSchema.parse(await c.req.json());
   const { url: cleanUrl, normalizedUrl, domain } = parseAndNormalizeUrl(url);
   const db = getDb();
 
+  const requestedCollectionIds = collectionIds
+    ? await assertOwnedCollections(db, user.id, collectionIds)
+    : [];
+
   const existing = await db.query.savedUrls.findFirst({
     where: and(eq(savedUrls.userId, user.id), eq(savedUrls.normalizedUrl, normalizedUrl)),
+    columns: SAVED_URL_SUMMARY_COLUMNS,
+    with: { readLaterState: true, collectionItems: true },
   });
   if (existing) {
-    return ok(serializeSavedUrl(existing), { status: 200 });
+    if (requestedCollectionIds.length > 0) {
+      await db
+        .insert(collectionItems)
+        .values(
+          requestedCollectionIds.map((collectionId) => ({
+            collectionId,
+            savedUrlId: existing.id,
+          }))
+        )
+        .onConflictDoNothing({
+          target: [collectionItems.collectionId, collectionItems.savedUrlId],
+        });
+    }
+    const mergedIds = [
+      ...new Set([
+        ...existing.collectionItems.map((ci) => ci.collectionId),
+        ...requestedCollectionIds,
+      ]),
+    ];
+    return ok(serializeSavedUrl(existing, existing.readLaterState, mergedIds), { status: 200 });
   }
 
   const result = await fetchUrlMetadata(cleanUrl);
@@ -126,15 +182,38 @@ items.post("/", async (c) => {
     )
     .returning();
 
-  await db.insert(readLaterState).values({ userId: user.id, savedUrlId: row.id });
+  const [rl] = await db
+    .insert(readLaterState)
+    .values({ userId: user.id, savedUrlId: row.id })
+    .returning();
 
-  return ok(serializeSavedUrl(row), { status: 201 });
+  if (requestedCollectionIds.length > 0) {
+    await db
+      .insert(collectionItems)
+      .values(
+        requestedCollectionIds.map((collectionId) => ({
+          collectionId,
+          savedUrlId: row.id,
+        }))
+      )
+      .onConflictDoNothing({
+        target: [collectionItems.collectionId, collectionItems.savedUrlId],
+      });
+  }
+
+  return ok(serializeSavedUrl(row, rl, requestedCollectionIds), { status: 201 });
 });
 
 items.get("/:id", async (c) => {
   const user = c.get("user");
   const row = await loadOwnedItem(user.id, c.req.param("id"));
-  return ok(serializeSavedUrl(row, row.readLaterState));
+  return ok(
+    serializeSavedUrl(
+      row,
+      row.readLaterState,
+      row.collectionItems.map((ci) => ci.collectionId)
+    )
+  );
 });
 
 const patchSchema = z.object({
@@ -147,7 +226,7 @@ const patchSchema = z.object({
 items.patch("/:id", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
-  await loadOwnedItem(user.id, id);
+  const existing = await loadOwnedItem(user.id, id);
   const { tags, ...body } = patchSchema.parse(await c.req.json());
   const db = getDb();
   const [updated] = await db
@@ -159,7 +238,13 @@ items.patch("/:id", async (c) => {
     })
     .where(and(eq(savedUrls.id, id), eq(savedUrls.userId, user.id)))
     .returning();
-  return ok(serializeSavedUrl(updated));
+  return ok(
+    serializeSavedUrl(
+      updated,
+      existing.readLaterState,
+      existing.collectionItems.map((ci) => ci.collectionId)
+    )
+  );
 });
 
 items.delete("/:id", async (c) => {
@@ -174,11 +259,8 @@ items.delete("/:id", async (c) => {
 items.post("/:id/refetch", async (c) => {
   const user = c.get("user");
   const id = c.req.param("id");
+  const existing = await loadOwnedItem(user.id, id);
   const db = getDb();
-  const existing = await db.query.savedUrls.findFirst({
-    where: and(eq(savedUrls.id, id), eq(savedUrls.userId, user.id)),
-  });
-  if (!existing) throw new NotFoundError("Saved URL");
 
   const result = await fetchUrlMetadata(existing.url);
 
@@ -207,7 +289,48 @@ items.post("/:id/refetch", async (c) => {
     .where(and(eq(savedUrls.id, id), eq(savedUrls.userId, user.id)))
     .returning();
 
-  return ok(serializeSavedUrl(updated));
+  return ok(
+    serializeSavedUrl(
+      updated,
+      existing.readLaterState,
+      existing.collectionItems.map((ci) => ci.collectionId)
+    )
+  );
+});
+
+const setCollectionsSchema = z.object({
+  collectionIds: z.array(z.string().uuid()).max(100),
+});
+
+items.put("/:id/collections", async (c) => {
+  const user = c.get("user");
+  const id = c.req.param("id");
+  const existing = await loadOwnedItem(user.id, id);
+  const { collectionIds } = setCollectionsSchema.parse(await c.req.json());
+  const db = getDb();
+
+  const nextIds = await assertOwnedCollections(db, user.id, collectionIds);
+  const nextSet = new Set(nextIds);
+  const currentIds = new Set(existing.collectionItems.map((ci) => ci.collectionId));
+
+  const toRemove = [...currentIds].filter((cid) => !nextSet.has(cid));
+  const toAdd = nextIds.filter((cid) => !currentIds.has(cid));
+
+  if (toRemove.length > 0) {
+    await db
+      .delete(collectionItems)
+      .where(and(eq(collectionItems.savedUrlId, id), inArray(collectionItems.collectionId, toRemove)));
+  }
+  if (toAdd.length > 0) {
+    await db
+      .insert(collectionItems)
+      .values(toAdd.map((collectionId) => ({ collectionId, savedUrlId: id })))
+      .onConflictDoNothing({
+        target: [collectionItems.collectionId, collectionItems.savedUrlId],
+      });
+  }
+
+  return ok({ savedUrlId: id, collectionIds: nextIds });
 });
 
 items.post("/:id/summarize", async (c) => {

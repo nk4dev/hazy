@@ -1,0 +1,89 @@
+import { useLocation } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { Icon } from "@/components/icon";
+import { SkeletonCards } from "@/components/loading";
+import { Tag } from "@/components/ui";
+import { useNotesQuery } from "@/lib/hooks";
+import { NoteLink } from "@/lib/navigation";
+import { deltaExcerpt, paragraphCount } from "@/lib/note-delta";
+
+export function NotesPage() {
+  const searchStr = useLocation().searchStr;
+  const tagFilter = useMemo(() => new URLSearchParams(searchStr).get("tag"), [searchStr]);
+  const { data: notes = [], isPending } = useNotesQuery();
+
+  const filtered = useMemo(
+    () => (tagFilter ? notes.filter((n) => n.tags.some((t) => t.label === tagFilter)) : notes),
+    [notes, tagFilter]
+  );
+
+  return (
+    <main className="flex flex-col gap-5 p-4 pb-10 sm:p-[26px_30px_40px]">
+      <header className="flex flex-wrap items-end gap-3">
+        <div>
+          <div className="mb-[5px] text-[11px] uppercase tracking-[0.1em] text-text/[0.42]">
+            {tagFilter ? "フィルタ中" : "ノート"}
+          </div>
+          <h3 className="tracking-[-0.02em]">
+            {tagFilter ? `#${tagFilter}` : "書いたノート一覧"}
+            {!isPending && filtered.length > 0 && (
+              <span className="ml-[8px] text-[13px] font-normal text-text/45">
+                {filtered.length}本
+              </span>
+            )}
+          </h3>
+        </div>
+        {tagFilter && (
+          <NoteLink href="/notes" className="btn btn-ghost text-[12px]">
+            <Icon name="x" /> フィルタ解除
+          </NoteLink>
+        )}
+        <NoteLink href="/notes/new" className="btn btn-primary ml-auto text-[13px]">
+          <Icon name="plus" /> 新しいノート
+        </NoteLink>
+      </header>
+
+      {isPending && <SkeletonCards count={6} />}
+
+      {!isPending && filtered.length === 0 && (
+        <div className="rounded-[10px] bg-surface px-6 py-10 text-center text-[13px] leading-[1.8] text-text/55 shadow-[0_0_0_1px_var(--color-neutral-900)]">
+          {tagFilter ? (
+            "このタグが付いたノートはありません。"
+          ) : (
+            <>
+              まだノートがありません。「新しいノート」から書き始めるか、
+              <br />
+              傾向分析の結果をノートに落とせます。
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-[14px] md:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((n) => (
+          <NoteLink key={n.id} href={`/notes/${n.id}`} className="card gap-[9px] elev-sm no-underline">
+            <div className="card-meta">
+              <Icon
+                name={n.status === "done" ? "check-circle" : "circle-dashed"}
+                className={n.status === "done" ? "text-accent" : "text-text/40"}
+              />
+              {n.updatedLabel}
+              <span className="ml-auto">
+                {paragraphCount(n.body)}段落 · {n.sources.length}出典
+              </span>
+            </div>
+            <div className="card-title text-text">{n.title}</div>
+            <p className="card-body">{deltaExcerpt(n.body, 140)}</p>
+            <div className="flex flex-wrap gap-[5px]">
+              {n.tags.map((t) => (
+                <Tag key={t.label} tone={t.tone === "outline" ? "outline" : t.tone}>
+                  {t.label}
+                </Tag>
+              ))}
+            </div>
+          </NoteLink>
+        ))}
+      </div>
+    </main>
+  );
+}

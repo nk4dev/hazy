@@ -4,18 +4,21 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file=.dev.vars src/server.ts",
+    "dev": "tsx watch src/server.ts",
     "preview": "wrangler dev",
     "deploy": "wrangler deploy",
     "lint": "biome lint .",
     "check-types": "tsc --noEmit",
+    "test": "bun test src/",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.7.28",
     "@clerk/backend": "^3.16.13",
     "@neondatabase/serverless": "^1.1.0",
     "@repo/api-client": "workspace:*",
     "@repo/db": "workspace:*",
+    "better-auth": "^1.7.28",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.10.4",

@@ -1,19 +1,18 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import postgres from "postgres";
+import { loadMonorepoEnv } from "../../../scripts/load-env";
 import { resolveSslMode } from "../src/connection-options";
 
 const pkgRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 async function main() {
-  if (existsSync(join(pkgRoot, ".env.local"))) {
-    process.loadEnvFile(join(pkgRoot, ".env.local"));
-  }
+  loadMonorepoEnv(pkgRoot);
 
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
-    console.error("DATABASE_URL is not set. Add it to packages/db/.env.local first.");
+    console.error("DATABASE_URL is not set. Add it to root .env.local / .env or packages/db/.env.local first.");
     process.exit(1);
   }
 

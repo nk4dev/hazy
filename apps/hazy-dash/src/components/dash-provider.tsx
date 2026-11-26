@@ -1,10 +1,14 @@
-"use client";
-
-import { ApiClientError, createHazyClient, type HazyClient } from "@repo/api-client";
-import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createContext, useContext, useState, useSyncExternalStore } from "react";
+import type { HazyClient } from "@repo/api-client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
+import { dashApiClient, dashQueryClient, setDashUnauthorizedHandler } from "@/lib/clients";
 import { clearToken, getToken } from "@/lib/connect";
-import { API_URL } from "@/lib/env";
 import { detectLocale, type Strings, strings } from "@/lib/i18n";
 
 type Dash = {
@@ -38,35 +42,29 @@ export function DashProvider({ children }: { children: React.ReactNode }) {
   const token = useSyncExternalStore(subscribe, getToken, () => undefined);
   const locale = useSyncExternalStore(subscribe, detectLocale, () => "ja" as const);
 
-  const [client] = useState(() =>
-    createHazyClient({ baseUrl: API_URL, getToken: async () => getToken() })
-  );
-
-  const disconnect = () => {
+  const disconnect = useCallback(() => {
     clearToken();
-    queryClient.clear();
+    dashQueryClient.clear();
     notify();
-  };
+  }, []);
 
-  // A 401 means the token was revoked in hazy's settings — back to Connect.
-  const onError = (error: unknown) => {
-    if (error instanceof ApiClientError && error.status === 401) disconnect();
-  };
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        queryCache: new QueryCache({ onError }),
-        mutationCache: new MutationCache({ onError }),
-        defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: true } },
-      })
-  );
+  useEffect(() => {
+    setDashUnauthorizedHandler(disconnect);
+    return () => setDashUnauthorizedHandler(null);
+  }, [disconnect]);
 
   if (token === undefined) return null;
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={dashQueryClient}>
       <DashContext.Provider
-        value={{ client, t: strings(locale), locale, connected: token !== null, disconnect }}
+        value={{
+          client: dashApiClient,
+          t: strings(locale),
+          locale,
+          connected: token !== null,
+          disconnect,
+        }}
       >
         {children}
       </DashContext.Provider>

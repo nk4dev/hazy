@@ -37,16 +37,23 @@
     "restart": "Restart the dev server after adding keys."
   },
   "auth": {
-    "signInTitle": "Welcome back",
-    "signUpTitle": "Create your account",
-    "tagline": "A memory for the URLs you save."
+    "signInTitle": "Sign in to Hazy",
+    "tagline": "A memory for the URLs you save.",
+    "continueWithPasskey": "Sign in with Passkey",
+    "continueWithGithub": "Continue with GitHub",
+    "githubNotConfigured": "GitHub OAuth is not configured on the API server.",
+    "signingIn": "Signing in…",
+    "signInError": "Sign-in failed or account not authorized.",
+    "passkeyError": "Passkey sign-in was cancelled or failed.",
+    "restrictedHint": "Personal workspace — sign-in is limited to the configured owner."
   },
   "library": {
     "title": "Library",
     "empty": "Nothing saved yet. Save your first link to get started.",
     "sortOldest": "Oldest first",
     "sortNewest": "Newest first",
-    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "itemCount_one": "{count} item",
+    "itemCount_other": "{count} items",
     "more": "Load more"
   },
   "save": {
@@ -58,7 +65,8 @@
     "fxtwitterHint": "Want the images? Open this post on fxtwitter",
     "paste": "Paste",
     "pasteEmpty": "The clipboard is empty.",
-    "pasteFailed": "Couldn't read the clipboard. Paste into the field instead."
+    "pasteFailed": "Couldn't read the clipboard. Paste into the field instead.",
+    "collectionsLabel": "Collections (optional)"
   },
   "item": {
     "openOriginal": "Open original",
@@ -74,7 +82,9 @@
     "editField": "Edit {field}",
     "tags": "Tags",
     "addTag": "Add tag",
-    "removeTag": "Remove tag {tag}"
+    "removeTag": "Remove tag {tag}",
+    "collectionsUpdated": "Collections updated",
+    "collectionsSaveFailed": "Could not update collections."
   },
   "ask": {
     "placeholder": "Ask about something you saved…",
@@ -88,7 +98,8 @@
     "aiUnavailable": "AI answers aren't configured yet — here's what matched your library.",
     "noResults": "Nothing in your library matches that yet.",
     "mentionHint": "Type @ to attach a collection's links to your question",
-    "mentionItemCount": "{count, plural, one {# link} other {# links}}",
+    "mentionItemCount_one": "{count} link",
+    "mentionItemCount_other": "{count} links",
     "mentionRemove": "Remove collection",
     "mentionPreviewTitle": "Links in this collection",
     "mentionPreviewLoading": "Loading…",
@@ -97,14 +108,16 @@
   },
   "search": {
     "placeholder": "Search your library",
-    "resultCount": "{count, plural, one {# match} other {# matches}}",
+    "resultCount_one": "{count} match",
+    "resultCount_other": "{count} matches",
     "noResults": "No matches.",
     "filterHint": "Filter with domain:example.com or tag:research"
   },
   "collections": {
     "title": "Collections",
     "empty": "No collections yet.",
-    "itemCount": "{count, plural, one {# item} other {# items}}",
+    "itemCount_one": "{count} item",
+    "itemCount_other": "{count} items",
     "create": "New collection",
     "namePlaceholder": "Collection name",
     "remove": "Remove from collection",
@@ -139,7 +152,25 @@
     },
     "nav": {
       "language": "Language",
-      "connections": "Connected apps"
+      "connections": "Connected apps",
+      "passkeys": "Passkeys"
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "note": "Register a passkey on this device after signing in with GitHub so you can sign in passwordlessly.",
+      "namePlaceholder": "Device name (optional)",
+      "add": "Add passkey",
+      "adding": "Adding…",
+      "added": "Passkey registered.",
+      "addFailed": "Could not register passkey.",
+      "loading": "Loading passkeys…",
+      "loadFailed": "Couldn't load passkeys.",
+      "retry": "Retry",
+      "empty": "No passkeys registered yet.",
+      "unnamed": "Unnamed passkey",
+      "delete": "Delete",
+      "deleted": "Passkey deleted.",
+      "deleteFailed": "Could not delete passkey."
     },
     "connections": {
       "title": "Connected apps",

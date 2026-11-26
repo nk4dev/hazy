@@ -1,5 +1,5 @@
 import type { SavedUrlDTO } from "@repo/api-client";
-import { Favicon } from "@/components/favicon";
+import { Favicon } from "@repo/ui/components/favicon";
 import { Link } from "@/i18n/navigation";
 
 export function ItemCard({ item }: { item: SavedUrlDTO }) {

@@ -3,7 +3,7 @@
 import { Link2 } from "lucide-react";
 import { useState } from "react";
 import { useDash } from "@/components/dash-provider";
-import { HazyMark } from "@/components/hazy-mark";
+import { HazyMark } from "@repo/ui/components/hazy-mark";
 import { startConnect } from "@/lib/connect";
 
 export function ConnectScreen({ error }: { error?: string }) {

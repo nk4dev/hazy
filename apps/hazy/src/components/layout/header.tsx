@@ -1,14 +1,31 @@
-import { UserButton } from "@clerk/nextjs";
-import { Settings } from "lucide-react";
-import { getTranslations } from "next-intl/server";
-import { HazyMark } from "@/components/hazy-mark";
+import { HazyMark } from "@repo/ui/components/hazy-mark";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
+import { Button } from "@repo/ui/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@repo/ui/components/ui/dropdown-menu";
+import { CircleUser, LogOut, Settings } from "lucide-react";
 import { NavLinks } from "@/components/layout/nav-links";
+import { useAuthSession } from "@/components/providers/auth-provider";
 import { SaveUrlDialog } from "@/components/save/save-url-dialog";
-import { Button } from "@/components/ui/button";
+import { useLocale, useTranslations } from "@/i18n";
 import { Link } from "@/i18n/navigation";
 
-export async function Header() {
-  const t = await getTranslations("common");
+function userInitials(name: string | undefined, email: string | undefined): string {
+  const source = (name || email || "H").trim();
+  return source.slice(0, 1).toUpperCase();
+}
+
+export function Header() {
+  const t = useTranslations("common");
+  const tNav = useTranslations("nav");
+  const locale = useLocale();
+  const { user, signOut } = useAuthSession();
 
   return (
     <header className="sticky top-0 z-20 hidden border-b sm:block border-border/70 bg-background/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
@@ -37,11 +54,44 @@ export async function Header() {
           </Button>
           <SaveUrlDialog triggerLabel={t("saveLink")} />
           <div className="ml-1 flex size-9 items-center justify-center">
-            <UserButton
-              appearance={{
-                variables: { colorPrimary: "#9184d9" },
-              }}
-            />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={tNav("account")}
+                  className="size-8 rounded-full"
+                >
+                  <Avatar className="size-7">
+                    {user?.image ? <AvatarImage src={user.image} alt={user.name} /> : null}
+                    <AvatarFallback className="bg-primary/20 text-xs text-primary">
+                      {user ? userInitials(user.name, user.email) : <CircleUser className="size-4" />}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {user && (
+                  <>
+                    <DropdownMenuLabel className="font-normal">
+                      <div className="flex flex-col space-y-0.5">
+                        <p className="truncate text-sm font-medium">{user.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                      </div>
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => void signOut(locale)}
+                >
+                  <LogOut className="size-4" />
+                  <span>{t("signOut")}</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>

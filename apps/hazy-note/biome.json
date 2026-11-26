@@ -9,16 +9,14 @@
     "ignoreUnknown": false,
     "includes": [
       "**",
-      "!.next",
+      "!dist",
       "!out",
       "!build",
-      "!next-env.d.ts",
-      "!.open-next",
       "!.wrangler",
       "!cloudflare-env.d.ts",
       "!public",
       "!design-source",
-      "!components/ui/**",
+      "!components/ui",
       "!lib/utils.ts"
     ]
   },

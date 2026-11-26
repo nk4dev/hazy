@@ -1,6 +1,5 @@
-"use client";
-
-import { useClerk, useUser } from "@clerk/nextjs";
+import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@repo/ui/components/ui/sheet";
 import {
   ChevronRight,
   CircleUser,
@@ -14,10 +13,10 @@ import {
   Settings,
   Sparkle,
 } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { useAuthSession } from "@/components/providers/auth-provider";
 import { SaveUrlDialog } from "@/components/save/save-url-dialog";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useLocale, useTranslations } from "@/i18n";
 import { Link, usePathname } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 
@@ -79,8 +78,7 @@ export function MobileTabBar() {
   const tCommon = useTranslations("common");
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { user } = useUser();
-  const { openUserProfile, signOut } = useClerk();
+  const { user, signOut } = useAuthSession();
   const locale = useLocale();
   const menuActive = isActive(pathname, "/collections") || isActive(pathname, "/settings");
 
@@ -141,29 +139,27 @@ export function MobileTabBar() {
             ))}
           </ul>
           <div className="mt-2 flex flex-col border-t border-border/70 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                // Clerk's modal renders outside the sheet, so close the sheet first.
-                setMenuOpen(false);
-                openUserProfile();
-              }}
-              className="hz-interactive flex min-h-14 items-center gap-4 rounded-xl px-3 text-left text-[16px]"
-            >
-              {user?.imageUrl ? (
-                // biome-ignore lint/performance/noImgElement: Clerk-hosted avatar, tiny
-                <img src={user.imageUrl} alt="" className="size-6 rounded-full" />
+            <div className="flex min-h-14 items-center gap-4 rounded-xl px-3 text-[16px]">
+              {user?.image ? (
+                <Avatar className="size-6">
+                  <AvatarImage src={user.image} alt={user.name} />
+                  <AvatarFallback className="bg-primary/20 text-xs text-primary">
+                    {user.name.slice(0, 1).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
               ) : (
                 <CircleUser className="size-5 text-muted-foreground" />
               )}
               <span className="min-w-0 flex-1 truncate">
-                {user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? t("account")}
+                {user?.name || user?.email || t("account")}
               </span>
-              <ChevronRight className="size-4 text-muted-foreground" />
-            </button>
+            </div>
             <button
               type="button"
-              onClick={() => signOut({ redirectUrl: `/${locale}/sign-in` })}
+              onClick={() => {
+                setMenuOpen(false);
+                void signOut(locale);
+              }}
               className="hz-interactive flex min-h-14 items-center gap-4 rounded-xl px-3 text-left text-[16px] text-destructive"
             >
               <LogOut className="size-5" />

@@ -1,11 +1,12 @@
-"use client";
-
-import { UserButton } from "@clerk/nextjs";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
-import type { Project, Tag as TagT } from "@/lib/types";
+import { useLocation } from "@tanstack/react-router";
+import { useState } from "react";
+import {
+  useCreateNoteProjectMutation,
+  useNoteProjectsQuery,
+  useNoteTagsQuery,
+} from "@/lib/hooks";
+import { NoteLink, useNoteNavigate } from "@/lib/navigation";
+import { AccountMenu } from "@/src/components/account-menu";
 import { DensityToggle } from "./density-toggle";
 import { Icon } from "./icon";
 import { NewProjectDialog } from "./new-project-dialog";
@@ -21,28 +22,19 @@ const NAV = [
 ];
 
 export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNavigate?: () => void }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [tags, setTags] = useState<TagT[]>([]);
+  const pathname = useLocation().pathname;
+  const router = useNoteNavigate();
+  const { data: projects = [] } = useNoteProjectsQuery();
+  const { data: tags = [] } = useNoteTagsQuery();
+  const createProjectMutation = useCreateNoteProjectMutation();
   const [newOpen, setNewOpen] = useState(false);
 
-  const load = () => {
-    api
-      .projects()
-      .then(setProjects)
-      .catch(() => {});
-    api
-      .tags()
-      .then(setTags)
-      .catch(() => {});
-  };
-  useEffect(load, []);
-
   async function createProject(name: string, description: string) {
-    const created = await api.addProject(name, description ? { description } : {});
+    const created = await createProjectMutation.mutateAsync({
+      name,
+      ...(description ? { description } : {}),
+    });
     setNewOpen(false);
-    load();
     router.push(`/projects/${created.id}`);
   }
 
@@ -54,24 +46,22 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
         }`}
       >
         <div className="flex items-center gap-[9px] px-[7px]">
-          <Link
+          <NoteLink
             href="/notes"
-            target="_self"
             onClick={onNavigate}
             className="flex flex-1 items-center gap-[9px] no-underline"
           >
             <span className="h-[22px] w-[22px] rounded-[7px] bg-[radial-gradient(circle_at_30%_25%,var(--color-accent-400),var(--color-accent-700))] shadow-[0_0_14px_rgba(145,132,217,0.45)]" />
             <span className="text-[15px] font-medium tracking-[-0.01em] text-text">hazy note</span>
-          </Link>
-          <UserButton />
+          </NoteLink>
+          <AccountMenu />
         </div>
 
         <nav className="flex flex-col gap-[2px]">
           {/* ノート = 主要機能。常時プライマリーカラーで最上部に固定 */}
           <div className="mb-[6px] flex items-stretch gap-1">
-            <Link
+            <NoteLink
               href="/notes"
-              target="_self"
               onClick={onNavigate}
               className={`flex flex-1 items-center gap-[10px] rounded-lg px-[11px] py-[9px] text-[13.5px] font-medium no-underline text-accent-100 shadow-[0_0_18px_rgba(145,132,217,0.4)] transition ${
                 pathname === "/notes" || pathname.startsWith("/notes/")
@@ -81,24 +71,22 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
             >
               <Icon name="notebook" size={17} />
               ノート
-            </Link>
-            <Link
+            </NoteLink>
+            <NoteLink
               href="/notes/new"
-              target="_self"
               title="新しいノート"
               onClick={onNavigate}
               className="flex items-center rounded-lg bg-accent/90 px-[10px] text-accent-100 no-underline shadow-[0_0_18px_rgba(145,132,217,0.4)] transition hover:bg-accent"
             >
               <Icon name="plus" size={14} />
-            </Link>
+            </NoteLink>
           </div>
           {NAV.map((n) => {
             const active = pathname === n.href || pathname.startsWith(`${n.href}/`);
             return (
-              <Link
+              <NoteLink
                 key={n.href}
                 href={n.href}
-                target="_self"
                 onClick={onNavigate}
                 className={`flex items-center gap-[10px] rounded-lg px-[10px] py-[7px] text-[13px] no-underline ${
                   active ? "bg-accent/[0.12] text-accent" : "text-text hover:bg-white/[0.04]"
@@ -106,7 +94,7 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
               >
                 <Icon name={n.icon} size={16} />
                 {n.label}
-              </Link>
+              </NoteLink>
             );
           })}
         </nav>
@@ -117,10 +105,9 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
           </div>
           <div className="flex flex-col gap-px">
             {projects.map((p) => (
-              <Link
+              <NoteLink
                 key={p.id}
                 href={`/projects/${p.id}`}
-                target="_self"
                 onClick={onNavigate}
                 className="flex items-center gap-[9px] rounded-[7px] px-[10px] py-[6px] text-[13px] text-text no-underline hover:bg-white/[0.04]"
               >
@@ -131,7 +118,7 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
                 />
                 {p.name}
                 <span className="ml-auto text-[11px] opacity-40">{p.count}</span>
-              </Link>
+              </NoteLink>
             ))}
           </div>
           <button
@@ -154,29 +141,27 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
         </div>
 
         <div className="flex flex-col gap-2">
-          <Link
+          <NoteLink
             href="/tags"
-            target="_self"
             onClick={onNavigate}
             className="px-[10px] text-[10px] uppercase tracking-[0.1em] text-text/[0.38] no-underline hover:text-text/60"
           >
             タグ
-          </Link>
+          </NoteLink>
           <div className="flex flex-wrap gap-[5px] px-[10px]">
             {tags.slice(0, 4).map((t) => (
-              <Link
+              <NoteLink
                 key={t.id}
                 href={`/library?tag=${encodeURIComponent(t.label)}`}
-                target="_self"
                 onClick={onNavigate}
               >
                 <Tag tone={t.tone === "accent" ? "accent" : "neutral"}>{t.label}</Tag>
-              </Link>
+              </NoteLink>
             ))}
             {tags.length > 4 && (
-              <Link href="/tags" target="_self" onClick={onNavigate}>
+              <NoteLink href="/tags" onClick={onNavigate}>
                 <Tag tone="outline">+{tags.length - 4}</Tag>
-              </Link>
+              </NoteLink>
             )}
           </div>
         </div>

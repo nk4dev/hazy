@@ -1,4 +1,4 @@
-import { and, eq, gte } from "drizzle-orm";
+import { and, count, eq, gte } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getDb } from "@/db";
@@ -37,17 +37,21 @@ readLater.get("/stats", async (c) => {
 
   const weekAgo = new Date(Date.now() - 7 * DAY_MS);
 
-  const [readRows, savedRows] = await Promise.all([
-    db.query.readLaterState.findMany({
-      where: and(
-        eq(readLaterState.userId, user.id),
-        eq(readLaterState.status, "read"),
-        gte(readLaterState.markedReadAt, weekAgo)
+  const [readRows, savedCountRows] = await Promise.all([
+    db
+      .select({ markedReadAt: readLaterState.markedReadAt })
+      .from(readLaterState)
+      .where(
+        and(
+          eq(readLaterState.userId, user.id),
+          eq(readLaterState.status, "read"),
+          gte(readLaterState.markedReadAt, weekAgo)
+        )
       ),
-    }),
-    db.query.savedUrls.findMany({
-      where: and(eq(savedUrls.userId, user.id), gte(savedUrls.createdAt, weekAgo)),
-    }),
+    db
+      .select({ value: count() })
+      .from(savedUrls)
+      .where(and(eq(savedUrls.userId, user.id), gte(savedUrls.createdAt, weekAgo))),
   ]);
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -64,7 +68,7 @@ readLater.get("/stats", async (c) => {
   return ok({
     days: days.map((n) => ({ count: n, heightPct: Math.round((n / maxDay) * 100) })),
     readThisWeek: readRows.length,
-    savedThisWeek: savedRows.length,
+    savedThisWeek: savedCountRows[0]?.value ?? 0,
   });
 });
 

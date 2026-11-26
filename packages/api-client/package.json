@@ -5,25 +5,35 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./react": "./src/react.ts",
+    "./auth": "./src/auth.ts",
+    "./query": "./src/query.ts",
+    "./react": "./src/react.tsx",
     "./types": "./src/types.ts"
   },
   "scripts": {
     "check-types": "tsc --noEmit"
   },
   "peerDependencies": {
-    "@clerk/nextjs": ">=7",
+    "@tanstack/react-query": ">=5",
     "react": ">=19"
   },
   "peerDependenciesMeta": {
-    "@clerk/nextjs": { "optional": true },
-    "react": { "optional": true }
+    "@tanstack/react-query": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@clerk/nextjs": "^7.8.3",
+    "@tanstack/react-query": "^5.101.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "react": "19.2.8",
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@better-auth/passkey": "^1.7.28",
+    "better-auth": "^1.7.28"
   }
 }

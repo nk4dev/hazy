@@ -1,9 +1,4 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from "@repo/ui/lib/utils";
 
 /** AI summaries sometimes come back as Markdown ("**要約：**\n- …"). For the
  *  two-line previews in lists, drop label-only lines and Markdown markers and

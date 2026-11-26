@@ -1,10 +1,10 @@
 "use client";
 
-import { ClipboardPaste, Download, Loader2, Plus } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Check, ClipboardPaste, Download, Loader2, Plus } from "lucide-react";
+import { useTranslations } from "@/i18n";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@repo/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,11 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "@repo/ui/components/ui/dialog";
+import { Input } from "@repo/ui/components/ui/input";
+import { Label } from "@repo/ui/components/ui/label";
+import { useCollectionsQuery } from "@/hooks/use-collections";
 import { useSaveUrlMutation } from "@/hooks/use-items";
 import { useRouter } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
 
 /** x.com / twitter.com URLs block scraping, so metadata + images never come
  *  through — fxtwitter.com mirrors the same path and actually serves them. */
@@ -45,10 +47,25 @@ export function SaveUrlDialog({
   const t = useTranslations("save");
   const [open, setOpen] = useState(false);
   const [url, setUrl] = useState("");
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const { data: collectionsData } = useCollectionsQuery();
   const mutation = useSaveUrlMutation();
   const router = useRouter();
 
   const fxUrl = useMemo(() => fxtwitterUrl(url.trim()), [url]);
+
+  function handleOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      setSelectedCollectionIds([]);
+    }
+  }
+
+  function toggleCollection(id: string) {
+    setSelectedCollectionIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  }
 
   async function handlePaste() {
     try {
@@ -64,21 +81,25 @@ export function SaveUrlDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!url.trim()) return;
-    mutation.mutate(url.trim(), {
-      onSuccess: (saved) => {
-        setOpen(false);
-        setUrl("");
-        toast.success(saved.title ?? saved.url);
-        router.push(`/item/${saved.id}`);
-      },
-      onError: (error) => {
-        toast.error(error instanceof Error ? error.message : "Could not save that link.");
-      },
-    });
+    mutation.mutate(
+      { url: url.trim(), collectionIds: selectedCollectionIds },
+      {
+        onSuccess: (saved) => {
+          setOpen(false);
+          setUrl("");
+          setSelectedCollectionIds([]);
+          toast.success(saved.title ?? saved.url);
+          router.push(`/item/${saved.id}`);
+        },
+        onError: (error) => {
+          toast.error(error instanceof Error ? error.message : "Could not save that link.");
+        },
+      }
+    );
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         {trigger ?? (
           <Button className="h-10 gap-1.5 rounded-full px-3.5 sm:h-9">
@@ -127,6 +148,34 @@ export function SaveUrlDialog({
                 <Download className="size-3" />
                 {t("fxtwitterHint")}
               </a>
+            )}
+            {(collectionsData?.items.length ?? 0) > 0 && (
+              <div className="mt-2 flex flex-col gap-1.5">
+                <Label>{t("collectionsLabel")}</Label>
+                <div className="flex max-h-32 flex-wrap gap-1.5 overflow-y-auto">
+                  {collectionsData?.items.map((collection) => {
+                    const selected = selectedCollectionIds.includes(collection.id);
+                    return (
+                      <button
+                        key={collection.id}
+                        type="button"
+                        aria-pressed={selected}
+                        disabled={mutation.isPending}
+                        onClick={() => toggleCollection(collection.id)}
+                        className={cn(
+                          "inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors",
+                          selected
+                            ? "border-primary bg-primary/10 text-foreground"
+                            : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                        )}
+                      >
+                        {selected && <Check className="size-3 shrink-0 text-primary" />}
+                        <span className="truncate">{collection.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
           <DialogFooter>

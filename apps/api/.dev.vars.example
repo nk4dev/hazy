@@ -8,7 +8,17 @@ DATABASE_URL=postgresql://hazy@127.0.0.1:5433/hazy
 # For `wrangler dev` (workerd) point this at a Neon branch instead — workerd has
 # no raw TCP, so it exercises the same neon-http driver production uses.
 
-# --- Clerk (same instance as the web apps) ---
+# --- Better Auth (primary browser session auth) ---
+BETTER_AUTH_URL=http://localhost:8787
+BETTER_AUTH_COOKIE_DOMAIN=
+BETTER_AUTH_SECRET=
+ADMIN_EMAIL=
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=
+PASSKEY_RP_ID=localhost
+PASSKEY_RP_NAME=Hazy
+
+# --- Clerk (temporary fallback / Flutter compatibility) ---
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
 CLERK_SECRET_KEY=
 # From the Clerk dashboard Webhooks page, endpoint https://api.hz.nknighta.me/v1/webhooks/clerk
@@ -22,5 +32,9 @@ NEXT_PUBLIC_APP_URL=http://localhost:3100
 # --- OpenRouter (optional — falls back to canned text when unset) ---
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL_ID=google/gemma-4-26b-a4b-it:free
+OPENROUTER_FALLBACK_MODELS=meta-llama/llama-3.3-70b-instruct:free,openrouter/free
+OPENROUTER_NOTE_MODEL_ID=mistralai/mistral-small-2603
+OPENROUTER_NOTE_FALLBACK_MODELS=google/gemma-4-26b-a4b-it:free,openrouter/free
+OPENROUTER_TIMEOUT_MS=20000
 OPENROUTER_SITE_URL=http://localhost:3100
 OPENROUTER_APP_NAME=Hazy

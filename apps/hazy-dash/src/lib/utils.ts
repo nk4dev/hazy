@@ -1,9 +1,4 @@
-import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from "@repo/ui/lib/utils";
 
 /** Same as `plainPreview` in apps/hazy — AI summaries can be Markdown. */
 export function plainPreview(text: string): string {

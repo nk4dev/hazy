@@ -1,6 +1,6 @@
 // Domain model for hazy note. Mirrors the 7 sections of the design doc.
 
-import type { DeltaOp } from "@repo/db";
+import type { NoteDeltaOp as DeltaOp } from "@repo/api-client";
 
 export type SourceKind = "article" | "pdf" | "video" | "thread" | "note";
 export type ItemStatus = "reading" | "ready";

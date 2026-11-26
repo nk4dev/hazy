@@ -1,15 +1,14 @@
-import { existsSync } from "node:fs";
+import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "drizzle-kit";
+import { loadMonorepoEnv } from "../../scripts/load-env";
 
-// drizzle-kit runs as a bare script (no Next.js), so load the package's own
-// .env.local for DATABASE_URL. `process.loadEnvFile` landed in Node 20.12+.
-if (existsSync(".env.local")) {
-  process.loadEnvFile(".env.local");
-}
+const pkgRoot = dirname(fileURLToPath(import.meta.url));
+loadMonorepoEnv(pkgRoot);
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
-    "DATABASE_URL is not set — add it to packages/db/.env.local (or pass it inline)",
+    "DATABASE_URL is not set — add it to root .env.local / .env or packages/db/.env.local (or pass it inline)",
   );
 }
 

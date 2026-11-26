@@ -1,8 +1,9 @@
 import { createClerkClient } from "@clerk/backend";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { getDb } from "@/db";
 import { userPreferences, users } from "@/db/schema";
 import { UnauthorizedError } from "@/lib/api/errors";
+import { isAllowedAdminEmail } from "@/lib/auth/better-auth";
 import { env, isClerkConfigured, isDatabaseConfigured } from "@/env";
 
 export type AppUser = typeof users.$inferSelect;
@@ -68,6 +69,73 @@ export async function resolveUser(clerkId: string): Promise<AppUser> {
 
   const user =
     created ?? (await db.query.users.findFirst({ where: eq(users.clerkId, clerkId) }));
+  if (!user) {
+    throw new UnauthorizedError("Could not resolve account. Try again.");
+  }
+
+  await db
+    .insert(userPreferences)
+    .values({ userId: user.id })
+    .onConflictDoNothing({ target: userPreferences.userId });
+
+  return user;
+}
+
+/**
+ * Resolves a Better Auth user to our internal `users` row (`users.id` UUID is
+ * preserved). Links an unlinked pre-existing row by case-insensitive email
+ * first so migrated Clerk data stays intact under the same `users.id`.
+ */
+export async function resolveBetterAuthUser(authUserRecord: {
+  id: string;
+  email: string;
+  name?: string | null;
+  image?: string | null;
+}): Promise<AppUser> {
+  if (!isDatabaseConfigured()) throw new UnauthorizedError();
+  if (!isAllowedAdminEmail(authUserRecord.email)) {
+    throw new UnauthorizedError("Account is not authorized.");
+  }
+
+  const normalizedEmail = authUserRecord.email.trim().toLowerCase();
+  const db = getDb();
+
+  const existingByAuth = await db.query.users.findFirst({
+    where: eq(users.authUserId, authUserRecord.id),
+  });
+  if (existingByAuth) return existingByAuth;
+
+  const existingByEmail = await db.query.users.findFirst({
+    where: and(isNull(users.authUserId), sql`lower(${users.email}) = ${normalizedEmail}`),
+  });
+  if (existingByEmail) {
+    const [linked] = await db
+      .update(users)
+      .set({
+        authUserId: authUserRecord.id,
+        displayName: existingByEmail.displayName ?? authUserRecord.name ?? null,
+        avatarUrl: existingByEmail.avatarUrl ?? authUserRecord.image ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, existingByEmail.id))
+      .returning();
+    if (linked) return linked;
+  }
+
+  const [created] = await db
+    .insert(users)
+    .values({
+      authUserId: authUserRecord.id,
+      email: normalizedEmail,
+      displayName: authUserRecord.name ?? null,
+      avatarUrl: authUserRecord.image ?? null,
+    })
+    .onConflictDoNothing({ target: users.authUserId })
+    .returning();
+
+  const user =
+    created ??
+    (await db.query.users.findFirst({ where: eq(users.authUserId, authUserRecord.id) }));
   if (!user) {
     throw new UnauthorizedError("Could not resolve account. Try again.");
   }

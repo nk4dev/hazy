@@ -7,5 +7,10 @@ export {
   type HazyClient,
   type HazyClientConfig,
   type ItemPatch,
+  type NoteCreateInput,
+  type NoteItemPatch,
+  type NotePatch,
+  type NoteProjectCreateInput,
+  type NoteProjectPatch,
 } from "./client";
 export * from "./types";

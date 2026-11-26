@@ -17,6 +17,9 @@
 | `not_found` | 404 | 対象が存在しない、**または他ユーザーの所有物**（所有チェックは 404 を返す） | 「見つかりません」表示。一覧を再取得 |
 | `validation_error` | 400 | Zod のボディ / クエリ検証失敗。`details` は `error.flatten()`（`fieldErrors` / `formErrors`） | フォームのフィールドエラーに反映 |
 | `service_not_configured` | 503 | その機能の env 未設定。`details.service` に `"openrouter"` 等 | AI 機能を無効表示（`details.service` で判別） |
+| `ai_rate_limited` | 429 | OpenRouter の全候補モデルがレート制限に到達 | 「AIが混み合っています。少し待ってから再試行してください」表示 |
+| `ai_timeout` | 504 | OpenRouter の全候補モデルがタイムアウト | 「応答がタイムアウトしました」表示＋リトライボタン |
+| `ai_unavailable` | 502 / 503 | OpenRouter 認証エラー / 不正な応答 / 全候補モデル一時障害 | 「AIサービスが一時的に利用できません」表示＋リトライボタン |
 | `internal_error` | 500 | 予期しない例外 | 「時間をおいて再試行」＋リトライボタン |
 
 `service_not_configured` が出うるエンドポイント: `POST /v1/items/:id/summarize`、

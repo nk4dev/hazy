@@ -16,7 +16,7 @@ export async function summarizeItem(userId: string, itemId: string): Promise<Sav
   const db = getDb();
   const item = await db.query.savedUrls.findFirst({
     where: and(eq(savedUrls.id, itemId), eq(savedUrls.userId, userId)),
-    with: { readLaterState: true },
+    with: { readLaterState: true, collectionItems: true },
   });
   if (!item) throw new NotFoundError("Saved URL");
 
@@ -38,5 +38,9 @@ export async function summarizeItem(userId: string, itemId: string): Promise<Sav
     .where(and(eq(savedUrls.id, itemId), eq(savedUrls.userId, userId)))
     .returning();
 
-  return serializeSavedUrl(updated, item.readLaterState);
+  return serializeSavedUrl(
+    updated,
+    item.readLaterState,
+    item.collectionItems.map((ci) => ci.collectionId)
+  );
 }

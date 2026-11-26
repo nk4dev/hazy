@@ -1,15 +1,11 @@
-"use client";
-
-import type { ConnectAuthorizeInput } from "@repo/api-client";
+import type { ConnectAuthorizeInput, ConnectedAppDTO } from "@repo/api-client";
+import { hazyQueryKeys } from "@repo/api-client/query";
 import { useHazyClient } from "@repo/api-client/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { hazyQueries } from "@/lib/clients";
 
 export function useConnectedAppsQuery() {
-  const client = useHazyClient();
-  return useQuery({
-    queryKey: ["connected-apps"],
-    queryFn: () => client.connect.apps(),
-  });
+  return useQuery(hazyQueries.connectedApps());
 }
 
 export function useRevokeConnectedAppMutation() {
@@ -17,7 +13,23 @@ export function useRevokeConnectedAppMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => client.connect.revoke(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["connected-apps"] }),
+    onMutate: async (id) => {
+      const key = hazyQueryKeys.connect.apps();
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<{ items: ConnectedAppDTO[] }>(key);
+      if (previous) {
+        queryClient.setQueryData<{ items: ConnectedAppDTO[] }>(key, {
+          items: previous.items.filter((app) => app.id !== id),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(hazyQueryKeys.connect.apps(), ctx.previous);
+      }
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: hazyQueryKeys.connect.apps() }),
   });
 }
 

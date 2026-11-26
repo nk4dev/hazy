@@ -1,5 +1,5 @@
-import Link from "next/link";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { NoteLink } from "@/lib/navigation";
 
 type Variant = "primary" | "secondary" | "ghost";
 
@@ -13,6 +13,7 @@ export function Button({
   variant = "secondary",
   icon,
   block,
+  type = "button",
   className = "",
   children,
   ...rest
@@ -23,6 +24,7 @@ export function Button({
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
     <button
+      type={type}
       className={`btn ${variantClass[variant]} ${icon ? "btn-icon" : ""} ${
         block ? "btn-block" : ""
       } ${className}`}
@@ -47,12 +49,12 @@ export function LinkButton({
   children: ReactNode;
 }) {
   return (
-    <Link
+    <NoteLink
       href={href}
       className={`btn ${variantClass[variant]} ${block ? "btn-block" : ""} ${className}`}
     >
       {children}
-    </Link>
+    </NoteLink>
   );
 }
 

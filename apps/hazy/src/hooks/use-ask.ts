@@ -1,25 +1,16 @@
-"use client";
-
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { hazyQueryKeys } from "@repo/api-client/query";
 import { useHazyClient } from "@repo/api-client/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { hazyQueries } from "@/lib/clients";
 
 export type AskInput = { question: string; collectionIds?: string[] };
 
 export function useAskThreadsQuery() {
-  const client = useHazyClient();
-  return useQuery({
-    queryKey: ["ask", "threads"],
-    queryFn: () => client.ask.threads(),
-  });
+  return useQuery(hazyQueries.askThreads());
 }
 
 export function useAskThreadQuery(threadId: string | null) {
-  const client = useHazyClient();
-  return useQuery({
-    queryKey: ["ask", "threads", threadId],
-    queryFn: ({ signal }) => client.ask.thread(threadId as string, signal),
-    enabled: Boolean(threadId),
-  });
+  return useQuery(hazyQueries.askThread(threadId));
 }
 
 export function useAskMutation() {
@@ -27,7 +18,7 @@ export function useAskMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: AskInput) => client.ask.ask(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ask", "threads"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: hazyQueryKeys.ask.threads() }),
   });
 }
 
@@ -36,7 +27,10 @@ export function useDeleteAskThreadMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (threadId: string) => client.ask.deleteThread(threadId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["ask", "threads"] }),
+    onSuccess: (_data, threadId) => {
+      queryClient.removeQueries({ queryKey: hazyQueryKeys.ask.thread(threadId) });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.ask.threads() });
+    },
   });
 }
 
@@ -46,8 +40,8 @@ export function useAskFollowUpMutation(threadId: string) {
   return useMutation({
     mutationFn: (input: AskInput) => client.ask.followUp(threadId, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["ask", "threads", threadId] });
-      queryClient.invalidateQueries({ queryKey: ["ask", "threads"] });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.ask.thread(threadId) });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.ask.threads() });
     },
   });
 }

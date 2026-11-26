@@ -6,7 +6,7 @@ import { collectionItems, collections, savedUrls } from "@/db/schema";
 import { summarizeCollection } from "@/lib/ai/summarize-collection";
 import { NotFoundError } from "@/lib/api/errors";
 import { ok } from "@/lib/api/response";
-import { serializeCollection, serializeSavedUrl } from "@/lib/serializers";
+import { SAVED_URL_SUMMARY_COLUMNS, serializeCollection, serializeSavedUrl } from "@/lib/serializers";
 import type { AppEnv } from "@/types/hono";
 
 export const collections_ = new Hono<AppEnv>();
@@ -104,7 +104,7 @@ collections_.get("/:id", async (c) => {
 
   const rows = await db.query.collectionItems.findMany({
     where: eq(collectionItems.collectionId, id),
-    with: { savedUrl: { with: { readLaterState: true } } },
+    with: { savedUrl: { columns: SAVED_URL_SUMMARY_COLUMNS, with: { readLaterState: true } } },
     orderBy: (t, { desc: d }) => [d(t.createdAt)],
   });
 

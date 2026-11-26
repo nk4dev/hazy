@@ -1,9 +1,9 @@
-import type { readLaterState, savedUrls } from "@/db/schema";
+import type { readLaterState } from "@/db/schema";
+import type { SavedUrlSummaryRow } from "@/lib/serializers";
 
-type SavedUrlRow = typeof savedUrls.$inferSelect;
 type ReadLaterRow = typeof readLaterState.$inferSelect;
 
-export type InboxItem = SavedUrlRow & { readLater: ReadLaterRow };
+export type InboxItem = SavedUrlSummaryRow & { readLater: ReadLaterRow };
 
 const TODAYS_THREE_COUNT = 3;
 const FIVE_MINUTE_THRESHOLD = 5;

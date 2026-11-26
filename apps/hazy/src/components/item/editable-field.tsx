@@ -1,10 +1,10 @@
 "use client";
 
 import { Loader2, Pencil } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { type KeyboardEvent, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@repo/ui/components/ui/button";
+import { Input } from "@repo/ui/components/ui/input";
 import { cn } from "@/lib/utils";
 
 /** Click-to-edit text — Enter/blur commits, Escape reverts. Empty commits `null`. */

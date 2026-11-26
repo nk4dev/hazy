@@ -2,13 +2,13 @@
 
 import type { SavedUrlDTO } from "@repo/api-client";
 import { Inbox, Search, X } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { useState } from "react";
 import { ItemCard } from "@/components/library/item-card";
 import { ItemRow } from "@/components/library/item-row";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@repo/ui/components/ui/button";
+import { Input } from "@repo/ui/components/ui/input";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import { ViewModeToggle } from "@/components/ui/view-mode-toggle";
 import { useItemsQuery } from "@/hooks/use-items";
 import { useSearchQuery } from "@/hooks/use-search";

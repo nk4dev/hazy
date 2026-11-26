@@ -1,9 +1,7 @@
-"use client";
-
 import "quill/dist/quill.bubble.css";
 import type Quill from "quill";
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { useNoteItemsQuery } from "@/lib/hooks";
 import type { DeltaOp } from "@/lib/note-delta";
 import type { Item } from "@/lib/types";
 import { Icon } from "./icon";
@@ -58,25 +56,21 @@ export const NoteEditor = forwardRef<
 >(function NoteEditor({ value, onChange, onCite, placeholder }, ref) {
   const holderRef = useRef<HTMLDivElement>(null);
   const quillRef = useRef<Quill | null>(null);
+  const initialValueRef = useRef(value);
   const onChangeRef = useRef(onChange);
   const onCiteRef = useRef(onCite);
   onChangeRef.current = onChange;
   onCiteRef.current = onCite;
 
-  const [items, setItems] = useState<Item[]>([]);
+  const { data: rawItems = [] } = useNoteItemsQuery();
+  const items = useMemo(() => rawItems.filter((it) => it.kind !== "note"), [rawItems]);
+
   const [mention, setMention] = useState<MentionState | null>(null);
   const [sel, setSel] = useState(0);
   const mentionRef = useRef<MentionState | null>(null);
   const selRef = useRef(sel);
   mentionRef.current = mention;
   selRef.current = sel;
-
-  useEffect(() => {
-    api
-      .items()
-      .then((its) => setItems(its.filter((it) => it.kind !== "note")))
-      .catch(() => {});
-  }, []);
 
   const results = useMemo(() => {
     if (!mention) return [];
@@ -87,6 +81,22 @@ export const NoteEditor = forwardRef<
   }, [items, mention]);
   const resultsRef = useRef(results);
   resultsRef.current = results;
+
+  function pick(it: Item | undefined) {
+    const q = quillRef.current;
+    const men = mentionRef.current;
+    if (!q || !it || !men) return;
+    q.deleteText(men.at, men.len, "user");
+    q.insertText(men.at, it.title, { link: it.url }, "user");
+    q.insertText(men.at + it.title.length, " ", {}, "user");
+    q.setSelection(men.at + it.title.length + 1, 0, "user");
+    onCiteRef.current({ title: it.title, site: it.site, url: it.url });
+    setMention(null);
+    onChangeRef.current(q.getContents().ops ?? []);
+  }
+
+  const pickRef = useRef(pick);
+  pickRef.current = pick;
 
   // ── mount Quill (dynamic import — Quill touches `document` at load) ──
   useEffect(() => {
@@ -119,7 +129,9 @@ export const NoteEditor = forwardRef<
         ignoreTags: ["h4", "h5", "h6", "strikethrough", "pre", "code"],
       });
 
-      if (value.length) quill.setContents({ ops: value } as never, "silent");
+      if (initialValueRef.current.length) {
+        quill.setContents({ ops: initialValueRef.current } as never, "silent");
+      }
 
       const scan = () => {
         const range = quill?.getSelection();
@@ -170,7 +182,7 @@ export const NoteEditor = forwardRef<
         setSel((s) => (s - 1 + res.length) % res.length);
       } else if (e.key === "Enter" || e.key === "Tab") {
         e.preventDefault();
-        pick(res[selRef.current] ?? res[0]);
+        pickRef.current(res[selRef.current] ?? res[0]);
       } else if (e.key === "Escape") {
         e.preventDefault();
         setMention(null);
@@ -188,21 +200,7 @@ export const NoteEditor = forwardRef<
       if (q) onChangeRef.current(q.getContents().ops ?? []);
       quillRef.current = null;
     };
-    // biome-ignore lint/correctness/useExhaustiveDependencies: mount-once; refs carry live props
-  }, []);
-
-  function pick(it: Item | undefined) {
-    const q = quillRef.current;
-    const men = mentionRef.current;
-    if (!q || !it || !men) return;
-    q.deleteText(men.at, men.len, "user");
-    q.insertText(men.at, it.title, { link: it.url }, "user");
-    q.insertText(men.at + it.title.length, " ", {}, "user");
-    q.setSelection(men.at + it.title.length + 1, 0, "user");
-    onCiteRef.current({ title: it.title, site: it.site, url: it.url });
-    setMention(null);
-    onChangeRef.current(q.getContents().ops ?? []);
-  }
+  }, [placeholder]);
 
   useImperativeHandle(ref, () => ({
     insertTextAtCursor(text: string) {

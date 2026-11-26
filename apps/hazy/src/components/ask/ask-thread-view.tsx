@@ -2,12 +2,12 @@
 
 import type { AskCitationDTO, AskMessageDTO } from "@repo/api-client";
 import { ArrowUp, ArrowUpRight, ChevronLeft, Loader2, Sparkle, Trash2 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations } from "@/i18n";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AttachedCollections, CollectionMentionField } from "@/components/ask/collection-mention";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@repo/ui/components/ui/button";
+import { Skeleton } from "@repo/ui/components/ui/skeleton";
 import {
   useAskFollowUpMutation,
   useAskThreadQuery,

@@ -2,6 +2,7 @@ import { and, eq, lte, or } from "drizzle-orm";
 import { getDb } from "@/db";
 import { readLaterState } from "@/db/schema";
 import type { InboxItem } from "@/lib/read-later/bucketing";
+import { SAVED_URL_SUMMARY_COLUMNS } from "@/lib/serializers";
 
 /**
  * The user's current "read later" queue: items still in the inbox, plus
@@ -23,7 +24,7 @@ export async function getReadLaterQueue(userId: string): Promise<InboxItem[]> {
         and(eq(readLaterState.status, "snoozed"), lte(readLaterState.snoozedUntil, now))
       )
     ),
-    with: { savedUrl: true },
+    with: { savedUrl: { columns: SAVED_URL_SUMMARY_COLUMNS } },
   });
 
   return rows
