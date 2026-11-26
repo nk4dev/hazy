@@ -118,6 +118,29 @@ export const authVerification = pgTable(
   (t) => [index("auth_verification_identifier_idx").on(t.identifier)]
 );
 
+export const authPasskey = pgTable(
+  "auth_passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => authUser.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull().unique(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: boolean("backed_up").notNull(),
+    transports: text("transports"),
+    createdAt: timestamp("created_at", { withTimezone: true }),
+    aaguid: text("aaguid"),
+  },
+  (t) => [
+    index("auth_passkey_user_id_idx").on(t.userId),
+    index("auth_passkey_credential_id_idx").on(t.credentialID),
+  ]
+);
+
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   clerkId: varchar("clerk_id", { length: 191 }).unique(),

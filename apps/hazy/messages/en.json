@@ -37,24 +37,15 @@
     "restart": "Restart the dev server after adding keys."
   },
   "auth": {
-    "signInTitle": "Welcome back",
-    "signUpTitle": "Create your account",
+    "signInTitle": "Sign in to Hazy",
     "tagline": "A memory for the URLs you save.",
-    "email": "Email",
-    "emailPlaceholder": "you@example.com",
-    "password": "Password",
-    "passwordPlaceholder": "••••••••",
-    "name": "Name",
-    "namePlaceholder": "Your name",
-    "continueWithGoogle": "Continue with Google",
-    "orContinueWithEmail": "or continue with email",
-    "noAccount": "Don't have an account?",
-    "hasAccount": "Already have an account?",
+    "continueWithPasskey": "Sign in with Passkey",
+    "continueWithGithub": "Continue with GitHub",
+    "githubNotConfigured": "GitHub OAuth is not configured on the API server.",
     "signingIn": "Signing in…",
-    "signingUp": "Creating account…",
-    "signInError": "Invalid email or password, or account not authorized.",
-    "signUpError": "Could not create account. Access is restricted to the configured owner.",
-    "restrictedHint": "Personal workspace — sign-up is limited to the configured owner email."
+    "signInError": "Sign-in failed or account not authorized.",
+    "passkeyError": "Passkey sign-in was cancelled or failed.",
+    "restrictedHint": "Personal workspace — sign-in is limited to the configured owner."
   },
   "library": {
     "title": "Library",
@@ -161,7 +152,25 @@
     },
     "nav": {
       "language": "Language",
-      "connections": "Connected apps"
+      "connections": "Connected apps",
+      "passkeys": "Passkeys"
+    },
+    "passkeys": {
+      "title": "Passkeys",
+      "note": "Register a passkey on this device after signing in with GitHub so you can sign in passwordlessly.",
+      "namePlaceholder": "Device name (optional)",
+      "add": "Add passkey",
+      "adding": "Adding…",
+      "added": "Passkey registered.",
+      "addFailed": "Could not register passkey.",
+      "loading": "Loading passkeys…",
+      "loadFailed": "Couldn't load passkeys.",
+      "retry": "Retry",
+      "empty": "No passkeys registered yet.",
+      "unnamed": "Unnamed passkey",
+      "delete": "Delete",
+      "deleted": "Passkey deleted.",
+      "deleteFailed": "Could not delete passkey."
     },
     "connections": {
       "title": "Connected apps",

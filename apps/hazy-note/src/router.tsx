@@ -98,22 +98,13 @@ const signUpRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/sign-up",
   validateSearch: validateAuthSearch,
-  beforeLoad: async ({ context, search }) => {
-    const session = await ensureSession(context);
-    if (session?.user) {
-      const safe = sanitizeRedirectUrl(search.redirect_url, "/notes");
-      const target = splitPathAndSearch(safe);
-      throw redirect({
-        to: target.to as never,
-        ...(target.search ? { search: target.search as never } : {}),
-        replace: true,
-      });
-    }
+  beforeLoad: ({ search }) => {
+    throw redirect({
+      to: "/sign-in",
+      ...(search.redirect_url ? { search: { redirect_url: search.redirect_url } } : {}),
+      replace: true,
+    });
   },
-  loader: ({ context }) => {
-    void context.queryClient.prefetchQuery(noteQueries.authConfig());
-  },
-  component: lazyRouteComponent(() => import("@/src/pages/auth-pages"), "SignUpPage"),
 });
 
 const rootIndexRoute = createRoute({

@@ -72,6 +72,7 @@ export const hazyQueryKeys = {
     all: ["auth"] as const,
     session: () => ["auth", "session"] as const,
     config: () => ["auth", "config"] as const,
+    passkeys: () => ["auth", "passkeys"] as const,
   },
   me: () => ["me"] as const,
   items: {

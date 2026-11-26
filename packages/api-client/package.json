@@ -33,6 +33,7 @@
     "typescript": "^5"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.7.28",
     "better-auth": "^1.7.28"
   }
 }

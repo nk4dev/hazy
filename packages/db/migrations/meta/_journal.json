@@ -71,6 +71,13 @@
       "when": 1795688265578,
       "tag": "0009_lovely_klaw",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1795695403063,
+      "tag": "0010_mean_living_tribunal",
+      "breakpoints": true
     }
   ]
 }

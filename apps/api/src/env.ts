@@ -22,8 +22,10 @@ const envSchema = z.object({
   BETTER_AUTH_URL: z.string().url().default("http://localhost:8787"),
   BETTER_AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
   ADMIN_EMAIL: z.string().email().optional(),
-  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
-  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+  GITHUB_CLIENT_ID: z.string().min(1).optional(),
+  GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
+  PASSKEY_RP_ID: z.string().min(1).optional(),
+  PASSKEY_RP_NAME: z.string().min(1).default("Hazy"),
 
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
@@ -87,8 +89,17 @@ export const env = loadEnv();
 
 export const isDatabaseConfigured = () => Boolean(env.DATABASE_URL);
 export const isBetterAuthConfigured = () => Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL);
-export const isGoogleOAuthConfigured = () =>
-  Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+export const isGithubOAuthConfigured = () =>
+  Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
+export function getPasskeyRpId(
+  rpId: string | undefined = env.PASSKEY_RP_ID,
+  cookieDomain: string | undefined = env.BETTER_AUTH_COOKIE_DOMAIN,
+  authUrl: string = env.BETTER_AUTH_URL
+): string {
+  if (rpId?.trim()) return rpId.trim();
+  if (cookieDomain?.trim()) return cookieDomain.trim().replace(/^\./, "");
+  return new URL(authUrl).hostname;
+}
 export const isClerkConfigured = () =>
   Boolean(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && env.CLERK_SECRET_KEY);
 export const isClerkWebhookConfigured = () => Boolean(env.CLERK_WEBHOOK_SIGNING_SECRET);

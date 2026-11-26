@@ -37,24 +37,15 @@
     "restart": "キーを追加したら開発サーバーを再起動してください。"
   },
   "auth": {
-    "signInTitle": "おかえりなさい",
-    "signUpTitle": "アカウントを作成",
+    "signInTitle": "Hazy にサインイン",
     "tagline": "保存したURLの記憶。",
-    "email": "メールアドレス",
-    "emailPlaceholder": "you@example.com",
-    "password": "パスワード",
-    "passwordPlaceholder": "••••••••",
-    "name": "名前",
-    "namePlaceholder": "表示名",
-    "continueWithGoogle": "Google で続行",
-    "orContinueWithEmail": "またはメールアドレスで続行",
-    "noAccount": "アカウントをお持ちでない場合",
-    "hasAccount": "すでにアカウントをお持ちの場合",
+    "continueWithPasskey": "パスキーでサインイン",
+    "continueWithGithub": "GitHub で続行",
+    "githubNotConfigured": "API サーバー側で GitHub OAuth が未設定です。",
     "signingIn": "サインイン中…",
-    "signingUp": "アカウント作成中…",
-    "signInError": "メールアドレスまたはパスワードが正しくないか、許可されていないアカウントです。",
-    "signUpError": "アカウントを作成できませんでした。許可されたオーナーアカウントのみ登録できます。",
-    "restrictedHint": "個人用ワークスペースのため、許可されたメールアドレスのみ登録できます。"
+    "signInError": "サインインに失敗したか、許可されていないアカウントです。",
+    "passkeyError": "パスキーでのサインインがキャンセルされたか失敗しました。",
+    "restrictedHint": "個人用ワークスペースのため、許可されたオーナーアカウントのみサインインできます。"
   },
   "library": {
     "title": "ライブラリ",
@@ -157,7 +148,25 @@
     },
     "nav": {
       "language": "言語",
-      "connections": "連携アプリ"
+      "connections": "連携アプリ",
+      "passkeys": "パスキー"
+    },
+    "passkeys": {
+      "title": "パスキー",
+      "note": "GitHub でサインインした後、この端末にパスキーを登録すると次回からパスキーだけでサインインできます。",
+      "namePlaceholder": "端末名（任意）",
+      "add": "パスキーを追加",
+      "adding": "登録中…",
+      "added": "パスキーを登録しました。",
+      "addFailed": "パスキーを登録できませんでした。",
+      "loading": "読み込み中…",
+      "loadFailed": "パスキーを読み込めませんでした。",
+      "retry": "再試行",
+      "empty": "登録済みのパスキーはありません。",
+      "unnamed": "名称未設定のパスキー",
+      "delete": "削除",
+      "deleted": "パスキーを削除しました。",
+      "deleteFailed": "パスキーを削除できませんでした。"
     },
     "connections": {
       "title": "連携アプリ",

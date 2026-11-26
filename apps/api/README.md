@@ -9,8 +9,8 @@ Everything under `/v1` returns `{ data }` on success / `{ error: { code, message
 
 | Group | Routes |
 |---|---|
-| `auth` (Better Auth) | `/api/auth/*` — sign-up/in/out, session, Google OAuth, cross-subdomain `HttpOnly` cookie; gated fail-closed by `ADMIN_EMAIL` |
-| `auth-config` | `GET /v1/auth-config` (public — exposes `googleEnabled` / `emailPasswordEnabled`) |
+| `auth` (Better Auth) | `/api/auth/*` — GitHub OAuth, Passkeys (`@better-auth/passkey`), sign-out, session, cross-subdomain `HttpOnly` cookie; email/password disabled; gated fail-closed by `ADMIN_EMAIL` |
+| `auth-config` | `GET /v1/auth-config` (public — exposes `betterAuth`, `github`, `passkey`) |
 | `items` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/refetch`, `POST /:id/summarize`, `PUT /:id/collections`, `GET /:id/image` |
 | `collections` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/items`, `DELETE /:id/items/:savedUrlId`, `POST /:id/summarize` |
 | `ask` | `POST /`, `GET /threads`, `GET/DELETE /threads/:id`, `POST /threads/:id/messages` |
@@ -56,8 +56,8 @@ Production secrets are stored in 1Password (`Hazy` vault) and registered with `o
 - `DATABASE_URL`
 - `BETTER_AUTH_SECRET`
 - `ADMIN_EMAIL`
-- `GOOGLE_CLIENT_ID` (optional for Google OAuth)
-- `GOOGLE_CLIENT_SECRET` (optional for Google OAuth)
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
 - `OPENROUTER_API_KEY`
 - Temporary Clerk fallback secrets if still enabled: `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_WEBHOOK_SIGNING_SECRET`
 

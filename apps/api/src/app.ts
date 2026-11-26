@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { isBetterAuthConfigured, isGoogleOAuthConfigured } from "@/env";
+import { isBetterAuthConfigured, isGithubOAuthConfigured } from "@/env";
 import { ServiceNotConfiguredError } from "@/lib/api/errors";
 import { fail, ok } from "@/lib/api/response";
 import { isConnectedOrigin } from "@/lib/auth/api-token";
@@ -121,7 +121,8 @@ export function createApp() {
   app.get("/v1/auth-config", (_c) =>
     ok({
       betterAuth: isBetterAuthConfigured(),
-      google: isGoogleOAuthConfigured(),
+      github: isGithubOAuthConfigured(),
+      passkey: isBetterAuthConfigured(),
     })
   );
 

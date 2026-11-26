@@ -26,7 +26,7 @@ Vite ビルド成果物 (`dist/`) → Cloudflare Workers Static Assets（`wrangl
 
 | ルート | 内容 |
 | --- | --- |
-| `/sign-in`, `/sign-up` | Better Auth サインイン／オーナー登録（`ADMIN_EMAIL` 制限） |
+| `/sign-in` | Better Auth サインイン（パスキー / GitHub OAuth のみ、`ADMIN_EMAIL` 制限） |
 | `/notes`, `/notes/new`, `/notes/$id` | **主要機能。** Quill 2 リッチテキストエディタ、Delta 保存、`@` 引用、右サイドバー AI 提案 |
 | `/library`, `/library/$id` | 受信箱。URL 取り込み、カード／リスト表示、明示要約ボタン |
 | `/capture` | 取り込みの3コマ（`?id=` 読み取り → 要約とタグ提案 → プロジェクト保存、`Hazyから追加` 対応） |

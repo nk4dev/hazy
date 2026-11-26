@@ -108,7 +108,8 @@ export type UserPreferencesDTO = {
 /** GET /v1/auth-config (public) — exposes non-secret auth capabilities to the SPA. */
 export type AuthConfigDTO = {
   betterAuth: boolean;
-  google: boolean;
+  github: boolean;
+  passkey: boolean;
 };
 
 /** GET /v1/me */

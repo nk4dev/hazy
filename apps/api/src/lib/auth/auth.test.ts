@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createApp } from "@/app";
+import { getPasskeyRpId } from "@/env";
 import { isAllowedAdminEmail } from "@/lib/auth/better-auth";
 
 describe("Better Auth single-user gate & CORS boundaries", () => {
@@ -23,10 +24,21 @@ describe("Better Auth single-user gate & CORS boundaries", () => {
     const authConfigRes = await app.request("/v1/auth-config");
     expect(authConfigRes.status).toBe(200);
     const body = (await authConfigRes.json()) as {
-      data: { betterAuth: boolean; google: boolean };
+      data: { betterAuth: boolean; github: boolean; passkey: boolean };
     };
     expect(typeof body.data.betterAuth).toBe("boolean");
-    expect(typeof body.data.google).toBe("boolean");
+    expect(typeof body.data.github).toBe("boolean");
+    expect(typeof body.data.passkey).toBe("boolean");
+  });
+
+  test("getPasskeyRpId strips leading dot from cookie domain and falls back to auth URL host", () => {
+    expect(getPasskeyRpId("hz.nknighta.me", ".hz.nknighta.me", "https://api.hz.nknighta.me")).toBe(
+      "hz.nknighta.me"
+    );
+    expect(getPasskeyRpId(undefined, ".hz.nknighta.me", "https://api.hz.nknighta.me")).toBe(
+      "hz.nknighta.me"
+    );
+    expect(getPasskeyRpId(undefined, undefined, "http://localhost:8787")).toBe("localhost");
   });
 
   test("unauthenticated protected /v1/* endpoints return 401 unauthorized envelope with CORS", async () => {

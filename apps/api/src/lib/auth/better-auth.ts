@@ -1,9 +1,15 @@
+import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { getDb } from "@/db";
-import { authAccount, authSession, authUser, authVerification } from "@/db/schema";
-import { env, isBetterAuthConfigured, isGoogleOAuthConfigured } from "@/env";
+import { authAccount, authPasskey, authSession, authUser, authVerification } from "@/db/schema";
+import {
+  env,
+  getPasskeyRpId,
+  isBetterAuthConfigured,
+  isGithubOAuthConfigured,
+} from "@/env";
 import { getAllowedOrigins } from "@/lib/auth/origins";
 
 export type BetterAuthSessionResult = {
@@ -36,6 +42,7 @@ function createAuthInstance() {
         session: authSession,
         account: authAccount,
         verification: authVerification,
+        passkey: authPasskey,
       },
     }),
     baseURL: env.BETTER_AUTH_URL,
@@ -43,18 +50,25 @@ function createAuthInstance() {
     secret: env.BETTER_AUTH_SECRET,
     trustedOrigins: () => getAllowedOrigins(),
     emailAndPassword: {
-      enabled: true,
+      enabled: false,
     },
-    ...(isGoogleOAuthConfigured() && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET
+    ...(isGithubOAuthConfigured() && env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET
       ? {
           socialProviders: {
-            google: {
-              clientId: env.GOOGLE_CLIENT_ID,
-              clientSecret: env.GOOGLE_CLIENT_SECRET,
+            github: {
+              clientId: env.GITHUB_CLIENT_ID,
+              clientSecret: env.GITHUB_CLIENT_SECRET,
             },
           },
         }
       : {}),
+    plugins: [
+      passkey({
+        rpID: getPasskeyRpId(),
+        rpName: env.PASSKEY_RP_NAME,
+        origin: getAllowedOrigins(),
+      }),
+    ],
     advanced: {
       crossSubDomainCookies: env.BETTER_AUTH_COOKIE_DOMAIN
         ? { enabled: true, domain: env.BETTER_AUTH_COOKIE_DOMAIN }

@@ -155,23 +155,15 @@ const signUpRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: "/sign-up",
   validateSearch: validateAuthSearch,
-  beforeLoad: async ({ context, params, search }) => {
+  beforeLoad: ({ params, search }) => {
     if (!isAppLocale(params.locale)) return;
-    const session = await ensureSession(context);
-    if (session?.user) {
-      const safe = sanitizeRedirectUrl(search.redirect_url, `/${params.locale}/library`);
-      const target = splitPathAndSearch(safe);
-      throw redirect({
-        to: target.to as never,
-        ...(target.search ? { search: target.search as never } : {}),
-        replace: true,
-      });
-    }
+    throw redirect({
+      to: "/$locale/sign-in",
+      params: { locale: params.locale },
+      ...(search.redirect_url ? { search: { redirect_url: search.redirect_url } } : {}),
+      replace: true,
+    });
   },
-  loader: ({ context }) => {
-    void context.queryClient.prefetchQuery(hazyQueries.authConfig());
-  },
-  component: lazyRouteComponent(() => import("@/pages/auth-pages"), "SignUpPage"),
 });
 
 const connectorRedirectRoute = createRoute({
@@ -349,6 +341,12 @@ const connectionsSettingsRoute = createRoute({
   component: lazyRouteComponent(() => import("@/pages/connected-apps-page"), "ConnectedAppsPage"),
 });
 
+const passkeysSettingsRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/passkeys",
+  component: lazyRouteComponent(() => import("@/pages/passkeys-page"), "PasskeysPage"),
+});
+
 const localeCatchAllRoute = createRoute({
   getParentRoute: () => localeRoute,
   path: "/$",
@@ -382,6 +380,7 @@ const routeTree = rootRoute.addChildren([
         settingsIndexRoute,
         languageSettingsRoute,
         connectionsSettingsRoute,
+        passkeysSettingsRoute,
       ]),
     ]),
     localeCatchAllRoute,
