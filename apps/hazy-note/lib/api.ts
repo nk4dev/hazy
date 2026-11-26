@@ -1,3 +1,4 @@
+import { noteApiClient } from "./clients";
 import type {
   ExportDraft,
   ExportFormat,
@@ -10,44 +11,38 @@ import type {
   Tag,
 } from "./types";
 
-async function j<T>(res: Response): Promise<T> {
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-  return res.json() as Promise<T>;
-}
-
-const opts = (method: string, body?: unknown): RequestInit => ({
-  method,
-  headers: body !== undefined ? { "content-type": "application/json" } : undefined,
-  body: body !== undefined ? JSON.stringify(body) : undefined,
-  cache: "no-store",
-});
-
 export const api = {
-  items: () => fetch("/api/items", { cache: "no-store" }).then(j<Item[]>),
-  importable: () => fetch("/api/items/importable", { cache: "no-store" }).then(j<Item[]>),
-  item: (id: string) => fetch(`/api/items/${id}`, { cache: "no-store" }).then(j<Item>),
-  addItem: (url: string) => fetch("/api/items", opts("POST", { url })).then(j<Item>),
-  addMemo: (text: string) => fetch("/api/items", opts("POST", { text })).then(j<Item>),
-  finishReading: (id: string) => fetch(`/api/items/${id}/read`, opts("POST")).then(j<Item>),
-  updateItem: (id: string, patch: Partial<Item>) =>
-    fetch(`/api/items/${id}`, opts("PATCH", patch)).then(j<Item>),
-  deleteItem: (id: string) => fetch(`/api/items/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
+  items: (): Promise<Item[]> => noteApiClient.note.items.list(),
+  importable: (): Promise<Item[]> => noteApiClient.note.items.importable(),
+  item: (id: string): Promise<Item> => noteApiClient.note.items.get(id),
+  addItem: (url: string): Promise<Item> => noteApiClient.note.items.addUrl(url),
+  addMemo: (text: string): Promise<Item> => noteApiClient.note.items.addMemo(text),
+  finishReading: (id: string): Promise<Item> => noteApiClient.note.items.finishReading(id),
+  updateItem: (id: string, patch: Partial<Item>): Promise<Item> =>
+    noteApiClient.note.items.update(id, {
+      tags: patch.tags,
+      projectId: patch.projectId,
+      title: patch.title,
+      summary: patch.summary,
+    }),
+  deleteItem: (id: string) => noteApiClient.note.items.remove(id).then(() => ({ ok: true })),
 
-  projects: () => fetch("/api/projects", { cache: "no-store" }).then(j<Project[]>),
-  project: (id: string) =>
-    fetch(`/api/projects/${id}`, { cache: "no-store" }).then(j<ProjectDetail>),
-  addProject: (name: string, patch: { description?: string; tone?: "accent" | "neutral" } = {}) =>
-    fetch("/api/projects", opts("POST", { name, ...patch })).then(j<Project>),
+  projects: (): Promise<Project[]> => noteApiClient.note.projects.list(),
+  project: (id: string): Promise<ProjectDetail> => noteApiClient.note.projects.get(id),
+  addProject: (
+    name: string,
+    patch: { description?: string; tone?: "accent" | "neutral" } = {}
+  ): Promise<Project> => noteApiClient.note.projects.create({ name, ...patch }),
   updateProject: (
     id: string,
     patch: { name?: string; description?: string | null; tone?: "accent" | "neutral" }
-  ) => fetch(`/api/projects/${id}`, opts("PATCH", patch)).then(j<Project>),
+  ): Promise<Project> => noteApiClient.note.projects.update(id, patch),
   deleteProject: (id: string) =>
-    fetch(`/api/projects/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
-  tags: () => fetch("/api/tags", { cache: "no-store" }).then(j<Tag[]>),
+    noteApiClient.note.projects.remove(id).then(() => ({ ok: true })),
+  tags: (): Promise<Tag[]> => noteApiClient.note.tags.list(),
 
-  notes: () => fetch("/api/notes", { cache: "no-store" }).then(j<Note[]>),
-  note: (id: string) => fetch(`/api/notes/${id}`, { cache: "no-store" }).then(j<Note>),
+  notes: (): Promise<Note[]> => noteApiClient.note.notes.list(),
+  note: (id: string): Promise<Note> => noteApiClient.note.notes.get(id),
   addNote: (
     input: {
       title?: string;
@@ -59,31 +54,35 @@ export const api = {
       status?: Note["status"];
       sources?: Note["sources"];
     } = {}
-  ) => fetch("/api/notes", opts("POST", input)).then(j<Note>),
-  updateNote: (id: string, patch: Partial<Note>) =>
-    fetch(`/api/notes/${id}`, opts("PATCH", patch)).then(j<Note>),
-  deleteNote: (id: string) => fetch(`/api/notes/${id}`, opts("DELETE")).then(j<{ ok: boolean }>),
-  appendParagraph: (id: string, text: string) =>
-    fetch(`/api/notes/${id}`, opts("PATCH", { text })).then(j<Note>),
-  suggestion: (id: string, suggestionId: string, action: "accept" | "dismiss") =>
-    fetch(`/api/notes/${id}/suggestion`, opts("POST", { id: suggestionId, action })).then(j<Note>),
+  ): Promise<Note> => noteApiClient.note.notes.create(input),
+  updateNote: (id: string, patch: Partial<Note>): Promise<Note> =>
+    noteApiClient.note.notes.update(id, {
+      title: patch.title,
+      status: patch.status,
+      projectId: patch.projectId,
+      body: patch.body,
+      suggestions: patch.suggestions,
+      tags: patch.tags,
+      sources: patch.sources,
+    }),
+  deleteNote: (id: string) => noteApiClient.note.notes.remove(id).then(() => ({ ok: true })),
+  appendParagraph: (id: string, text: string): Promise<Note> =>
+    noteApiClient.note.notes.appendParagraph(id, text),
+  suggestion: (id: string, suggestionId: string, action: "accept" | "dismiss"): Promise<Note> =>
+    noteApiClient.note.notes.suggestion(id, suggestionId, action),
 
-  analyze: (projectId?: string) =>
-    fetch(`/api/analyze${projectId ? `?project=${projectId}` : ""}`, { cache: "no-store" }).then(
-      j<InsightProfile>
-    ),
-  rebuildAnalyze: (projectId?: string) =>
-    fetch("/api/analyze", opts("POST", projectId ? { projectId } : {})).then(j<InsightProfile>),
+  analyze: (projectId?: string): Promise<InsightProfile> =>
+    noteApiClient.note.analyze.get(projectId),
+  rebuildAnalyze: (projectId?: string): Promise<InsightProfile> =>
+    noteApiClient.note.analyze.rebuild(projectId),
 
-  searchChat: (query: string, history?: { role: "user" | "assistant"; content: string }[]) =>
-    fetch("/api/search/chat", opts("POST", { query, history })).then(j<SearchChatAnswer>),
+  searchChat: (
+    query: string,
+    history?: { role: "user" | "assistant"; content: string }[]
+  ): Promise<SearchChatAnswer> => noteApiClient.note.searchChat(query, history),
 
-  export: (noteId: string, format: ExportFormat) =>
-    fetch(`/api/export?noteId=${noteId}&format=${format}`, {
-      cache: "no-store",
-    }).then(j<ExportDraft>),
+  export: (noteId: string, format: ExportFormat): Promise<ExportDraft> =>
+    noteApiClient.note.export.preview(noteId, format),
   runExport: (noteId: string, format: ExportFormat) =>
-    fetch("/api/export", opts("POST", { noteId, format })).then(
-      j<ExportDraft & { exportedTo: string }>
-    ),
+    noteApiClient.note.export.run(noteId, format),
 };

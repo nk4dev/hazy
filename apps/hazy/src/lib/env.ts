@@ -14,16 +14,4 @@ export const env = {
     "http://localhost:3000"
   ) as string,
   API_URL: readEnv("VITE_API_URL", "NEXT_PUBLIC_API_URL", "http://localhost:8787") as string,
-  CLERK_PUBLISHABLE_KEY: readEnv(
-    "VITE_CLERK_PUBLISHABLE_KEY",
-    "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY"
-  ),
 };
-
-export const isClerkConfigured = () => Boolean(env.CLERK_PUBLISHABLE_KEY);
-
-export type CoreService = "clerk";
-
-export function getMissingCoreServices(): CoreService[] {
-  return isClerkConfigured() ? [] : ["clerk"];
-}

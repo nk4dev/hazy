@@ -9,7 +9,7 @@ import { ok } from "@/lib/api/response";
 import { fetchUrlMetadata } from "@/lib/metadata/fetch-metadata";
 import { parseAndNormalizeUrl } from "@/lib/metadata/normalize-url";
 import { toFxTwitterUrl } from "@/lib/metadata/x-fallback";
-import { serializeSavedUrl } from "@/lib/serializers";
+import { SAVED_URL_SUMMARY_COLUMNS, serializeSavedUrl } from "@/lib/serializers";
 import type { AppEnv } from "@/types/hono";
 
 export const items = new Hono<AppEnv>();
@@ -18,6 +18,7 @@ async function loadOwnedItem(userId: string, id: string) {
   const db = getDb();
   const row = await db.query.savedUrls.findFirst({
     where: and(eq(savedUrls.id, id), eq(savedUrls.userId, userId)),
+    columns: SAVED_URL_SUMMARY_COLUMNS,
     with: { readLaterState: true, collectionItems: true },
   });
   if (!row) throw new NotFoundError("Saved URL");
@@ -68,7 +69,10 @@ items.get("/", async (c) => {
 
   let cursorCreatedAt: Date | undefined;
   if (cursor) {
-    const cursorRow = await db.query.savedUrls.findFirst({ where: eq(savedUrls.id, cursor) });
+    const cursorRow = await db.query.savedUrls.findFirst({
+      where: and(eq(savedUrls.id, cursor), eq(savedUrls.userId, user.id)),
+      columns: { createdAt: true },
+    });
     cursorCreatedAt = cursorRow?.createdAt;
   }
 
@@ -83,6 +87,7 @@ items.get("/", async (c) => {
 
   const rows = await db.query.savedUrls.findMany({
     where: and(...conditions),
+    columns: SAVED_URL_SUMMARY_COLUMNS,
     orderBy: sort === "newest" ? [desc(savedUrls.createdAt)] : [asc(savedUrls.createdAt)],
     limit: limit + 1,
     with: { readLaterState: true, collectionItems: true },
@@ -120,6 +125,7 @@ items.post("/", async (c) => {
 
   const existing = await db.query.savedUrls.findFirst({
     where: and(eq(savedUrls.userId, user.id), eq(savedUrls.normalizedUrl, normalizedUrl)),
+    columns: SAVED_URL_SUMMARY_COLUMNS,
     with: { readLaterState: true, collectionItems: true },
   });
   if (existing) {

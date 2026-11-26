@@ -1,9 +1,7 @@
-"use client";
-
-import { ShieldCheck } from "lucide-react";
-import { useState } from "react";
-import { useSearchParams } from "react-router";
 import { Button } from "@repo/ui/components/ui/button";
+import { useLocation } from "@tanstack/react-router";
+import { ShieldCheck } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useAuthorizeConnectMutation } from "@/hooks/use-connected-apps";
 import { useTranslations } from "@/i18n";
 
@@ -32,7 +30,8 @@ function redirectBack(base: URL, params: Record<string, string>) {
 
 export function ConnectApprovalView() {
   const t = useTranslations("connect");
-  const [search] = useSearchParams();
+  const location = useLocation();
+  const search = useMemo(() => new URLSearchParams(location.searchStr), [location.searchStr]);
   const authorize = useAuthorizeConnectMutation();
   const [failed, setFailed] = useState(false);
 

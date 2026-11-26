@@ -1,25 +1,16 @@
-"use client";
-
+import type { CollectionDetailDTO, CollectionSummaryDTO, SavedUrlDTO } from "@repo/api-client";
+import { hazyQueryKeys } from "@repo/api-client/query";
+import { useHazyClient } from "@repo/api-client/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocale } from "@/i18n";
-import { useHazyClient } from "@repo/api-client/react";
-import type { CollectionDetailDTO, CollectionSummaryDTO, SavedUrlDTO } from "@repo/api-client";
+import { hazyQueries } from "@/lib/clients";
 
 export function useCollectionsQuery() {
-  const client = useHazyClient();
-  return useQuery({
-    queryKey: ["collections"],
-    queryFn: () => client.collections.list(),
-  });
+  return useQuery(hazyQueries.collections());
 }
 
 export function useCollectionQuery(id: string) {
-  const client = useHazyClient();
-  return useQuery({
-    queryKey: ["collections", id],
-    queryFn: ({ signal }) => client.collections.get(id, signal),
-    enabled: Boolean(id),
-  });
+  return useQuery(hazyQueries.collection(id));
 }
 
 export function useCreateCollectionMutation() {
@@ -28,7 +19,7 @@ export function useCreateCollectionMutation() {
   return useMutation({
     mutationFn: (input: { name: string; description?: string }) =>
       client.collections.create(input),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["collections"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: hazyQueryKeys.collections.all }),
   });
 }
 
@@ -39,9 +30,13 @@ export function useAddToCollectionMutation() {
     mutationFn: ({ collectionId, savedUrlId }: { collectionId: string; savedUrlId: string }) =>
       client.collections.addItem(collectionId, savedUrlId),
     onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["collections"] });
-      queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
-      queryClient.invalidateQueries({ queryKey: ["item", variables.savedUrlId] });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.collections.all });
+      void queryClient.invalidateQueries({
+        queryKey: hazyQueryKeys.collections.detail(variables.collectionId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: hazyQueryKeys.items.detail(variables.savedUrlId),
+      });
     },
   });
 }
@@ -52,12 +47,28 @@ export function useSetItemCollectionsMutation(savedUrlId: string) {
   return useMutation({
     mutationFn: (collectionIds: string[]) =>
       client.items.setCollections(savedUrlId, collectionIds),
+    onMutate: async (collectionIds) => {
+      const key = hazyQueryKeys.items.detail(savedUrlId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<SavedUrlDTO>(key);
+      if (previous) {
+        queryClient.setQueryData<SavedUrlDTO>(key, { ...previous, collectionIds });
+      }
+      return { previous };
+    },
+    onError: (_err, _ids, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(hazyQueryKeys.items.detail(savedUrlId), ctx.previous);
+      }
+    },
     onSuccess: (data) => {
-      queryClient.setQueryData<SavedUrlDTO>(["item", savedUrlId], (prev) =>
+      queryClient.setQueryData<SavedUrlDTO>(hazyQueryKeys.items.detail(savedUrlId), (prev) =>
         prev ? { ...prev, collectionIds: data.collectionIds } : prev
       );
-      queryClient.invalidateQueries({ queryKey: ["items"] });
-      queryClient.invalidateQueries({ queryKey: ["collections"] });
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.items.all });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.collections.all });
     },
   });
 }
@@ -70,10 +81,10 @@ export function useSummarizeCollectionMutation(id: string) {
     mutationFn: () => client.collections.summarize(id, locale as "en" | "ja"),
     onSuccess: (data: CollectionSummaryDTO) => {
       queryClient.setQueryData(
-        ["collections", id],
+        hazyQueryKeys.collections.detail(id),
         (prev: CollectionDetailDTO | undefined) => (prev ? { ...prev, ...data } : prev)
       );
-      queryClient.invalidateQueries({ queryKey: ["collections"] });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.collections.all });
     },
   });
 }
@@ -84,10 +95,36 @@ export function useRemoveFromCollectionMutation() {
   return useMutation({
     mutationFn: ({ collectionId, savedUrlId }: { collectionId: string; savedUrlId: string }) =>
       client.collections.removeItem(collectionId, savedUrlId),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ["collections"] });
-      queryClient.invalidateQueries({ queryKey: ["collections", variables.collectionId] });
-      queryClient.invalidateQueries({ queryKey: ["item", variables.savedUrlId] });
+    onMutate: async ({ collectionId, savedUrlId }) => {
+      const key = hazyQueryKeys.collections.detail(collectionId);
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<CollectionDetailDTO>(key);
+      if (previous) {
+        const nextItems = previous.items.filter((item) => item.id !== savedUrlId);
+        queryClient.setQueryData<CollectionDetailDTO>(key, {
+          ...previous,
+          items: nextItems,
+          itemCount: nextItems.length,
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, variables, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(
+          hazyQueryKeys.collections.detail(variables.collectionId),
+          ctx.previous
+        );
+      }
+    },
+    onSettled: (_data, _err, variables) => {
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.collections.all });
+      void queryClient.invalidateQueries({
+        queryKey: hazyQueryKeys.collections.detail(variables.collectionId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: hazyQueryKeys.items.detail(variables.savedUrlId),
+      });
     },
   });
 }

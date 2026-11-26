@@ -1,14 +1,14 @@
 # hazy-repo
 
-Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
+Turborepo, bun workspaces. One product, **Better Auth + `hz_` API tokens** (with temporary Clerk JWT fallback), one database, one API.
 
 | Package | What |
 |---|---|
-| `apps/api` | `hazy-api` — a **Hono Worker** at `api.hz.nknighta.me`. hazy's backend: `/v1/**` JSON API (including `/v1/note/**` for `hazy-note`) + the Clerk webhook. |
-| `apps/hazy` | `hz.nknighta.me` — a **pure frontend** (React 19 + Vite SPA, `react-router`, `react-i18next`). No backend, no DB. Calls `apps/api` via `@repo/api-client`. |
-| `apps/hazy-note` | `note.hz.nknighta.me` — Next 16. Capture → notes (Quill editor) → search / analyze → export. **Still has its own `/api/*` route handlers** over `@repo/db` until Step 1-3 switches its frontend to `@repo/api-client` (`/v1/note/**`). Search: client-side keyword/tag + on-device `@ternlight/base` semantic + an OpenRouter chat route. |
-| `apps/hazy-dash` | `dash.hz.nknighta.me` — home-screen dashboard (React + Vite SPA, client-only) — weather (Open-Meteo), today's three, week stats, recent saves, quick save, inline Ask. A **connected app**: gets an `hz_…` token via "Connect with Hazy" (`/connector/add`) and calls `apps/api` with it; no Clerk, no DB. |
-| `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types. The single source of truth for the API shape. `docs/ai/flutter/` re-documents this surface by genre for the Flutter hazy app — keep it in sync when the contract changes. |
+| `apps/api` | `hazy-api` — a **Hono Worker** at `api.hz.nknighta.me`. hazy's backend: `/api/auth/**` (Better Auth) + `/v1/**` JSON API (including `/v1/note/**` for `hazy-note`) + the legacy Clerk webhook. |
+| `apps/hazy` | `hz.nknighta.me` — a **pure frontend** (React 19 + Vite SPA, `@tanstack/react-router`, `@tanstack/react-query`, `react-i18next`). No backend, no DB. Calls `apps/api` via `@repo/api-client` using Better Auth `HttpOnly` cookies (`credentials: "include"`). |
+| `apps/hazy-note` | `note.hz.nknighta.me` — **pure frontend** (React 19 + Vite SPA, `@tanstack/react-router`, `@tanstack/react-query`). Capture → notes (Quill 2 editor) → search / analyze → export. Calls `apps/api` (`/v1/note/**`) via `@repo/api-client` using Better Auth `HttpOnly` cookies. Search: client-side keyword/tag + on-device `@ternlight/base/web` semantic + `/v1/note/search/chat`. |
+| `apps/hazy-dash` | `dash.hz.nknighta.me` — home-screen dashboard (React 19 + Vite SPA, client-only, `@tanstack/react-router`, `@tanstack/react-query`) — weather (Open-Meteo), today's three, week stats, recent saves, quick save, inline Ask. A **connected app**: gets an `hz_…` token via "Connect with Hazy" (`/connector/add`) and calls `apps/api` with it; no user session login, no DB. |
+| `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient` / `useHazyClient`), Better Auth client (`@repo/api-client/auth`), shared TanStack Query key/options/client helpers (`@repo/api-client/query`), and the wire-contract DTO types. `docs/ai/flutter/` re-documents this surface by genre for the Flutter hazy app — keep it in sync when the contract changes. |
 | `packages/db` | `@repo/db` — the one Drizzle schema + `getDb()` + migrations + search-vector trigger. |
 | `packages/ui` | `@repo/ui` — shared Nocturne Tailwind v4 theme (`@repo/ui/styles.css`) + shadcn/ui & common components (`HazyMark`, `Favicon`, etc.). |
 
@@ -18,19 +18,12 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
   `bun run <task>` (→ `turbo run`, `--filter=<name>` to scope). One `bun.lock` at the root.
 - **Schema changes go in `packages/db/src/schema.ts` only.** Then `bun db:generate`
   (from `packages/db/`) + apply. There is no per-app schema.
-- `apps/hazy` must never regain a `src/db` or `src/app/api` — data flows
-  frontend → `@repo/api-client` → `apps/api`. Add API methods to
-  `packages/api-client/src/client.ts` and the DTO to `src/types.ts`.
+- `apps/hazy`, `apps/hazy-note`, and `apps/hazy-dash` must never contain `src/db` or API route handlers — data flows frontend → `@repo/api-client` → `apps/api`. Add API methods to `packages/api-client/src/client.ts`, query helpers to `packages/api-client/src/query.ts`, and DTOs to `packages/api-client/src/types.ts`.
 - Four Workers, four custom domains, deployed independently. See each app's
-  README for the deploy + `wrangler secret put` steps. `apps/api` also needs the
-  Clerk dashboard webhook pointed at `api.hz.nknighta.me/v1/webhooks/clerk`.
+  README for the deploy + `wrangler secret put` steps. If keeping legacy Clerk webhook fallback active, point Clerk dashboard webhook at `api.hz.nknighta.me/v1/webhooks/clerk`.
 - `bun run dev` starts all four: api :8787 (Node, `@hono/node-server`),
-  hazy-note :3000, hazy :3100, hazy-dash :3200. hazy needs `NEXT_PUBLIC_API_URL=http://localhost:8787`;
-  hazy-dash defaults to the production hazy + API (its approval page and tokens live there).
-- **Environment variables:** Copy `.env.example` at the repo root to `.env.local` (or `.env`).
-  `scripts/load-env.ts` loads root `.env.local` / `.env` automatically for `api`, `hazy`,
-  `hazy-note`, `hazy-dash`, `packages/db`, and Playwright, while optional per-app `.env.local` /
-  `.dev.vars` files still override root values.
+  hazy-note :3000, hazy :3100, hazy-dash :3200. Frontend SPAs read `VITE_API_URL` (default `http://localhost:8787` locally); hazy-dash defaults to the production hazy + API unless overridden.
+- **Environment variables:** Root `.env.op` defines 1Password secret references (`op://Hazy/...`). Inject secrets via `op run --env-file=".env.op" -- ...` (see rules below); never write plaintext secrets into `.env*` or `wrangler.jsonc`.
 - **Keep agent-facing docs in sync in the same change.** Any spec/behaviour
   change — a route added or removed, a nav item, an API endpoint, a schema
   table, a workflow step — must update the affected `CLAUDE.md` (root +
@@ -38,18 +31,27 @@ Turborepo, bun workspaces. One product, one Clerk tenant, one database, one API.
   Removed-but-retained tables/columns get a one-line "dead, nothing reads it"
   note rather than silent deletion.
 
+## Auth & TanStack Architecture
+
+- **Better Auth + `users.id` preservation:** `packages/db/src/schema.ts` stores Better Auth in `auth_user`, `auth_session`, `auth_account`, `auth_verification`, while `users.auth_user_id` links back to the existing `users.id` (UUID) row by case-insensitive email match before inserting (`resolveBetterAuthUser`), keeping all existing FKs (`saved_urls`, `collections`, `notes`, `projects`, `api_tokens`) intact.
+- **Single-owner restriction:** `ADMIN_EMAIL` (fail-closed `databaseHooks.user.create.before`) blocks registration of any account other than the configured owner email, while `crossSubDomainCookies` (`BETTER_AUTH_COOKIE_DOMAIN`, `.hz.nknighta.me` in prod) shares the `HttpOnly; SameSite=Lax; Secure` cookie across `api` / `hazy` / `hazy-note`.
+- **API auth order (`apps/api/src/middleware/auth.ts`):** `hz_...` connected-app bearer (`authVia: "api_token"`) → Better Auth session cookie (`authVia: "better_auth"`) → temporary Clerk JWT fallback (`authVia: "clerk"`).
+- **Frontend TanStack Router + TanStack Query (`hazy`, `hazy-note`, `hazy-dash`):**
+  - Route code-splitting via `lazyRouteComponent`, `defaultPreload: "intent"`, `beforeLoad` session guards (`ensureQueryData(sessionQueryOptions)`), and `loader` prefetching via `createHazyQueryOptions`.
+  - Sign-out, `401` (`onUnauthorized` handler in `createAppQueryClient`), and `user.id` change clear `QueryClient` user caches immediately before navigating to `/sign-in`.
+
 ## Database
 
 `getDb()` picks the driver from the URL: postgres.js (TCP) for
 `localhost` / `127.0.0.1`, Neon's HTTP driver otherwise (Workers has no raw TCP).
 Local dev DB: `apps/hazy-note/scripts/localdb.sh` (user-owned PG 18 on
-`127.0.0.1:5433`). The Neon database is the production one — all three apps share it.
+`127.0.0.1:5433`). The Neon database is the production one — all apps share it.
 
-## Connect with Hazy (branch `feat/connect`)
+## Connect with Hazy
 
 OAuth-style authorization-code + PKCE (S256) flow that lets third-party clients get a long-lived `hz_…` bearer token for the API. No client registration; the `redirect_uri` origin is the client's identity.
 
-1. Client sends the user to `https://hz.nknighta.me/connector/add?client_name&redirect_uri&code_challenge&state` (no locale prefix needed; next-intl redirects to `/en|ja/connector/add` keeping the query).
+1. Client sends the user to `https://hz.nknighta.me/connector/add?client_name&redirect_uri&code_challenge&state` (no locale prefix needed; `apps/hazy` redirects `/connector/add` to `/$locale/connector/add` keeping the query).
 2. Signed-in user approves → `POST /v1/connect/authorize` → `{ code }` (5-minute TTL).
 3. hazy redirects to `redirect_uri?code&state`.
 4. Client calls the public `POST /v1/connect/token` with `code`, `codeVerifier`, `redirectUri` → `{ accessToken, tokenType: "Bearer", clientName }`.
@@ -61,16 +63,16 @@ OAuth-style authorization-code + PKCE (S256) flow that lets third-party clients 
 | Tables `connect_codes`, `api_tokens` (SHA-256 hashes only) | `packages/db/src/schema.ts`, migration `0008_high_katie_power` |
 | Client methods `connect.authorize / apps / revoke`; DTOs `ConnectCodeDTO`, `ConnectedAppDTO`, `ConnectTokenDTO` | `packages/api-client` |
 
-- `authMiddleware` treats any bearer starting with `hz_` as a connected-app token and sets `authVia: "api_token"`; anything else is a Clerk JWT (`authVia: "clerk"`). `/v1/connect/token` is exempt from auth like the webhook.
-- `connect` routes require `authVia === "clerk"` — a connected app gets 403 and can't mint or revoke tokens.
+- `authMiddleware` treats any bearer starting with `hz_` as a connected-app token (`authVia: "api_token"`); otherwise checks the Better Auth session cookie (`authVia: "better_auth"`) and then the temporary Clerk JWT fallback (`authVia: "clerk"`). `/v1/connect/token` and `/v1/auth-config` are exempt from auth like webhooks.
+- `connect` routes require `authVia === "better_auth" || authVia === "clerk"` — a connected app gets 403 and can't mint or revoke tokens.
 - Codes are single-use: deleted on read even if the checks fail. Mismatched `redirectUri` or PKCE verifier → `400 invalid_grant`.
 - `redirect_uri` must be https (http only for `localhost`, `127.0.0.1`, `[::1]`) with no fragment.
-- CORS: besides `allowedOrigins()`, `/v1/connect/token` accepts any origin, and any origin holding an unrevoked token is allowed (`isConnectedOrigin`).
+- CORS: `/api/auth/*` and `/v1/*` allow credentialed requests only from `isAllowedOrigin` (`CORS_ALLOWED_ORIGINS` + local dev); `/v1/*` also allows uncredentialed requests from any origin holding an unrevoked `api_token` (`isConnectedOrigin`), and `/v1/connect/token` accepts any origin without credentials.
 - `last_used_at` is written at most once an hour.
 
-Web UI in `apps/hazy`: approval page `src/components/connect/connect-approval-view.tsx` at `/[locale]/connector/add` (route group `(connect)`; bare `/connector` redirects to `/settings/connections`, signed-out users bounce through `/sign-in?redirect_url=` with the PKCE query preserved), and the list/revoke screen at `/settings/connections` (`settings/connected-apps-view.tsx`, hooks in `src/hooks/use-connected-apps.ts`).
+Web UI in `apps/hazy`: approval page `src/components/connect/connect-approval-view.tsx` at `/$locale/connector/add` (`src/pages/connect-pages.tsx`; bare `/$locale/connector` redirects to `/$locale/settings/connections`, signed-out users bounce through `/$locale/sign-in?redirect_url=` with the PKCE query preserved), and the list/revoke screen at `/$locale/settings/connections` (`settings/connected-apps-view.tsx`, hooks in `src/hooks/use-connected-apps.ts`).
 
-Remote debugging: `~/.cloudflared/config.yml` routes `pctunnel.nknighta.me` → `localhost:3100` on tunnel `nk4dev-pc-test`; run `bun run dev` and `bun run dev:tunnel` in `apps/hazy` (`allowedDevOrigins` is set in `next.config.ts`).
+Remote debugging: `~/.cloudflared/config.yml` routes `pctunnel.nknighta.me` → `localhost:3100` on tunnel `nk4dev-pc-test`; run `bun run dev` and `bun run dev:tunnel` in `apps/hazy` (`server.allowedHosts` is set in `vite.config.ts`).
 
 ## Browser testing — `agent-browser`
 

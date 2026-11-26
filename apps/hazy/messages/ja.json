@@ -39,7 +39,22 @@
   "auth": {
     "signInTitle": "おかえりなさい",
     "signUpTitle": "アカウントを作成",
-    "tagline": "保存したURLの記憶。"
+    "tagline": "保存したURLの記憶。",
+    "email": "メールアドレス",
+    "emailPlaceholder": "you@example.com",
+    "password": "パスワード",
+    "passwordPlaceholder": "••••••••",
+    "name": "名前",
+    "namePlaceholder": "表示名",
+    "continueWithGoogle": "Google で続行",
+    "orContinueWithEmail": "またはメールアドレスで続行",
+    "noAccount": "アカウントをお持ちでない場合",
+    "hasAccount": "すでにアカウントをお持ちの場合",
+    "signingIn": "サインイン中…",
+    "signingUp": "アカウント作成中…",
+    "signInError": "メールアドレスまたはパスワードが正しくないか、許可されていないアカウントです。",
+    "signUpError": "アカウントを作成できませんでした。許可されたオーナーアカウントのみ登録できます。",
+    "restrictedHint": "個人用ワークスペースのため、許可されたメールアドレスのみ登録できます。"
   },
   "library": {
     "title": "ライブラリ",

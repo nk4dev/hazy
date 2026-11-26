@@ -1,6 +1,6 @@
 # hazy-dash
 
-A home-screen dashboard for Hazy (React 19 + Vite + React Router SPA, `:3200`), deployed at `dash.hz.nknighta.me`. Everything renders on the client; there are no route handlers, no Clerk and no DB.
+A home-screen dashboard for Hazy (React 19 + Vite + TanStack Router + TanStack Query SPA, `:3200`), deployed at `dash.hz.nknighta.me`. Everything renders on the client; there are no route handlers, no user login session, and no DB.
 
 - **It is a connected app, not a hazy session.** `src/lib/connect.ts` runs the
   "Connect with Hazy" flow: PKCE (S256) → `${VITE_HAZY_URL}/connector/add`
@@ -9,16 +9,13 @@ A home-screen dashboard for Hazy (React 19 + Vite + React Router SPA, `:3200`), 
   compares strings) and use `localhost`, not `127.0.0.1` (CORS is granted by the
   origin stored with the token). Codes are single-use; `completeConnect` runs once
   per page load because StrictMode mounts effects twice.
-- Data: `createHazyClient` from `@repo/api-client` with the stored token. Don't
-  import `@repo/api-client/react` — it needs Clerk. A 401 clears the token
-  (revoked in hazy → Settings → Connected apps). The dash can't revoke its own
-  token: `hz_…` tokens get 403 on `/v1/connect/*`, so "disconnect" only forgets it.
+- Data & Cache: `src/lib/clients.ts` configures `dashApiClient` (`createHazyClient` reading the stored `hz_…` token), `dashQueries` (`createHazyQueryOptions`), and `dashQueryClient` (`createAppQueryClient` clearing both token and QueryClient cache on `401`). Routing in `src/router.tsx` uses `@tanstack/react-router` (`lazyRouteComponent`, `loader` prefetching, `defaultPreload: "intent"`). Don't invoke `@repo/api-client/auth` session cookies here — dash authenticates strictly via `hz_…` bearer tokens, and `hz_…` tokens get 403 on `/v1/connect/*`, so "disconnect" clears local token + query cache only.
 - Weather: Open-Meteo, no key (`src/lib/weather.ts`). Place from geolocation or a
   city search, kept in `localStorage`.
 - Strings: `src/lib/i18n.ts` (en/ja by browser language). Styles use
   `@repo/ui/styles.css` (Nocturne theme) in `src/styles/globals.css`.
 - Defaults to the **production** hazy + API (`.env.example`); the approval page and
-  the `connect_codes` / `api_tokens` tables only exist there.
+  the `connect_codes` / `api_tokens` tables only exist there unless running local full stack.
 - Remote debugging: `pctunnel-dash.nknighta.me` → `localhost:3200` on the
   `nk4dev-pc-test` tunnel (`server.allowedHosts` in `vite.config.ts`). Connecting
   from there makes the tunnel origin the token's `clientOrigin`, so it gets its

@@ -1,10 +1,10 @@
-"use client";
-
-import type { SavedUrlDTO } from "@repo/api-client";
+import type { ReadLaterQueueDTO, SavedUrlDTO } from "@repo/api-client";
+import { hazyQueryKeys } from "@repo/api-client/query";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUp, Check, ClipboardPaste, Globe, Loader2, Plus, Sparkle } from "lucide-react";
 import { useState } from "react";
 import { useDash } from "@/components/dash-provider";
+import { dashQueries } from "@/lib/clients";
 import { HAZY_URL } from "@/lib/env";
 import { cn, firstUrl, plainPreview } from "@/lib/utils";
 
@@ -16,7 +16,6 @@ function Favicon({ src }: { src: string | null }) {
   return (
     <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary">
       {src ? (
-        // biome-ignore lint/performance/noImgElement: tiny external favicon
         <img src={src} alt="" className="size-4" />
       ) : (
         <Globe className="size-4 text-muted-foreground" />
@@ -91,8 +90,8 @@ export function QuickSave() {
     onSuccess: (item) => {
       setUrl("");
       setMessage({ ok: true, text: `${t.saved}: ${item.title ?? item.url}` });
-      queryClient.invalidateQueries({ queryKey: ["recent"] });
-      queryClient.invalidateQueries({ queryKey: ["read-later"] });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.items.all });
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.readLater.all });
     },
     onError: () => setMessage({ ok: false, text: t.saveError }),
   });
@@ -159,12 +158,40 @@ export function QuickSave() {
 export function TodaysThree() {
   const { client, t } = useDash();
   const queryClient = useQueryClient();
-  const queue = useQuery({ queryKey: ["read-later"], queryFn: () => client.readLater.queue() });
+  const queue = useQuery(dashQueries.readLaterQueue());
   const markRead = useMutation({
     mutationFn: (itemId: string) => client.readLater.setStatus({ itemId, status: "read" }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["read-later"] });
-      queryClient.invalidateQueries({ queryKey: ["week"] });
+    onMutate: async (itemId) => {
+      const key = hazyQueryKeys.readLater.queue();
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ReadLaterQueueDTO>(key);
+      if (previous) {
+        const todaysThree = previous.todaysThree.filter((i) => i.id !== itemId);
+        const fiveMinutes = previous.fiveMinutes.filter((i) => i.id !== itemId);
+        const sitDown = previous.sitDown.filter((i) => i.id !== itemId);
+        const remaining = [...todaysThree, ...fiveMinutes, ...sitDown];
+        queryClient.setQueryData<ReadLaterQueueDTO>(key, {
+          ...previous,
+          todaysThree,
+          fiveMinutes,
+          sitDown,
+          totalCount: remaining.length,
+          todaysThreeMinutes: todaysThree.reduce(
+            (sum, i) => sum + (i.estimatedReadMinutes ?? 0),
+            0
+          ),
+          totalMinutes: remaining.reduce((sum, i) => sum + (i.estimatedReadMinutes ?? 0), 0),
+        });
+      }
+      return { previous };
+    },
+    onError: (_err, _itemId, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(hazyQueryKeys.readLater.queue(), ctx.previous);
+      }
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: hazyQueryKeys.readLater.all });
     },
   });
 
@@ -209,8 +236,8 @@ export function TodaysThree() {
 }
 
 export function WeekStats() {
-  const { client, t, locale } = useDash();
-  const stats = useQuery({ queryKey: ["week"], queryFn: () => client.readLater.stats() });
+  const { t, locale } = useDash();
+  const stats = useQuery(dashQueries.readLaterStats());
   const labels = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - (6 - i));
@@ -252,11 +279,8 @@ export function WeekStats() {
 }
 
 export function RecentSaves() {
-  const { client, t } = useDash();
-  const recent = useQuery({
-    queryKey: ["recent"],
-    queryFn: () => client.items.list({ sort: "newest", limit: 6 }),
-  });
+  const { t } = useDash();
+  const recent = useQuery(dashQueries.itemsRecent(6));
 
   return (
     <Card title={t.recent}>

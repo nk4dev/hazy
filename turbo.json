@@ -3,6 +3,12 @@
   "globalDependencies": ["tsconfig.base.json", ".env", ".env.local"],
   "globalEnv": [
     "DATABASE_URL",
+    "BETTER_AUTH_SECRET",
+    "BETTER_AUTH_URL",
+    "BETTER_AUTH_COOKIE_DOMAIN",
+    "ADMIN_EMAIL",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
     "OPENROUTER_API_KEY",
     "OPENROUTER_MODEL_ID",
     "OPENROUTER_FALLBACK_MODELS",

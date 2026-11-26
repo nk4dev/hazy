@@ -1,12 +1,19 @@
 import type { collections, readLaterState, savedUrls } from "@/db/schema";
 import type { CollectionDTO, SavedUrlDTO } from "@/types/api";
 
-type SavedUrlRow = typeof savedUrls.$inferSelect;
+export type SavedUrlRow = typeof savedUrls.$inferSelect;
+export type SavedUrlSummaryRow = Omit<SavedUrlRow, "extractedText" | "searchVector">;
 type ReadLaterRow = typeof readLaterState.$inferSelect;
 type CollectionRow = typeof collections.$inferSelect;
 
+/** Exclude large/unused full-text columns on list, detail, queue, and citation queries. */
+export const SAVED_URL_SUMMARY_COLUMNS = {
+  extractedText: false,
+  searchVector: false,
+} as const;
+
 export function serializeSavedUrl(
-  row: SavedUrlRow,
+  row: SavedUrlSummaryRow,
   readLater?: ReadLaterRow | null,
   collectionIds: string[] = []
 ): SavedUrlDTO {

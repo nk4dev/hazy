@@ -1,111 +1,60 @@
 # hazy note
 
-Claude Design のモックアップ (`design-source/Hazy Note.dc.html`) を Next.js アプリ化したもの。
 URLの霧を、自分の言葉に落とすまでの一本道 — 取り込み → 整理 → 考えを書く → 外に出す。
-**ノート (`/notes`) が主役**（サインイン後・ルートの遷移先、サイドバー最上部）。
-残りの画面は素材をノートに集めるための補助。Turborepo (`hazy-repo/`) の `apps/hazy-note`。
+**ノート (`/notes`) が主役**（サインイン後・ルートの遷移先、サイドバー最上部）。Turborepo (`hazy-repo/`) の `apps/hazy-note`。
 
 ## 技術構成
 
-- **Next.js 16** (App Router, Turbopack) + **React 19** + **TypeScript**
-- **Tailwind CSS v4** — Nocturne デザイントークンを `app/globals.css` の `@theme` に移植。
-  DS のコンポーネントクラス (`.btn` / `.card` / `.tag` / `.seg` / `.table` …) は
-  トークンベースのまま `@layer components` にポート。
-- **バックエンド** — `/app/api/*` の Route Handlers + Postgres。スキーマとクライアントは
-  `@repo/db`（`packages/db`）。`lib/db/repo.ts` が旧 `lib/store.ts` の置き換え（関数名・
-  返り値そのまま、裏が Postgres）。「AI」は `OPENROUTER_API_KEY` があればモデル、
-  無ければ固定文にフォールバック。
-- **hazy アプリと DB を共有** — 同じ Clerk・同じ `users` / `saved_urls` / `collections`。
-  hazy で保存した URL が hazy-note の `/library` に出る（逆も）。スキーマは 1 つ
-  （`@repo/db`）。詳細・マイグレーション手順は `packages/db/README.md`。
-  開発中は `.env.local` の `DATABASE_URL` をローカル PG に向ければ連携を切って隔離できる。
-- **デプロイ** — OpenNext で Cloudflare Workers（`wrangler.jsonc` / `open-next.config.ts`）。
+- **React 19 + Vite SPA + TypeScript**
+- **TanStack Router + TanStack Query** — ルート単位のコード分割（`lazyRouteComponent`）、`beforeLoad` 認証ガード、`loader` プリフェッチ、キャッシュ無効化・サインアウト／401時キャッシュクリアを統一
+- **Tailwind CSS v4 (`@repo/ui`)** — 共有 Nocturne テーマ（`@repo/ui/styles.css`）を継承し、`src/styles/globals.css` でアプリ固有クラス（`.btn` / `.card` / `.density-compact` / Quill スタイル等）を定義
+- **認証・バックエンド** — **Better Auth**（サブドメイン共有 `HttpOnly` Cookie、`credentials: "include"`）＋ `apps/api` (`/v1/note/**`) を `@repo/api-client` 経由で呼び出す純フロントエンド。DB 直アクセス・Next.js API Routes は廃止
 
 ## 起動
 
 ```bash
-# リポジトリルートで
-bun install
-bun run dev                    # turbo: hazy-note :3000 / hazy :3100
-bun run dev --filter=hazy-note # この app だけ
+# リポジトリルートで（API と同時に起動する場合）
+op run --env-file=".env.op" -- bun run dev
+bun run dev --filter=hazy-note   # Vite :3000 のみ
 ```
 
-`next/font/google`（Inter / Noto Sans JP）の取得にネットワークが要ります。
+## デプロイ
 
-## 画面（デザインドキュメントの s1–s6 に対応）
+Vite ビルド成果物 (`dist/`) → Cloudflare Workers Static Assets（`wrangler.jsonc`, `not_found_handling: "single-page-application"`, ドメイン `note.hz.nknighta.me`）。
 
-| ルート | 元 | 内容 |
-| --- | --- | --- |
-| `/library` , `/library/[id]` | s1 | 受信箱。URL入力→取り込み、カード/リスト表示、タグ絞り込み。アイテムをクリックすると概要ページ（AIは走らない・要約は明示ボタン） |
-| `/capture` | s2 | 取り込みの3コマ（読み取り中 → 要約とタグの提案 → 保存後の次の一手）。`URL` タブ＝新規URL、`Hazyから追加` タブ＝接続中のDB(`saved_urls`)に入っている自分のURL一覧から選ぶ |
-| `/projects/[id]` | — | プロジェクト＝アイデアを練る場。hazy-note 専用の `projects` テーブル（hazy の `collections` とは別）。ユーザーが自分で作成し、`description` を書き、出典を集め（`saved_urls.project_id`）、ノートを紐づける（`notes.project_id`）。タグからの自動生成・自動振り分けは廃止 |
-| `/notes` , `/notes/[id]` | s3 | **主要機能。** Quill（bubble テーマ）のリッチテキストエディタ。本文は Delta として `notes.body` に保存（旧 `blocks` のノートは開いた時に変換）。`@` で保存済み URL を引用（リンク挿入＋出典登録）、タグ・状態編集、AI 提案は右サイドバー（本文に採る／消す） |
-| `/search` | — | ノート＋出典を横断検索。4 モード: **文字列**（`lib/search.ts` のキーワード一致・クライアント）／**タグ**（タグクラウド＋部分一致）／**AI検索**（`@ternlight/base/web` の端末内埋め込みで意味の近い順・初回に数MBの wasm 読み込み）／**チャット**（`/api/search/chat` → OpenRouter、自分の記録だけを資料に回答＋参照元）。文字列・タグ・AI はサーバーを介さない |
-| `/analyze` | s4 | 傾向分析。ノート本文＋保存済み URL を集計し、関心テーマ／情報源のクセ／視点の偏り・死角／次の一歩を推定。`?project=<id>` でプロジェクト単位に絞れる。`(user, project|null)` ごとに 1 行キャッシュ（`insight_profiles`） |
-| `/export` | s6 | 書き出す。形式切替（ブログ／メモ／要点）、どこから来たかの対応表 |
-| `/tags` | — | タグ一覧。`saved_urls.tags` と `notes.tags` を横断して集計、件数順。クリックで `/library?tag=` か `/notes?tag=` に絞り込む |
+## 画面
 
-> `/graph`（s5「つながり」）と `/compare`（s4「比較ボード」）は廃止。
-> `graph_snapshots` / `compare_boards` テーブルとスキーマは残置（読み書きなし）。
-
-ヘッダーにパンくずリストが出る（`components/breadcrumbs.tsx`）。トップレベルの
-画面（`/notes` 等）では出さず、詳細画面（`/notes/[id]`, `/projects/[id]`,
-`/library/[id]`, タグ・プロジェクトで絞った `/library` `/notes`）でのみ
-「ノート › タイトル」のように一段追加される。各詳細ページが `useBreadcrumb()`
-でデータ読み込み後に自分の見出しを渡す仕組み — サーバー側にルート定義は無い。
-
-## API
-
-```
-GET    /api/items                     取り込み一覧
-GET    /api/items/importable          接続中DBにある自分のURL（「Hazyから追加」候補・未取込を上に）
-POST   /api/items          {url}      取り込み開始（status: reading）
-GET    /api/items/:id
-PATCH  /api/items/:id      {tags,projectId,...}
-DELETE /api/items/:id
-POST   /api/items/:id/read            読み取り完了（取得＋要約を流し込む）
-GET    /api/projects                  プロジェクト一覧
-POST   /api/projects       {name,description?}
-GET    /api/projects/:id              プロジェクト詳細（出典・ノート込み）
-PATCH  /api/projects/:id   {name?,description?,tone?}
-DELETE /api/projects/:id
-GET    /api/tags                      タグ一覧（saved_urls + notes を横断、件数順）
-GET    /api/notes  /api/notes/:id
-PATCH  /api/notes/:id  {text}                 段落を追記
-PATCH  /api/notes/:id  {body,suggestions,...} ノート本文（Quill Delta）ほかを更新
-POST   /api/notes/:id/suggestion  {id, action: "accept"|"dismiss"}
-GET    /api/analyze?project=<id>      傾向分析（キャッシュ済み・なければ空）
-POST   /api/analyze  {projectId?}     傾向分析を（再）生成
-POST   /api/search/chat  {query, history?}  チャット検索（自分の記録を資料に回答）
-       ↑ 文字列/タグ/AI 検索はクライアント側（lib/search.ts + @ternlight/base）
-GET    /api/export?noteId=&format=blog|memo|bullets
-POST   /api/export        {noteId,format}
-```
+| ルート | 内容 |
+| --- | --- |
+| `/sign-in`, `/sign-up` | Better Auth サインイン／オーナー登録（`ADMIN_EMAIL` 制限） |
+| `/notes`, `/notes/new`, `/notes/$id` | **主要機能。** Quill 2 リッチテキストエディタ、Delta 保存、`@` 引用、右サイドバー AI 提案 |
+| `/library`, `/library/$id` | 受信箱。URL 取り込み、カード／リスト表示、明示要約ボタン |
+| `/capture` | 取り込みの3コマ（`?id=` 読み取り → 要約とタグ提案 → プロジェクト保存、`Hazyから追加` 対応） |
+| `/projects/$id` | プロジェクト＝アイデア・出典・ノートをまとめる作業場 |
+| `/search` | **文字列** / **タグ** / **AI検索**（`@ternlight/base/web` 端末内 WASM） / **チャット**（`/v1/note/search/chat`） |
+| `/analyze` | 傾向分析（`?project=` 対応） |
+| `/export` | 書き出し（ブログ／共有メモ／要点、Markdown ダウンロード・コピー） |
+| `/tags` | タグ一覧（出典数・ノート数順） |
 
 ## ディレクトリ
 
 ```
-app/            ルートとレイアウト、API Route Handlers
-components/      Sidebar, UI プリミティブ (Button/Tag/Seg), Icon
-lib/            types / ai / extract / search / api(クライアント fetch)
-lib/db/         index.ts (= @repo/db の getDb) / repo.ts / current-user.ts / seed.ts
-e2e/            Playwright（auth.setup.ts で Clerk チケットサインイン → storageState）
-design-source/  元の Claude Design プロジェクト（Hazy Note.dc.html ほか）
-scripts/localdb.sh       隔離開発用のローカル PG（`127.0.0.1:5433`）
-scripts/sync-from-neon.sh  Neon（本番）のデータをローカル DB にコピー（`NEON_DATABASE_URL=… bun run db:sync-from-neon`）
+src/
+  main.tsx, App.tsx, router.tsx     Vite エントリ・TanStack Query/Router 構成
+  pages/*-page.tsx                  ルートごとのコード分割ページコンポーネント
+  components/                       AuthProvider / AccountMenu
+  styles/globals.css                Nocturne + アプリ固有コンポーネントスタイル
+components/                         AppShell, Sidebar, Breadcrumbs, NoteEditor (Quill 2), UI プリミティブ
+lib/                                env, clients (@repo/api-client & Better Auth), api, hooks, search, note-delta, navigation
+e2e/                                Playwright（`playwright.config.ts`）
+scripts/                            localdb.sh / sync-from-neon.sh
 ```
 
-スキーマ・マイグレーション・`db:*` スクリプトは `packages/db`（`packages/db/README.md`）。
+## テスト・検証
 
-## テスト
-
+```bash
+bun --filter hazy-note test         # lib/search.test.ts
+bun --filter hazy-note check-types
+bun --filter hazy-note lint
+bun --filter hazy-note build
 ```
-bun run test        # lib/ のユニットテスト（bun:test）— lib/search.ts のランキングなど
-bun run test:e2e    # Playwright。dev サーバが起動していれば再利用する
-```
-
-Playwright のサインインは Clerk のチケット方式（バックエンドが既存ユーザーの
-ワンタイムサインイントークンを発行）。`E2E_CLERK_USER_EMAIL=<既存ユーザーのメール>`
-と `CLERK_SECRET_KEY`（`.env.local`）が要る。未設定なら署名済みの spec は
-skip される（`e2e/auth.signed-out.spec.ts` は常に走る）。`E2E_CHAT=1` で
-チャット検索の実 API を叩く spec も有効化。

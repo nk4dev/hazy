@@ -3,25 +3,36 @@ import { createHazyClient, type HazyClient } from "./client";
 
 const HazyClientContext = createContext<HazyClient | null>(null);
 
-export function HazyClientProvider({
-  baseUrl,
-  getToken,
-  children,
-}: {
-  baseUrl: string;
-  getToken: () => Promise<string | null>;
-  children: ReactNode;
-}) {
+type HazyClientProviderProps =
+  | {
+      client: HazyClient;
+      children: ReactNode;
+    }
+  | {
+      baseUrl: string;
+      getToken?: () => Promise<string | null>;
+      credentials?: RequestCredentials;
+      children: ReactNode;
+    };
+
+export function HazyClientProvider(props: HazyClientProviderProps) {
+  const prebuilt = "client" in props ? props.client : null;
+  const baseUrl = "baseUrl" in props ? props.baseUrl : "";
+  const getToken = "getToken" in props ? props.getToken : undefined;
+  const credentials = "credentials" in props ? props.credentials : undefined;
+
   const client = useMemo(
     () =>
+      prebuilt ??
       createHazyClient({
         baseUrl,
         getToken,
+        credentials,
       }),
-    [baseUrl, getToken]
+    [prebuilt, baseUrl, getToken, credentials]
   );
 
-  return <HazyClientContext.Provider value={client}>{children}</HazyClientContext.Provider>;
+  return <HazyClientContext.Provider value={client}>{props.children}</HazyClientContext.Provider>;
 }
 
 export function useHazyClient(): HazyClient {

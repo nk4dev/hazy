@@ -1,18 +1,22 @@
 import { createMiddleware } from "hono/factory";
+import { isBetterAuthConfigured, isClerkConfigured } from "@/env";
 import { UnauthorizedError } from "@/lib/api/errors";
 import { API_TOKEN_PREFIX, resolveApiToken } from "@/lib/auth/api-token";
-import { authenticate, resolveUser } from "@/lib/auth/current-user";
+import { getBetterAuthSession } from "@/lib/auth/better-auth";
+import { authenticate, resolveBetterAuthUser, resolveUser } from "@/lib/auth/current-user";
 import type { AppEnv } from "@/types/hono";
 
 /**
- * Gate for `/v1/**` (except the webhook and `/v1/connect/token`): verify the
- * bearer, resolve the internal user row, stash it on the context. Two kinds of
- * bearer: a Clerk session JWT (hazy itself, the Flutter app) or an `hz_…`
- * connected-app token (`authVia: "api_token"`). A missing/invalid token throws
- * `UnauthorizedError` → `onError` → `401 { error: { code: "unauthorized" } }`.
+ * Dual-auth gate for `/v1/**` (except webhooks, `/v1/auth-config`, and `/v1/connect/token`):
+ *   1. `Authorization: Bearer hz_...` → connected-app API token (`authVia: "api_token"`)
+ *   2. Better Auth HttpOnly cookie session (`authVia: "better_auth"`)
+ *   3. Temporary Clerk JWT fallback (`authVia: "clerk"`)
+ * Missing/invalid credentials throw `UnauthorizedError` → 401 envelope.
  */
 export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
-  const bearer = c.req.header("Authorization")?.replace(/^Bearer\s+/i, "");
+  const authHeader = c.req.header("Authorization");
+  const bearer = authHeader?.replace(/^Bearer\s+/i, "");
+
   if (bearer?.startsWith(API_TOKEN_PREFIX)) {
     const user = await resolveApiToken(bearer);
     if (!user) throw new UnauthorizedError();
@@ -21,9 +25,24 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
     return next();
   }
 
-  const clerkId = await authenticate(c.req.raw);
-  if (!clerkId) throw new UnauthorizedError();
-  c.set("user", await resolveUser(clerkId));
-  c.set("authVia", "clerk");
-  await next();
+  if (isBetterAuthConfigured() && c.req.header("cookie")) {
+    const session = await getBetterAuthSession(c.req.raw.headers);
+    if (session?.user) {
+      const user = await resolveBetterAuthUser(session.user);
+      c.set("user", user);
+      c.set("authVia", "better_auth");
+      return next();
+    }
+  }
+
+  if (isClerkConfigured() && authHeader) {
+    const clerkId = await authenticate(c.req.raw);
+    if (clerkId) {
+      c.set("user", await resolveUser(clerkId));
+      c.set("authVia", "clerk");
+      return next();
+    }
+  }
+
+  throw new UnauthorizedError();
 });

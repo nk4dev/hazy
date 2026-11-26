@@ -2,6 +2,7 @@ import type {
   AskResponseDTO,
   AskThreadDetailDTO,
   AskThreadListDTO,
+  AuthConfigDTO,
   CollectionDTO,
   CollectionDetailDTO,
   CollectionItemRefDTO,
@@ -50,8 +51,10 @@ export class ApiClientError extends Error {
 export interface HazyClientConfig {
   /** e.g. `https://api.hz.nknighta.me` (no trailing `/v1`). */
   baseUrl: string;
-  /** Resolves the current Clerk session token, or null when signed out. */
-  getToken: () => Promise<string | null>;
+  /** Resolves a Bearer token (`hz_…` connected-app token or Clerk JWT). Omit for Better Auth cookie sessions. */
+  getToken?: () => Promise<string | null>;
+  /** Explicit fetch credentials mode. Defaults to `"include"` when cookie-backed (`!getToken`) and `"omit"` for bearer callers. */
+  credentials?: RequestCredentials;
 }
 
 type RequestInitLite = {
@@ -68,12 +71,16 @@ type Envelope<T> =
 /** Fetches a binary response (image download) rather than the `{ data }` JSON envelope. */
 function createBinaryRequest(config: HazyClientConfig) {
   return async function requestBinary(
-    path: string
+    path: string,
+    signal?: AbortSignal
   ): Promise<{ blob: Blob; contentType: string }> {
     const url = new URL(`/v1${path}`, config.baseUrl);
-    const token = await config.getToken();
+    const token = config.getToken ? await config.getToken() : null;
+    const credentials = config.credentials ?? (config.getToken ? "omit" : "include");
     const res = await fetch(url, {
+      credentials,
       headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal,
     });
     if (!res.ok) {
       const json = (await res.json().catch(() => null)) as Envelope<never> | null;
@@ -99,9 +106,11 @@ function createRequest(config: HazyClientConfig) {
       if (value !== undefined) url.searchParams.set(key, String(value));
     }
 
-    const token = await config.getToken();
+    const token = config.getToken ? await config.getToken() : null;
+    const credentials = config.credentials ?? (config.getToken ? "omit" : "include");
     const res = await fetch(url, {
       method: init.method ?? "GET",
+      credentials,
       headers: {
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -192,6 +201,8 @@ export function createHazyClient(config: HazyClientConfig) {
   const requestBinary = createBinaryRequest(config);
 
   return {
+    authConfig: (signal?: AbortSignal) => request<AuthConfigDTO>("/auth-config", { signal }),
+
     items: {
       list: (
         query: { sort?: "newest" | "oldest"; cursor?: string; limit?: number } = {},
@@ -219,11 +230,12 @@ export function createHazyClient(config: HazyClientConfig) {
           method: "PUT",
           body: { collectionIds },
         }),
-      downloadImage: (id: string) => requestBinary(`/items/${id}/image`),
+      downloadImage: (id: string, signal?: AbortSignal) =>
+        requestBinary(`/items/${id}/image`, signal),
     },
 
     collections: {
-      list: () => request<{ items: CollectionDTO[] }>("/collections"),
+      list: (signal?: AbortSignal) => request<{ items: CollectionDTO[] }>("/collections", { signal }),
       get: (id: string, signal?: AbortSignal) =>
         request<CollectionDetailDTO>(`/collections/${id}`, { signal }),
       create: (input: { name: string; description?: string; color?: string }) =>
@@ -250,7 +262,7 @@ export function createHazyClient(config: HazyClientConfig) {
 
     ask: {
       ask: (input: AskInput) => request<AskResponseDTO>("/ask", { method: "POST", body: input }),
-      threads: () => request<AskThreadListDTO>("/ask/threads"),
+      threads: (signal?: AbortSignal) => request<AskThreadListDTO>("/ask/threads", { signal }),
       thread: (id: string, signal?: AbortSignal) =>
         request<AskThreadDetailDTO>(`/ask/threads/${id}`, { signal }),
       deleteThread: (id: string) =>
@@ -263,8 +275,8 @@ export function createHazyClient(config: HazyClientConfig) {
     },
 
     readLater: {
-      queue: () => request<ReadLaterQueueDTO>("/read-later"),
-      stats: () => request<ReadLaterStatsDTO>("/read-later/stats"),
+      queue: (signal?: AbortSignal) => request<ReadLaterQueueDTO>("/read-later", { signal }),
+      stats: (signal?: AbortSignal) => request<ReadLaterStatsDTO>("/read-later/stats", { signal }),
       setStatus: (input: {
         itemId: string;
         status: ReadLaterStatus;
@@ -280,26 +292,28 @@ export function createHazyClient(config: HazyClientConfig) {
       request<SearchResponseDTO>("/search", { query: { q, limit }, signal }),
 
     me: {
-      get: () => request<MeDTO>("/me"),
+      get: (signal?: AbortSignal) => request<MeDTO>("/me", { signal }),
       updatePreferences: (patch: Partial<MeDTO["preferences"]>) =>
         request<MeDTO["preferences"]>("/me", { method: "PATCH", body: patch }),
     },
 
-    // "Connect with Hazy" — needs a Clerk session (a connected app's own
+    // "Connect with Hazy" — needs an interactive user session (a connected app's
     // `hz_…` token gets 403 here). The code → token exchange is the public
     // `POST /v1/connect/token`, called by the third-party client, not by hazy.
     connect: {
       authorize: (input: ConnectAuthorizeInput) =>
         request<ConnectCodeDTO>("/connect/authorize", { method: "POST", body: input }),
-      apps: () => request<{ items: ConnectedAppDTO[] }>("/connect/apps"),
+      apps: (signal?: AbortSignal) => request<{ items: ConnectedAppDTO[] }>("/connect/apps", { signal }),
       revoke: (id: string) => request<{ id: string }>(`/connect/apps/${id}`, { method: "DELETE" }),
     },
 
     note: {
       items: {
-        list: () => request<NoteItemDTO[]>("/note/items"),
-        importable: () => request<NoteItemDTO[]>("/note/items/importable"),
-        get: (id: string) => request<NoteItemDTO>(`/note/items/${id}`),
+        list: (signal?: AbortSignal) => request<NoteItemDTO[]>("/note/items", { signal }),
+        importable: (signal?: AbortSignal) =>
+          request<NoteItemDTO[]>("/note/items/importable", { signal }),
+        get: (id: string, signal?: AbortSignal) =>
+          request<NoteItemDTO>(`/note/items/${id}`, { signal }),
         addUrl: (url: string) => request<NoteItemDTO>("/note/items", { method: "POST", body: { url } }),
         addMemo: (text: string) =>
           request<NoteItemDTO>("/note/items", { method: "POST", body: { text } }),
@@ -310,8 +324,8 @@ export function createHazyClient(config: HazyClientConfig) {
         remove: (id: string) => request<{ id: string }>(`/note/items/${id}`, { method: "DELETE" }),
       },
       notes: {
-        list: () => request<NoteDTO[]>("/note/notes"),
-        get: (id: string) => request<NoteDTO>(`/note/notes/${id}`),
+        list: (signal?: AbortSignal) => request<NoteDTO[]>("/note/notes", { signal }),
+        get: (id: string, signal?: AbortSignal) => request<NoteDTO>(`/note/notes/${id}`, { signal }),
         create: (input: NoteCreateInput = {}) =>
           request<NoteDTO>("/note/notes", { method: "POST", body: input }),
         update: (id: string, patch: NotePatch) =>
@@ -326,8 +340,9 @@ export function createHazyClient(config: HazyClientConfig) {
           }),
       },
       projects: {
-        list: () => request<NoteProjectDTO[]>("/note/projects"),
-        get: (id: string) => request<NoteProjectDetailDTO>(`/note/projects/${id}`),
+        list: (signal?: AbortSignal) => request<NoteProjectDTO[]>("/note/projects", { signal }),
+        get: (id: string, signal?: AbortSignal) =>
+          request<NoteProjectDetailDTO>(`/note/projects/${id}`, { signal }),
         create: (input: NoteProjectCreateInput) =>
           request<NoteProjectDTO>("/note/projects", { method: "POST", body: input }),
         update: (id: string, patch: NoteProjectPatch) =>
@@ -336,7 +351,7 @@ export function createHazyClient(config: HazyClientConfig) {
           request<{ id: string }>(`/note/projects/${id}`, { method: "DELETE" }),
       },
       tags: {
-        list: () => request<NoteTagDTO[]>("/note/tags"),
+        list: (signal?: AbortSignal) => request<NoteTagDTO[]>("/note/tags", { signal }),
       },
       searchChat: (query: string, history?: NoteSearchChatTurnDTO[]) =>
         request<NoteSearchChatAnswerDTO>("/note/search/chat", {
@@ -344,8 +359,8 @@ export function createHazyClient(config: HazyClientConfig) {
           body: { query, history },
         }),
       analyze: {
-        get: (projectId?: string) =>
-          request<NoteInsightProfileDTO>("/note/analyze", { query: { project: projectId } }),
+        get: (projectId?: string, signal?: AbortSignal) =>
+          request<NoteInsightProfileDTO>("/note/analyze", { query: { project: projectId }, signal }),
         rebuild: (projectId?: string) =>
           request<NoteInsightProfileDTO>("/note/analyze", {
             method: "POST",
@@ -353,8 +368,8 @@ export function createHazyClient(config: HazyClientConfig) {
           }),
       },
       export: {
-        preview: (noteId: string, format: NoteExportFormat) =>
-          request<NoteExportDraftDTO>("/note/export", { query: { noteId, format } }),
+        preview: (noteId: string, format: NoteExportFormat, signal?: AbortSignal) =>
+          request<NoteExportDraftDTO>("/note/export", { query: { noteId, format }, signal }),
         run: (noteId: string, format: NoteExportFormat) =>
           request<NoteExportResultDTO>("/note/export", {
             method: "POST",

@@ -35,16 +35,17 @@ const redirectUriSchema = z
     return url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
   }, "redirect_uri must be https (or http on localhost) without a fragment");
 
-/** Connection management needs a real Clerk session — a connected app can't mint or revoke tokens. */
-const requireClerkSession = createMiddleware<AppEnv>(async (c, next) => {
-  if (c.get("authVia") !== "clerk") {
+/** Connection management needs an interactive user session — a connected app can't mint or revoke tokens. */
+const requireUserSession = createMiddleware<AppEnv>(async (c, next) => {
+  const authVia = c.get("authVia");
+  if (authVia !== "better_auth" && authVia !== "clerk") {
     throw new ApiError(403, "forbidden", "Not available to connected apps.");
   }
   await next();
 });
 
 export const connect = new Hono<AppEnv>();
-connect.use("*", requireClerkSession);
+connect.use("*", requireUserSession);
 
 const authorizeSchema = z.object({
   clientName: z.string().trim().min(1).max(100),

@@ -1,7 +1,7 @@
+import { useLocation } from "@tanstack/react-router";
 import i18n from "i18next";
 import { useCallback } from "react";
 import { initReactI18next, useTranslation } from "react-i18next";
-import { useParams } from "react-router";
 import enMessages from "../../messages/en.json";
 import jaMessages from "../../messages/ja.json";
 import { type AppLocale, DEFAULT_LOCALE, detectDefaultLocale, isAppLocale } from "./routing";
@@ -32,8 +32,9 @@ export function useTranslations(namespace?: string) {
 }
 
 export function useLocale(): AppLocale {
-  const { locale } = useParams<{ locale?: string }>();
-  if (isAppLocale(locale)) return locale;
+  const { pathname } = useLocation();
+  const segment = pathname.split("/")[1];
+  if (isAppLocale(segment)) return segment;
   return isAppLocale(i18n.language) ? i18n.language : DEFAULT_LOCALE;
 }
 

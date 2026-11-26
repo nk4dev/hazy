@@ -1,18 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router";
+import { RouterProvider } from "@tanstack/react-router";
 import { DashProvider } from "@/components/dash-provider";
-import { CallbackPage } from "@/pages/callback-page";
-import { DashboardPage } from "@/pages/dashboard-page";
+import { router } from "@/router";
 
 export function App() {
   return (
     <DashProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/callback" element={<CallbackPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <RouterProvider router={router} />
     </DashProvider>
   );
 }

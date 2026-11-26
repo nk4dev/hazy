@@ -18,6 +18,13 @@ const envSchema = z.object({
 
   DATABASE_URL: z.string().min(1).optional(),
 
+  BETTER_AUTH_SECRET: z.string().min(1).optional(),
+  BETTER_AUTH_URL: z.string().url().default("http://localhost:8787"),
+  BETTER_AUTH_COOKIE_DOMAIN: z.string().min(1).optional(),
+  ADMIN_EMAIL: z.string().email().optional(),
+  GOOGLE_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
+
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
   CLERK_WEBHOOK_SIGNING_SECRET: z.string().min(1).optional(),
@@ -79,10 +86,13 @@ function loadEnv() {
 export const env = loadEnv();
 
 export const isDatabaseConfigured = () => Boolean(env.DATABASE_URL);
+export const isBetterAuthConfigured = () => Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL);
+export const isGoogleOAuthConfigured = () =>
+  Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
 export const isClerkConfigured = () =>
   Boolean(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && env.CLERK_SECRET_KEY);
 export const isClerkWebhookConfigured = () => Boolean(env.CLERK_WEBHOOK_SIGNING_SECRET);
 export const isOpenRouterConfigured = () => Boolean(env.OPENROUTER_API_KEY);
 
-export type CoreService = "database" | "clerk";
+export type CoreService = "database" | "clerk" | "better_auth";
 export type MissingService = CoreService | "openrouter";

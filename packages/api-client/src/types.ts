@@ -105,6 +105,12 @@ export type UserPreferencesDTO = {
   notifyWeeklyStats: boolean;
 };
 
+/** GET /v1/auth-config (public) — exposes non-secret auth capabilities to the SPA. */
+export type AuthConfigDTO = {
+  betterAuth: boolean;
+  google: boolean;
+};
+
 /** GET /v1/me */
 export type MeDTO = {
   id: string;

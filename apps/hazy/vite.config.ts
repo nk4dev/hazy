@@ -16,6 +16,17 @@ export default defineConfig({
       "@": resolve(rootDir, "src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "vendor-tanstack": ["@tanstack/react-router", "@tanstack/react-query"],
+          "vendor-i18n": ["i18next", "react-i18next"],
+          "vendor-radix": ["radix-ui", "lucide-react"],
+        },
+      },
+    },
+  },
   server: {
     port: 3100,
     allowedHosts: ["pctunnel.nknighta.me"],

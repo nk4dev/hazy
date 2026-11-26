@@ -1,14 +1,10 @@
 # hazy
 
-Save URLs, search your reading, ask questions about it, catch up on a
-read-later digest. Next 16 (App Router, Turbopack, React Compiler) +
-next-intl (en / ja) + Tailwind + shadcn/radix.
+Save URLs, search your reading, ask questions about it, catch up on a read-later digest.
+**React 19 + Vite SPA** + **TanStack Router** + **TanStack Query** + `react-i18next` (`en` / `ja`) + Tailwind v4 (`@repo/ui` Nocturne).
 
-**hazy is a pure frontend.** The backend lives in `apps/api`
-(`api.hz.nknighta.me`); every data call goes through `@repo/api-client`
-(`useHazyClient()` in the react-query hooks under `src/hooks/`). This app
-only needs Clerk (for `<ClerkProvider>` + the server-side redirect gate in
-`src/app/[locale]/(app)/layout.tsx`) and `NEXT_PUBLIC_API_URL`.
+**hazy is a pure frontend.** The backend lives in `apps/api` (`api.hz.nknighta.me`);
+every data call goes through `@repo/api-client` using Better Auth `HttpOnly` cross-subdomain cookies (`credentials: "include"`).
 
 ## Dev
 
@@ -16,28 +12,18 @@ only needs Clerk (for `<ClerkProvider>` + the server-side redirect gate in
 bun run dev --filter=hazy   # :3100 — needs apps/api on :8787
 ```
 
-`apps/hazy/.env.local`:
-
-```
-NEXT_PUBLIC_API_URL=http://localhost:8787
-NEXT_PUBLIC_APP_URL=http://localhost:3100
-NEXT_PUBLIC_HAZY_NOTE_URL=http://localhost:3000
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
-CLERK_SECRET_KEY=...
-```
+Non-secret local defaults work out of the box (`VITE_API_URL=http://localhost:8787`, `VITE_HAZY_NOTE_URL=http://localhost:3000`).
 
 ## Deploy
 
-OpenNext → Cloudflare Workers (`wrangler.jsonc`, `open-next.config.ts`).
-`bun run cf:deploy --filter=hazy`. Set `NEXT_PUBLIC_API_URL=https://api.hz.nknighta.me`
-as a Worker var. The cross-origin API call carries a Clerk session token as
-`Authorization: Bearer`; `apps/api`'s CORS allowlist must include this app's
-origin (`CORS_ALLOWED_ORIGINS`).
+Vite `dist/` → Cloudflare Workers Static Assets (`wrangler.jsonc`, `not_found_handling: "single-page-application"`).
+`bun run cf:deploy --filter=hazy`. Set `VITE_API_URL=https://api.hz.nknighta.me` in `wrangler.jsonc`.
+Because requests send Better Auth cookies cross-origin to `api.hz.nknighta.me`, `apps/api`'s `CORS_ALLOWED_ORIGINS` must include `https://hz.nknighta.me`.
 
 ## Structure
 
-- `src/hooks/use-*.ts` — react-query wrappers over `@repo/api-client`.
-- `src/app/[locale]/**` — pages; only the two layout/gate files touch Clerk
-  server-side, nothing reads the DB.
-- `src/lib/env.ts` — the four `NEXT_PUBLIC_*` vars + the two Clerk keys.
-- `src/middleware.ts` — Clerk context + next-intl locale routing.
+- `src/lib/clients.ts` — shared `apiClient`, `authClient`, `hazyQueries`, and `queryClient` (`401` cache clearing).
+- `src/router.tsx` & `src/pages/*-page.tsx` — TanStack Router route tree with `beforeLoad` session gates, `loader` prefetching, and lazy page code-splitting.
+- `src/hooks/use-*.ts` — TanStack Query hooks + optimistic mutations over `@repo/api-client`.
+- `src/components/providers/auth-provider.tsx` — Better Auth session sync & sign-out cache clear.
+- `public/_headers` — `X-Frame-Options: DENY` and `Content-Security-Policy: frame-ancestors 'none'` on `/connector/add` and `/*/connector/add`.

@@ -17,6 +17,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@repo/api-client": "workspace:*",
     "@repo/db": "workspace:*",
+    "better-auth": "^1.7.28",
     "cheerio": "^1.2.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.10.4",

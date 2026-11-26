@@ -39,7 +39,22 @@
   "auth": {
     "signInTitle": "Welcome back",
     "signUpTitle": "Create your account",
-    "tagline": "A memory for the URLs you save."
+    "tagline": "A memory for the URLs you save.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "••••••••",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "continueWithGoogle": "Continue with Google",
+    "orContinueWithEmail": "or continue with email",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "signingIn": "Signing in…",
+    "signingUp": "Creating account…",
+    "signInError": "Invalid email or password, or account not authorized.",
+    "signUpError": "Could not create account. Access is restricted to the configured owner.",
+    "restrictedHint": "Personal workspace — sign-up is limited to the configured owner email."
   },
   "library": {
     "title": "Library",

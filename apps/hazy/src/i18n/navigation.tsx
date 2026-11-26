@@ -1,5 +1,6 @@
-import { useCallback, useMemo } from "react";
-import { type LinkProps, Link as RouterLink, useLocation, useNavigate } from "react-router";
+import { Link as RouterLink, useLocation, useNavigate } from "@tanstack/react-router";
+import { type AnchorHTMLAttributes, useCallback, useMemo } from "react";
+import { splitPathAndSearch } from "@/lib/clients";
 import i18n, { useLocale } from "./index";
 import { type AppLocale, isAppLocale } from "./routing";
 
@@ -13,11 +14,20 @@ function prefixLocalePath(href: string, locale: AppLocale): string {
 export function Link({
   href,
   ...props
-}: Omit<LinkProps, "to"> & {
+}: AnchorHTMLAttributes<HTMLAnchorElement> & {
   href: string;
+  preload?: false | "intent" | "viewport" | "render";
 }) {
   const locale = useLocale();
-  return <RouterLink to={prefixLocalePath(href, locale)} {...props} />;
+  const target = splitPathAndSearch(prefixLocalePath(href, locale));
+  return (
+    <RouterLink
+      to={target.to as never}
+      {...(target.search ? { search: target.search as never } : {})}
+      preload="intent"
+      {...(props as Record<string, unknown>)}
+    />
+  );
 }
 
 export function usePathname(): string {
@@ -40,7 +50,11 @@ export function useRouter() {
       if (opts?.locale) {
         void i18n.changeLanguage(opts.locale);
       }
-      void navigate(prefixLocalePath(href, targetLocale));
+      const target = splitPathAndSearch(prefixLocalePath(href, targetLocale));
+      void navigate({
+        to: target.to as never,
+        ...(target.search ? { search: target.search as never } : {}),
+      });
     },
     [navigate, currentLocale]
   );
@@ -51,14 +65,19 @@ export function useRouter() {
       if (opts?.locale) {
         void i18n.changeLanguage(opts.locale);
       }
-      void navigate(prefixLocalePath(href, targetLocale), { replace: true });
+      const target = splitPathAndSearch(prefixLocalePath(href, targetLocale));
+      void navigate({
+        to: target.to as never,
+        ...(target.search ? { search: target.search as never } : {}),
+        replace: true,
+      });
     },
     [navigate, currentLocale]
   );
 
   const back = useCallback(() => {
-    void navigate(-1);
-  }, [navigate]);
+    window.history.back();
+  }, []);
 
   return useMemo(() => ({ push, replace, back }), [push, replace, back]);
 }

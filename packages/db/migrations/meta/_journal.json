@@ -64,6 +64,13 @@
       "when": 1792829779736,
       "tag": "0008_high_katie_power",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795688265578,
+      "tag": "0009_lovely_klaw",
+      "breakpoints": true
     }
   ]
 }

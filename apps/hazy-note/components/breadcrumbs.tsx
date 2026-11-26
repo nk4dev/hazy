@@ -1,8 +1,6 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useLocation } from "@tanstack/react-router";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { NoteLink } from "@/lib/navigation";
 import { Icon } from "./icon";
 
 export type Crumb = { label: string };
@@ -16,10 +14,6 @@ const BreadcrumbContext = createContext<{
 
 export function BreadcrumbProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<BreadcrumbState>({ path: "", crumbs: [] });
-  // Bail out when nothing actually changed — `setCrumbs` fires from a render
-  // effect on every render of the reporting page, and returning a new object
-  // unconditionally would re-render the provider, which hands consumers a new
-  // context value, which re-fires their effect: an infinite loop.
   const setCrumbs = useCallback((path: string, crumbs: Crumb[]) => {
     setState((prev) =>
       prev.path === path && JSON.stringify(prev.crumbs) === JSON.stringify(crumbs)
@@ -35,13 +29,12 @@ export function BreadcrumbProvider({ children }: { children: React.ReactNode }) 
  *  once its data has loaded. `null` while loading — nothing is shown yet. */
 export function useBreadcrumb(crumbs: Crumb[] | null) {
   const ctx = useContext(BreadcrumbContext);
-  const pathname = usePathname();
-  const key = crumbs ? JSON.stringify(crumbs) : "";
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `key` stands in for `crumbs` (array identity changes every render)
+  const pathname = useLocation().pathname;
+  const serialized = crumbs ? JSON.stringify(crumbs) : "";
   useEffect(() => {
-    if (!ctx || !crumbs) return;
-    ctx.setCrumbs(pathname, crumbs);
-  }, [ctx, pathname, key]);
+    if (!ctx || !serialized) return;
+    ctx.setCrumbs(pathname, JSON.parse(serialized) as Crumb[]);
+  }, [ctx, pathname, serialized]);
 }
 
 const ROOT: Record<string, { label: string; href?: string }> = {
@@ -51,14 +44,14 @@ const ROOT: Record<string, { label: string; href?: string }> = {
   analyze: { label: "傾向分析", href: "/analyze" },
   export: { label: "書き出す", href: "/export" },
   search: { label: "検索", href: "/search" },
-  projects: { label: "プロジェクト" }, // no list view — only /projects/[id]
+  projects: { label: "プロジェクト" }, // no list view — only /projects/$id
   tags: { label: "タグ", href: "/tags" },
 };
 
 /** Renders nothing on top-level pages (nav + sidebar already show where you
  *  are) — only kicks in once a detail page adds a trailing crumb. */
 export function Breadcrumbs() {
-  const pathname = usePathname();
+  const pathname = useLocation().pathname;
   const ctx = useContext(BreadcrumbContext);
   const root = ROOT[pathname.split("/")[1] ?? ""];
   const extra = ctx && ctx.state.path === pathname ? ctx.state.crumbs : [];
@@ -85,9 +78,9 @@ export function Breadcrumbs() {
           <span key={i} className="flex shrink-0 items-center gap-[6px]">
             {i > 0 && <Icon name="caret-right" size={10} className="opacity-40" />}
             {c.href && !last ? (
-              <Link href={c.href} className="no-underline hover:text-text/80">
+              <NoteLink href={c.href} className="no-underline hover:text-text/80">
                 {c.label}
-              </Link>
+              </NoteLink>
             ) : (
               <span className={last ? "text-text/80" : ""}>{c.label}</span>
             )}
