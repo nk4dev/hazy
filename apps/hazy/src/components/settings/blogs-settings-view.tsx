@@ -111,8 +111,11 @@ export function BlogsSettingsView() {
       >
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Provider</label>
+            <label htmlFor="blog-provider-select" className="block text-xs font-medium text-text-secondary mb-1">
+              Provider
+            </label>
             <select
+              id="blog-provider-select"
               value={provider}
               onChange={(e) => setProvider(e.target.value as BlogProvider)}
               className="w-full rounded-lg border border-border-subtle bg-bg px-3 py-1.5 text-sm text-text-primary"
@@ -123,8 +126,11 @@ export function BlogsSettingsView() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-medium text-text-secondary mb-1">Label</label>
+            <label htmlFor="blog-label-input" className="block text-xs font-medium text-text-secondary mb-1">
+              Label
+            </label>
             <input
+              id="blog-label-input"
               type="text"
               value={label}
               onChange={(e) => setLabel(e.target.value)}

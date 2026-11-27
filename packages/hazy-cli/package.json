@@ -1,0 +1,13 @@
+{
+  "name": "@repo/hazy-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "hazy": "./src/index.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "test": "bun test src/"
+  }
+}

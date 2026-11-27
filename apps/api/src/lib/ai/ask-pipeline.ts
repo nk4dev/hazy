@@ -147,6 +147,7 @@ async function runToolCallingAsk(
 
 export async function runAskPipeline(params: {
   user: AppUser;
+  profileId?: string;
   question: string;
   threadId?: string;
   answerLanguageOverride?: string;
@@ -155,6 +156,8 @@ export async function runAskPipeline(params: {
 }): Promise<AskResponseDTO> {
   const { user, question, threadId, answerLanguageOverride, collectionIds } = params;
   const db = getDb();
+  const resolvedProfileId =
+    params.profileId ?? (await (await import("@/lib/auth/profiles")).ensureDefaultProfile(db, user.id)).id;
 
   const attached = await loadCollectionSources(user.id, collectionIds ?? []);
   const attachedIds = new Set(attached.hits.map((hit) => hit.id));
@@ -163,7 +166,10 @@ export async function runAskPipeline(params: {
   // the deterministic fallback (canned text + citations) when OpenRouter is
   // unconfigured or errors out. The AI path itself no longer gets these
   // handed to it directly; it searches live via the search_saved_links tool.
-  let fallbackHits = await searchUserItems(user.id, question, { limit: SOURCE_LIMIT });
+  let fallbackHits = await searchUserItems(user.id, question, {
+    limit: SOURCE_LIMIT,
+    profileId: resolvedProfileId,
+  });
   if (fallbackHits.length === 0) {
     // No keyword overlap between the question and any saved item (common
     // for natural-language questions, or a library in a different
@@ -172,7 +178,7 @@ export async function runAskPipeline(params: {
     // and decide whether it's relevant.
     fallbackHits = await getRecentUserItems(user.id, SOURCE_LIMIT);
   }
-  const readLaterQueue = await getReadLaterQueue(user.id);
+  const readLaterQueue = await getReadLaterQueue(user.id, resolvedProfileId);
   const targetLanguage = await resolveTargetLanguage(
     user.id,
     fallbackHits[0]?.contentLanguage ?? attached.hits[0]?.contentLanguage ?? null,
@@ -186,7 +192,7 @@ export async function runAskPipeline(params: {
     thread = await db.query.askThreads.findFirst({
       where: eq(askThreads.id, threadId),
     });
-    if (!thread || thread.userId !== user.id) {
+    if (!thread || thread.userId !== user.id || thread.profileId !== resolvedProfileId) {
       throw new Error("Thread not found");
     }
     const existing = await db.query.askMessages.findMany({
@@ -200,11 +206,9 @@ export async function runAskPipeline(params: {
       .slice(-MAX_HISTORY_MESSAGES)
       .map((m) => ({ role: m.role, content: m.content }));
   } else {
-    const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
-    const defaultProfile = await ensureDefaultProfile(db, user.id);
     const [created] = await db
       .insert(askThreads)
-      .values({ userId: user.id, profileId: defaultProfile.id, title: question.slice(0, 120) })
+      .values({ userId: user.id, profileId: resolvedProfileId, title: question.slice(0, 120) })
       .returning();
     thread = created;
   }

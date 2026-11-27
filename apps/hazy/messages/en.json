@@ -150,7 +150,9 @@
     },
     "nav": {
       "language": "Language",
-      "connections": "Connected apps"
+      "connections": "Connected apps",
+      "profiles": "Profiles",
+      "blogs": "Blogs"
     },
     "connections": {
       "title": "Connected apps",

@@ -266,6 +266,103 @@ const exportRoute = createRoute({
   component: lazyRouteComponent(() => import("@/src/pages/export-page"), "ExportPage"),
 });
 
+const profileScopeRoute = createRoute({
+  getParentRoute: () => authedLayoutRoute,
+  path: "/p/$profile",
+  component: Outlet,
+});
+
+const pNotesRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/notes",
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(noteQueries.note.notes());
+  },
+  component: lazyRouteComponent(() => import("@/src/pages/notes-page"), "NotesPage"),
+});
+
+const pNewNoteRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/notes/new",
+  component: lazyRouteComponent(() => import("@/src/pages/note-page"), "NewNotePage"),
+});
+
+const pNoteDetailRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/notes/$id",
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(noteQueries.note.note(params.id));
+  },
+  component: lazyRouteComponent(() => import("@/src/pages/note-page"), "NoteDetailPage"),
+});
+
+const pLibraryRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/library",
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(noteQueries.note.items());
+  },
+  component: lazyRouteComponent(() => import("@/src/pages/library-page"), "LibraryPage"),
+});
+
+const pItemDetailRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/library/$id",
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(noteQueries.note.item(params.id));
+  },
+  component: lazyRouteComponent(() => import("@/src/pages/item-detail-page"), "ItemDetailPage"),
+});
+
+const pCaptureRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/capture",
+  component: lazyRouteComponent(() => import("@/src/pages/capture-page"), "CapturePage"),
+});
+
+const pProjectRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/projects/$id",
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(noteQueries.note.project(params.id));
+  },
+  component: lazyRouteComponent(() => import("@/src/pages/project-page"), "ProjectPage"),
+});
+
+const pTagsRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/tags",
+  component: lazyRouteComponent(() => import("@/src/pages/tags-page"), "TagsPage"),
+});
+
+const pSearchRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/search",
+  component: lazyRouteComponent(() => import("@/src/pages/search-page"), "SearchPage"),
+});
+
+const pAnalyzeRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/analyze",
+  component: lazyRouteComponent(() => import("@/src/pages/analyze-page"), "AnalyzePage"),
+});
+
+const pExportRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/export",
+  validateSearch: (raw: Record<string, unknown>): { noteId?: string } => ({
+    noteId: typeof raw.noteId === "string" ? raw.noteId : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ noteId: search.noteId }),
+  loader: ({ context, deps }) => {
+    void context.queryClient.prefetchQuery(noteQueries.note.notes());
+    if (deps.noteId) {
+      void context.queryClient.prefetchQuery(noteQueries.note.exportPreview(deps.noteId, "blog"));
+    }
+  },
+  component: lazyRouteComponent(() => import("@/src/pages/export-page"), "ExportPage"),
+});
+
 const catchAllRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/$",
@@ -290,6 +387,19 @@ const routeTree = rootRoute.addChildren([
     searchRoute,
     analyzeRoute,
     exportRoute,
+    profileScopeRoute.addChildren([
+      pNotesRoute,
+      pNewNoteRoute,
+      pNoteDetailRoute,
+      pLibraryRoute,
+      pItemDetailRoute,
+      pCaptureRoute,
+      pProjectRoute,
+      pTagsRoute,
+      pSearchRoute,
+      pAnalyzeRoute,
+      pExportRoute,
+    ]),
   ]),
   catchAllRoute,
 ]);

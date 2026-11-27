@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useState } from "react";
+import { noteApiClient } from "@/lib/clients";
 import {
   useCreateNoteProjectMutation,
   useNoteProjectsQuery,
@@ -26,6 +28,14 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
   const router = useNoteNavigate();
   const { data: projects = [] } = useNoteProjectsQuery();
   const { data: tags = [] } = useNoteTagsQuery();
+  const { data: profilesData } = useQuery({
+    queryKey: ["profiles", "list"],
+    queryFn: ({ signal }) => noteApiClient.profiles.list(signal),
+    staleTime: 60_000,
+  });
+  const profiles = profilesData?.items ?? [];
+  const activeProfileSlug =
+    pathname.match(/^\/p\/([^/]+)/)?.[1] ?? profiles.find((p) => p.isDefault)?.slug ?? "personal";
   const createProjectMutation = useCreateNoteProjectMutation();
   const [newOpen, setNewOpen] = useState(false);
 
@@ -56,6 +66,26 @@ export function Sidebar({ open = false, onNavigate }: { open?: boolean; onNaviga
           </NoteLink>
           <AccountMenu />
         </div>
+
+        {profiles.length > 0 && (
+          <div className="px-[7px]">
+            <select
+              aria-label="Profile"
+              className="input w-full py-1 text-[12px]"
+              value={activeProfileSlug}
+              onChange={(e) => {
+                router.push(`/p/${e.target.value}/notes`);
+                onNavigate?.();
+              }}
+            >
+              {profiles.map((p) => (
+                <option key={p.id} value={p.slug}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <nav className="flex flex-col gap-[2px]">
           {/* ノート = 主要機能。常時プライマリーカラーで最上部に固定 */}

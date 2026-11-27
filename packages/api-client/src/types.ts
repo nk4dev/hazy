@@ -132,6 +132,9 @@ export type ConnectedAppDTO = {
   clientOrigin: string;
   createdAt: string;
   lastUsedAt: string | null;
+  profileId?: string;
+  profileSlug?: string;
+  profileName?: string;
 };
 
 /** POST /v1/connect/token (public) — PKCE code exchange. */

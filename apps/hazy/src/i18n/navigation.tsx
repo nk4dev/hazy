@@ -4,11 +4,23 @@ import { splitPathAndSearch } from "@/lib/clients";
 import i18n, { useLocale } from "./index";
 import { type AppLocale, isAppLocale } from "./routing";
 
+const ACCOUNT_SCOPED_PREFIXES = ["/settings", "/connector", "/docs", "/sign-in", "/sign-up", "/p/"];
+
+function getActiveProfileSlug(): string | null {
+  if (typeof window === "undefined") return null;
+  const match = window.location.pathname.match(/^\/(?:en|ja)\/p\/([^/]+)/);
+  return match?.[1] ?? null;
+}
+
 function prefixLocalePath(href: string, locale: AppLocale): string {
   if (!href.startsWith("/")) return href;
   const firstSegment = href.split("/")[1];
   if (isAppLocale(firstSegment)) return href;
-  return href === "/" ? `/${locale}` : `/${locale}${href}`;
+  const profileSlug = getActiveProfileSlug();
+  const isAccountScoped = ACCOUNT_SCOPED_PREFIXES.some((p) => href.startsWith(p));
+  const withProfile =
+    profileSlug && !isAccountScoped && href !== "/" ? `/p/${profileSlug}${href}` : href;
+  return withProfile === "/" ? `/${locale}` : `/${locale}${withProfile}`;
 }
 
 export function Link({

@@ -32,8 +32,15 @@ async function loadOwnedThread(userId: string, profileId: string, id: string) {
 
 ask.post("/", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const { question, answerLanguageOverride, collectionIds } = askSchema.parse(await c.req.json());
-  const result = await runAskPipeline({ user, question, answerLanguageOverride, collectionIds });
+  const result = await runAskPipeline({
+    user,
+    profileId: profile.id,
+    question,
+    answerLanguageOverride,
+    collectionIds,
+  });
   return ok(result, { status: 201 });
 });
 
@@ -130,6 +137,7 @@ const messageSchema = z.object({
 
 ask.post("/threads/:id/messages", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const threadId = c.req.param("id");
   const { question, answerLanguageOverride, collectionIds } = messageSchema.parse(
     await c.req.json()
@@ -138,6 +146,7 @@ ask.post("/threads/:id/messages", async (c) => {
   try {
     const result = await runAskPipeline({
       user,
+      profileId: profile.id,
       question,
       threadId,
       answerLanguageOverride,

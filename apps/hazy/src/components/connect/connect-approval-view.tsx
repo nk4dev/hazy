@@ -1,9 +1,11 @@
 import { Button } from "@repo/ui/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuthorizeConnectMutation } from "@/hooks/use-connected-apps";
 import { useTranslations } from "@/i18n";
+import { apiClient } from "@/lib/clients";
 
 /** Mirrors the API's `redirectUriSchema` — the server re-validates, this just avoids a dead-end click. */
 function parseRedirectUri(raw: string | null): URL | null {
@@ -34,6 +36,19 @@ export function ConnectApprovalView() {
   const search = useMemo(() => new URLSearchParams(location.searchStr), [location.searchStr]);
   const authorize = useAuthorizeConnectMutation();
   const [failed, setFailed] = useState(false);
+  const { data: profilesData } = useQuery({
+    queryKey: ["profiles", "list"],
+    queryFn: ({ signal }) => apiClient.profiles.list(signal),
+  });
+  const profiles = profilesData?.items ?? [];
+  const [selectedProfileId, setSelectedProfileId] = useState<string>("");
+
+  useEffect(() => {
+    if (!selectedProfileId && profiles.length > 0) {
+      const def = profiles.find((p) => p.isDefault) ?? profiles[0];
+      if (def) setSelectedProfileId(def.id);
+    }
+  }, [profiles, selectedProfileId]);
 
   const clientName = search.get("client_name")?.trim() ?? "";
   const redirectUri = parseRedirectUri(search.get("redirect_uri"));
@@ -55,6 +70,25 @@ export function ConnectApprovalView() {
         <p className="break-all text-xs text-muted-foreground">{redirectUri.origin}</p>
       </div>
       <p className="text-[13px] leading-relaxed text-muted-foreground">{t("scope")}</p>
+      {profiles.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="connect-profile-select" className="text-xs font-medium text-muted-foreground">
+            Profile
+          </label>
+          <select
+            id="connect-profile-select"
+            value={selectedProfileId}
+            onChange={(e) => setSelectedProfileId(e.target.value)}
+            className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm text-foreground"
+          >
+            {profiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name} ({p.slug})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
       {failed && <p className="text-sm text-destructive">{t("failed")}</p>}
       <div className="flex gap-2">
         <Button
@@ -76,6 +110,7 @@ export function ConnectApprovalView() {
                 redirectUri: redirectUri.toString(),
                 codeChallenge,
                 codeChallengeMethod: "S256",
+                ...(selectedProfileId ? { profileId: selectedProfileId } : {}),
               },
               {
                 onSuccess: ({ code }) => redirectBack(redirectUri, { code, ...stateParam }),

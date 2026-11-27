@@ -146,7 +146,9 @@
     },
     "nav": {
       "language": "言語",
-      "connections": "連携アプリ"
+      "connections": "連携アプリ",
+      "profiles": "プロファイル",
+      "blogs": "ブログ連携"
     },
     "connections": {
       "title": "連携アプリ",

@@ -302,6 +302,88 @@ const readLaterRoute = createRoute({
   component: lazyRouteComponent(() => import("@/pages/read-later-page"), "ReadLaterPage"),
 });
 
+const profileScopeRoute = createRoute({
+  getParentRoute: () => authedLayoutRoute,
+  path: "/p/$profile",
+  component: Outlet,
+});
+
+const pLibraryRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/library",
+  validateSearch: (raw: Record<string, unknown>): { q?: string } => ({
+    q: typeof raw.q === "string" ? raw.q : undefined,
+  }),
+  loader: ({ context }) => {
+    void context.queryClient.prefetchInfiniteQuery(hazyQueries.itemsInfinite("newest"));
+    void context.queryClient.prefetchQuery(hazyQueries.collections());
+  },
+  component: lazyRouteComponent(() => import("@/pages/library-page"), "LibraryPage"),
+});
+
+const pItemRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/item/$id",
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(hazyQueries.item(params.id));
+    void context.queryClient.prefetchQuery(hazyQueries.collections());
+  },
+  component: lazyRouteComponent(() => import("@/pages/item-page"), "ItemPage"),
+});
+
+const pCollectionsRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/collections",
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(hazyQueries.collections());
+  },
+  component: lazyRouteComponent(() => import("@/pages/collections-page"), "CollectionsPage"),
+});
+
+const pCollectionDetailRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/collections/$id",
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(hazyQueries.collection(params.id));
+  },
+  component: lazyRouteComponent(
+    () => import("@/pages/collection-detail-page"),
+    "CollectionDetailPage"
+  ),
+});
+
+const pAskRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/ask",
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(hazyQueries.askThreads());
+    void context.queryClient.prefetchQuery(hazyQueries.collections());
+  },
+  component: lazyRouteComponent(() => import("@/pages/ask-page"), "AskPage"),
+});
+
+const pAskThreadRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/ask/$threadId",
+  loader: ({ context, params }) => {
+    void context.queryClient.prefetchQuery(hazyQueries.askThreads());
+    void context.queryClient.prefetchQuery(hazyQueries.askThread(params.threadId));
+    void context.queryClient.prefetchQuery(hazyQueries.collections());
+  },
+  component: lazyRouteComponent(() => import("@/pages/ask-thread-page"), "AskThreadPage"),
+});
+
+const pReadLaterRoute = createRoute({
+  getParentRoute: () => profileScopeRoute,
+  path: "/read-later",
+  loader: ({ context }) => {
+    void context.queryClient.prefetchQuery(hazyQueries.readLaterQueue());
+    void context.queryClient.prefetchQuery(hazyQueries.readLaterStats());
+    void context.queryClient.prefetchQuery(hazyQueries.me());
+  },
+  component: lazyRouteComponent(() => import("@/pages/read-later-page"), "ReadLaterPage"),
+});
+
 const settingsLayoutRoute = createRoute({
   getParentRoute: () => authedLayoutRoute,
   path: "/settings",
@@ -388,6 +470,15 @@ const routeTree = rootRoute.addChildren([
       askRoute,
       askThreadRoute,
       readLaterRoute,
+      profileScopeRoute.addChildren([
+        pLibraryRoute,
+        pItemRoute,
+        pCollectionsRoute,
+        pCollectionDetailRoute,
+        pAskRoute,
+        pAskThreadRoute,
+        pReadLaterRoute,
+      ]),
       settingsLayoutRoute.addChildren([
         settingsIndexRoute,
         languageSettingsRoute,

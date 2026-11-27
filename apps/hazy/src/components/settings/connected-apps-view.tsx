@@ -48,7 +48,14 @@ export function ConnectedAppsView() {
               <li key={app.id} className="flex items-center gap-3 px-4 py-3.5">
                 <Favicon src={null} domain={domain} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[15px]">{app.clientName}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-[15px]">{app.clientName}</span>
+                    {(app.profileName || app.profileSlug) && (
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                        {app.profileName ?? app.profileSlug}
+                      </span>
+                    )}
+                  </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {domain} ·{" "}
                     {app.lastUsedAt

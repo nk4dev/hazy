@@ -2,6 +2,13 @@ import { Link as RouterLink, useNavigate } from "@tanstack/react-router";
 import { type AnchorHTMLAttributes, useCallback, useMemo } from "react";
 import { splitPathAndSearch } from "./clients";
 
+function prefixNoteProfilePath(href: string): string {
+  if (!href.startsWith("/") || href.startsWith("/p/") || href.startsWith("/sign-")) return href;
+  if (typeof window === "undefined") return href;
+  const match = window.location.pathname.match(/^\/p\/([^/]+)/);
+  return match?.[1] ? `/p/${match[1]}${href}` : href;
+}
+
 export function NoteLink({
   href,
   ...props
@@ -9,7 +16,7 @@ export function NoteLink({
   href: string;
   preload?: false | "intent" | "viewport" | "render";
 }) {
-  const target = splitPathAndSearch(href);
+  const target = splitPathAndSearch(prefixNoteProfilePath(href));
   return (
     <RouterLink
       to={target.to as never}
@@ -25,7 +32,7 @@ export function useNoteNavigate() {
 
   const push = useCallback(
     (href: string) => {
-      const target = splitPathAndSearch(href);
+      const target = splitPathAndSearch(prefixNoteProfilePath(href));
       void navigate({
         to: target.to as never,
         ...(target.search ? { search: target.search as never } : {}),
@@ -36,7 +43,7 @@ export function useNoteNavigate() {
 
   const replace = useCallback(
     (href: string) => {
-      const target = splitPathAndSearch(href);
+      const target = splitPathAndSearch(prefixNoteProfilePath(href));
       void navigate({
         to: target.to as never,
         ...(target.search ? { search: target.search as never } : {}),

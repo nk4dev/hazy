@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 const LINKS = [
   { href: "/settings/language", key: "language" },
   { href: "/settings/connections", key: "connections" },
+  { href: "/settings/profiles", key: "profiles" },
+  { href: "/settings/blogs", key: "blogs" },
 ] as const;
 
 export function SettingsNav() {

@@ -73,8 +73,11 @@ export function ProfilesSettingsView() {
         className="flex flex-wrap items-end gap-3 rounded-xl border border-border-subtle bg-surface p-4"
       >
         <div className="flex-1 min-w-[160px]">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Name</label>
+          <label htmlFor="profile-name-input" className="block text-xs font-medium text-text-secondary mb-1">
+            Name
+          </label>
           <input
+            id="profile-name-input"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -83,8 +86,11 @@ export function ProfilesSettingsView() {
           />
         </div>
         <div className="flex-1 min-w-[160px]">
-          <label className="block text-xs font-medium text-text-secondary mb-1">Slug</label>
+          <label htmlFor="profile-slug-input" className="block text-xs font-medium text-text-secondary mb-1">
+            Slug
+          </label>
           <input
+            id="profile-slug-input"
             type="text"
             value={slug}
             onChange={(e) => setSlug(e.target.value.toLowerCase())}

@@ -39,7 +39,12 @@ export function ProfileSwitcher() {
 
       {open && (
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <button
+            type="button"
+            aria-label="Close profile menu"
+            className="fixed inset-0 z-40 cursor-default"
+            onClick={() => setOpen(false)}
+          />
           <div className="absolute right-0 z-50 mt-1.5 w-52 rounded-xl border border-border-subtle bg-surface p-1.5 shadow-lg">
             <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-text-muted">
               Profiles
