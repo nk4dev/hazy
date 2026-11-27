@@ -200,9 +200,11 @@ export async function runAskPipeline(params: {
       .slice(-MAX_HISTORY_MESSAGES)
       .map((m) => ({ role: m.role, content: m.content }));
   } else {
+    const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
+    const defaultProfile = await ensureDefaultProfile(db, user.id);
     const [created] = await db
       .insert(askThreads)
-      .values({ userId: user.id, title: question.slice(0, 120) })
+      .values({ userId: user.id, profileId: defaultProfile.id, title: question.slice(0, 120) })
       .returning();
     thread = created;
   }

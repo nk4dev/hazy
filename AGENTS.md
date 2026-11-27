@@ -33,8 +33,8 @@ Turborepo, bun workspaces. One product, **Better Auth + `hz_` API tokens** (with
 
 ## Auth & TanStack Architecture
 
-- **Better Auth + `users.id` preservation:** `packages/db/src/schema.ts` stores Better Auth in `auth_user`, `auth_session`, `auth_account`, `auth_verification`, `auth_passkey`, while `users.auth_user_id` links back to the existing `users.id` (UUID) row by case-insensitive email match before inserting (`resolveBetterAuthUser`), keeping all existing FKs (`saved_urls`, `collections`, `notes`, `projects`, `api_tokens`) intact.
-- **Single-owner restriction (GitHub + Passkey only):** Email/password and Google OAuth are disabled. Sign-in uses **GitHub OAuth** and **Passkeys (`@better-auth/passkey`)** only. `ADMIN_EMAIL` (fail-closed `databaseHooks.user.create.before`) blocks registration of any account other than the configured owner email, while `crossSubDomainCookies` (`BETTER_AUTH_COOKIE_DOMAIN`, `.hz.nknighta.me` in prod) shares the `HttpOnly; SameSite=Lax; Secure` cookie across `api` / `hazy` / `hazy-note`.
+- **Better Auth + `users.id` preservation:** `packages/db/src/schema.ts` stores Better Auth in `auth_user`, `auth_session`, `auth_account`, `auth_verification` (`auth_passkey` is dead, nothing reads it), while `users.auth_user_id` links back to the existing `users.id` (UUID) row by case-insensitive email match before inserting (`resolveBetterAuthUser`), keeping all existing FKs (`saved_urls`, `collections`, `notes`, `projects`, `api_tokens`) intact.
+- **Single-owner restriction (GitHub OAuth only):** Email/password, Google OAuth, and Passkeys are disabled. Sign-in uses **GitHub OAuth** only. `ADMIN_EMAIL` (fail-closed `databaseHooks.user.create.before`) blocks registration of any account other than the configured owner email, while `crossSubDomainCookies` (`BETTER_AUTH_COOKIE_DOMAIN`, `.hz.nknighta.me` in prod) shares the `HttpOnly; SameSite=Lax; Secure` cookie across `api` / `hazy` / `hazy-note`.
 - **API auth order (`apps/api/src/middleware/auth.ts`):** `hz_...` connected-app bearer (`authVia: "api_token"`) → Better Auth session cookie (`authVia: "better_auth"`) → temporary Clerk JWT fallback (`authVia: "clerk"`).
 - **Frontend TanStack Router + TanStack Query (`hazy`, `hazy-note`, `hazy-dash`):**
   - Route code-splitting via `lazyRouteComponent`, `defaultPreload: "intent"`, `beforeLoad` session guards (`ensureQueryData(sessionQueryOptions)`), and `loader` prefetching via `createHazyQueryOptions`.
@@ -44,8 +44,8 @@ Turborepo, bun workspaces. One product, **Better Auth + `hz_` API tokens** (with
 
 `getDb()` picks the driver from the URL: postgres.js (TCP) for
 `localhost` / `127.0.0.1`, Neon's HTTP driver otherwise (Workers has no raw TCP).
-Local dev DB: `apps/hazy-note/scripts/localdb.sh` (user-owned PG 18 on
-`127.0.0.1:5433`). The Neon database is the production one — all apps share it.
+- **Local dev DB:** `.env.op` sets `DATABASE_URL=postgresql://hazy@127.0.0.1:5433/hazy` (`apps/hazy-note/scripts/localdb.sh`, PG 18). Run `op run --env-file=".env.op" -- bun run dev`.
+- **Production DB:** Neon project `misty-sun-40818263` (`production` branch), injected via `.env.prod.op` (`op run --env-file=".env.prod.op" -- bun --filter @repo/db db:migrate`) and Cloudflare Workers `DATABASE_URL` secret. Keep self-managed Better Auth (GitHub + Passkey + `ADMIN_EMAIL` hook); do not switch to Neon Managed Better Auth.
 
 ## Connect with Hazy
 

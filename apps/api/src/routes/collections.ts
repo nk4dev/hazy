@@ -13,10 +13,14 @@ export const collections_ = new Hono<AppEnv>();
 
 const PREVIEW_IMAGES_PER_COLLECTION = 4;
 
-async function loadOwnedCollection(userId: string, id: string) {
+async function loadOwnedCollection(userId: string, profileId: string, id: string) {
   const db = getDb();
   const collection = await db.query.collections.findFirst({
-    where: and(eq(collections.id, id), eq(collections.userId, userId)),
+    where: and(
+      eq(collections.id, id),
+      eq(collections.userId, userId),
+      eq(collections.profileId, profileId)
+    ),
   });
   if (!collection) throw new NotFoundError("Collection");
   return collection;
@@ -55,13 +59,14 @@ async function buildPreviewMap(
 
 collections_.get("/", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const db = getDb();
 
   const rows = await db
     .select({ collection: collections, itemCount: count(collectionItems.id) })
     .from(collections)
     .leftJoin(collectionItems, eq(collectionItems.collectionId, collections.id))
-    .where(eq(collections.userId, user.id))
+    .where(and(eq(collections.userId, user.id), eq(collections.profileId, profile.id)))
     .groupBy(collections.id)
     .orderBy(collections.createdAt);
 
@@ -85,12 +90,13 @@ const createSchema = z.object({
 
 collections_.post("/", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const body = createSchema.parse(await c.req.json());
   const db = getDb();
 
   const [row] = await db
     .insert(collections)
-    .values({ userId: user.id, ...body })
+    .values({ userId: user.id, profileId: profile.id, ...body })
     .returning();
 
   return ok(serializeCollection(row, 0), { status: 201 });
@@ -98,8 +104,9 @@ collections_.post("/", async (c) => {
 
 collections_.get("/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  const collection = await loadOwnedCollection(user.id, id);
+  const collection = await loadOwnedCollection(user.id, profile.id, id);
   const db = getDb();
 
   const rows = await db.query.collectionItems.findMany({
@@ -126,8 +133,9 @@ const patchSchema = z.object({
 
 collections_.patch("/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  await loadOwnedCollection(user.id, id);
+  await loadOwnedCollection(user.id, profile.id, id);
   const body = patchSchema.parse(await c.req.json());
   const db = getDb();
   const [updated] = await db
@@ -140,8 +148,9 @@ collections_.patch("/:id", async (c) => {
 
 collections_.delete("/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  await loadOwnedCollection(user.id, id);
+  await loadOwnedCollection(user.id, profile.id, id);
   const db = getDb();
   await db.delete(collections).where(and(eq(collections.id, id), eq(collections.userId, user.id)));
   return ok({ id });
@@ -151,16 +160,25 @@ const addItemSchema = z.object({ savedUrlId: z.string().uuid() });
 
 collections_.post("/:id/items", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
   const { savedUrlId } = addItemSchema.parse(await c.req.json());
   const db = getDb();
 
   const [collection, item] = await Promise.all([
     db.query.collections.findFirst({
-      where: and(eq(collections.id, id), eq(collections.userId, user.id)),
+      where: and(
+        eq(collections.id, id),
+        eq(collections.userId, user.id),
+        eq(collections.profileId, profile.id)
+      ),
     }),
     db.query.savedUrls.findFirst({
-      where: and(eq(savedUrls.id, savedUrlId), eq(savedUrls.userId, user.id)),
+      where: and(
+        eq(savedUrls.id, savedUrlId),
+        eq(savedUrls.userId, user.id),
+        eq(savedUrls.profileId, profile.id)
+      ),
     }),
   ]);
   if (!collection) throw new NotFoundError("Collection");

@@ -18,10 +18,11 @@ export const authMiddleware = createMiddleware<AppEnv>(async (c, next) => {
   const bearer = authHeader?.replace(/^Bearer\s+/i, "");
 
   if (bearer?.startsWith(API_TOKEN_PREFIX)) {
-    const user = await resolveApiToken(bearer);
-    if (!user) throw new UnauthorizedError();
-    c.set("user", user);
+    const resolved = await resolveApiToken(bearer);
+    if (!resolved) throw new UnauthorizedError();
+    c.set("user", resolved.user);
     c.set("authVia", "api_token");
+    c.set("apiTokenProfileId", resolved.profileId);
     return next();
   }
 

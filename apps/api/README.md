@@ -9,8 +9,8 @@ Everything under `/v1` returns `{ data }` on success / `{ error: { code, message
 
 | Group | Routes |
 |---|---|
-| `auth` (Better Auth) | `/api/auth/*` — GitHub OAuth, Passkeys (`@better-auth/passkey`), sign-out, session, cross-subdomain `HttpOnly` cookie; email/password disabled; gated fail-closed by `ADMIN_EMAIL` |
-| `auth-config` | `GET /v1/auth-config` (public — exposes `betterAuth`, `github`, `passkey`) |
+| `auth` (Better Auth) | `/api/auth/*` — GitHub OAuth, sign-out, session, cross-subdomain `HttpOnly` cookie; email/password disabled; gated fail-closed by `ADMIN_EMAIL` |
+| `auth-config` | `GET /v1/auth-config` (public — exposes `betterAuth`, `github`) |
 | `items` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/refetch`, `POST /:id/summarize`, `PUT /:id/collections`, `GET /:id/image` |
 | `collections` | `GET /`, `POST /`, `GET/PATCH/DELETE /:id`, `POST /:id/items`, `DELETE /:id/items/:savedUrlId`, `POST /:id/summarize` |
 | `ask` | `POST /`, `GET /threads`, `GET/DELETE /threads/:id`, `POST /threads/:id/messages` |
@@ -43,9 +43,10 @@ src/
 ## Dev / deploy
 
 ```bash
-op run --env-file=".env.op" -- bun run dev --filter=api   # tsx watch, Node, :8787
-bun run preview --filter=api                              # wrangler dev (workerd)
-bun run deploy --filter=api                               # wrangler deploy
+op run --env-file=".env.op" -- bun run dev --filter=api        # local PG (127.0.0.1:5433)
+op run --env-file=".env.prod.op" -- bun --filter @repo/db db:migrate  # Neon production
+bun run preview --filter=api                                   # wrangler dev (workerd)
+bun run deploy --filter=api                                    # wrangler deploy
 ```
 
 Node dev uses the postgres.js TCP driver for a `127.0.0.1` `DATABASE_URL`;

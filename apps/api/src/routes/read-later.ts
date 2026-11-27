@@ -16,7 +16,8 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 readLater.get("/", async (c) => {
   const user = c.get("user");
-  const inboxItems = await getReadLaterQueue(user.id);
+  const profile = c.get("profile");
+  const inboxItems = await getReadLaterQueue(user.id, profile.id);
 
   const { todaysThree, fiveMinutes, sitDown, totalMinutes, todaysThreeMinutes } =
     bucketReadLaterItems(inboxItems);
@@ -33,6 +34,7 @@ readLater.get("/", async (c) => {
 
 readLater.get("/stats", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const db = getDb();
 
   const weekAgo = new Date(Date.now() - 7 * DAY_MS);
@@ -44,6 +46,7 @@ readLater.get("/stats", async (c) => {
       .where(
         and(
           eq(readLaterState.userId, user.id),
+          eq(readLaterState.profileId, profile.id),
           eq(readLaterState.status, "read"),
           gte(readLaterState.markedReadAt, weekAgo)
         )
@@ -51,7 +54,13 @@ readLater.get("/stats", async (c) => {
     db
       .select({ value: count() })
       .from(savedUrls)
-      .where(and(eq(savedUrls.userId, user.id), gte(savedUrls.createdAt, weekAgo))),
+      .where(
+        and(
+          eq(savedUrls.userId, user.id),
+          eq(savedUrls.profileId, profile.id),
+          gte(savedUrls.createdAt, weekAgo)
+        )
+      ),
   ]);
 
   const days = Array.from({ length: 7 }, (_, i) => {
@@ -79,12 +88,17 @@ const patchSchema = z.object({
 
 readLater.patch("/:itemId", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const itemId = c.req.param("itemId");
   const body = patchSchema.parse(await c.req.json());
   const db = getDb();
 
   const owned = await db.query.savedUrls.findFirst({
-    where: and(eq(savedUrls.id, itemId), eq(savedUrls.userId, user.id)),
+    where: and(
+      eq(savedUrls.id, itemId),
+      eq(savedUrls.userId, user.id),
+      eq(savedUrls.profileId, profile.id)
+    ),
   });
   if (!owned) throw new NotFoundError("Saved URL");
 
@@ -92,6 +106,7 @@ readLater.patch("/:itemId", async (c) => {
     .insert(readLaterState)
     .values({
       userId: user.id,
+      profileId: profile.id,
       savedUrlId: itemId,
       status: body.status,
       snoozedUntil: body.snoozedUntil ? new Date(body.snoozedUntil) : null,

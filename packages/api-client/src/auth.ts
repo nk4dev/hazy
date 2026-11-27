@@ -1,4 +1,3 @@
-import { passkeyClient } from "@better-auth/passkey/client";
 import { createAuthClient } from "better-auth/client";
 
 export type AuthSessionUser = {
@@ -19,7 +18,6 @@ export type AuthSessionData = {
 export function createHazyAuthClient(baseUrl: string) {
   return createAuthClient({
     baseURL: baseUrl,
-    plugins: [passkeyClient()],
     fetchOptions: {
       credentials: "include",
     },

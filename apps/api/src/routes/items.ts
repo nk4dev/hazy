@@ -14,10 +14,14 @@ import type { AppEnv } from "@/types/hono";
 
 export const items = new Hono<AppEnv>();
 
-async function loadOwnedItem(userId: string, id: string) {
+async function loadOwnedItem(userId: string, profileId: string, id: string) {
   const db = getDb();
   const row = await db.query.savedUrls.findFirst({
-    where: and(eq(savedUrls.id, id), eq(savedUrls.userId, userId)),
+    where: and(
+      eq(savedUrls.id, id),
+      eq(savedUrls.userId, userId),
+      eq(savedUrls.profileId, profileId)
+    ),
     columns: SAVED_URL_SUMMARY_COLUMNS,
     with: { readLaterState: true, collectionItems: true },
   });
@@ -28,6 +32,7 @@ async function loadOwnedItem(userId: string, id: string) {
 async function assertOwnedCollections(
   db: ReturnType<typeof getDb>,
   userId: string,
+  profileId: string,
   collectionIds: string[]
 ): Promise<string[]> {
   const uniqueIds = [...new Set(collectionIds)];
@@ -35,7 +40,13 @@ async function assertOwnedCollections(
   const owned = await db
     .select({ id: collections.id })
     .from(collections)
-    .where(and(eq(collections.userId, userId), inArray(collections.id, uniqueIds)));
+    .where(
+      and(
+        eq(collections.userId, userId),
+        eq(collections.profileId, profileId),
+        inArray(collections.id, uniqueIds)
+      )
+    );
   if (owned.length !== uniqueIds.length) {
     throw new NotFoundError("Collection");
   }
@@ -60,6 +71,7 @@ const listQuerySchema = z.object({
 
 items.get("/", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const { cursor, limit, sort } = listQuerySchema.parse({
     cursor: c.req.query("cursor"),
     limit: c.req.query("limit"),
@@ -70,13 +82,17 @@ items.get("/", async (c) => {
   let cursorCreatedAt: Date | undefined;
   if (cursor) {
     const cursorRow = await db.query.savedUrls.findFirst({
-      where: and(eq(savedUrls.id, cursor), eq(savedUrls.userId, user.id)),
+      where: and(
+        eq(savedUrls.id, cursor),
+        eq(savedUrls.userId, user.id),
+        eq(savedUrls.profileId, profile.id)
+      ),
       columns: { createdAt: true },
     });
     cursorCreatedAt = cursorRow?.createdAt;
   }
 
-  const conditions = [eq(savedUrls.userId, user.id)];
+  const conditions = [eq(savedUrls.userId, user.id), eq(savedUrls.profileId, profile.id)];
   if (cursorCreatedAt) {
     conditions.push(
       sort === "newest"
@@ -115,16 +131,17 @@ const createSchema = z.object({
 
 items.post("/", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const { url, collectionIds } = createSchema.parse(await c.req.json());
   const { url: cleanUrl, normalizedUrl, domain } = parseAndNormalizeUrl(url);
   const db = getDb();
 
   const requestedCollectionIds = collectionIds
-    ? await assertOwnedCollections(db, user.id, collectionIds)
+    ? await assertOwnedCollections(db, user.id, profile.id, collectionIds)
     : [];
 
   const existing = await db.query.savedUrls.findFirst({
-    where: and(eq(savedUrls.userId, user.id), eq(savedUrls.normalizedUrl, normalizedUrl)),
+    where: and(eq(savedUrls.profileId, profile.id), eq(savedUrls.normalizedUrl, normalizedUrl)),
     columns: SAVED_URL_SUMMARY_COLUMNS,
     with: { readLaterState: true, collectionItems: true },
   });
@@ -159,6 +176,7 @@ items.post("/", async (c) => {
       result.status === "success"
         ? {
             userId: user.id,
+            profileId: profile.id,
             url: cleanUrl,
             normalizedUrl,
             domain,
@@ -173,6 +191,7 @@ items.post("/", async (c) => {
           }
         : {
             userId: user.id,
+            profileId: profile.id,
             url: cleanUrl,
             normalizedUrl,
             domain,
@@ -184,7 +203,7 @@ items.post("/", async (c) => {
 
   const [rl] = await db
     .insert(readLaterState)
-    .values({ userId: user.id, savedUrlId: row.id })
+    .values({ userId: user.id, profileId: profile.id, savedUrlId: row.id })
     .returning();
 
   if (requestedCollectionIds.length > 0) {
@@ -206,7 +225,8 @@ items.post("/", async (c) => {
 
 items.get("/:id", async (c) => {
   const user = c.get("user");
-  const row = await loadOwnedItem(user.id, c.req.param("id"));
+  const profile = c.get("profile");
+  const row = await loadOwnedItem(user.id, profile.id, c.req.param("id"));
   return ok(
     serializeSavedUrl(
       row,
@@ -225,8 +245,9 @@ const patchSchema = z.object({
 
 items.patch("/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  const existing = await loadOwnedItem(user.id, id);
+  const existing = await loadOwnedItem(user.id, profile.id, id);
   const { tags, ...body } = patchSchema.parse(await c.req.json());
   const db = getDb();
   const [updated] = await db
@@ -249,8 +270,9 @@ items.patch("/:id", async (c) => {
 
 items.delete("/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  await loadOwnedItem(user.id, id);
+  await loadOwnedItem(user.id, profile.id, id);
   const db = getDb();
   await db.delete(savedUrls).where(and(eq(savedUrls.id, id), eq(savedUrls.userId, user.id)));
   return ok({ id });
@@ -258,8 +280,9 @@ items.delete("/:id", async (c) => {
 
 items.post("/:id/refetch", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  const existing = await loadOwnedItem(user.id, id);
+  const existing = await loadOwnedItem(user.id, profile.id, id);
   const db = getDb();
 
   const result = await fetchUrlMetadata(existing.url);
@@ -304,12 +327,13 @@ const setCollectionsSchema = z.object({
 
 items.put("/:id/collections", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  const existing = await loadOwnedItem(user.id, id);
+  const existing = await loadOwnedItem(user.id, profile.id, id);
   const { collectionIds } = setCollectionsSchema.parse(await c.req.json());
   const db = getDb();
 
-  const nextIds = await assertOwnedCollections(db, user.id, collectionIds);
+  const nextIds = await assertOwnedCollections(db, user.id, profile.id, collectionIds);
   const nextSet = new Set(nextIds);
   const currentIds = new Set(existing.collectionItems.map((ci) => ci.collectionId));
 
@@ -349,7 +373,8 @@ const IMAGE_FETCH_TIMEOUT_MS = 8000;
  */
 items.get("/:id/image", async (c) => {
   const user = c.get("user");
-  const row = await loadOwnedItem(user.id, c.req.param("id"));
+  const profile = c.get("profile");
+  const row = await loadOwnedItem(user.id, profile.id, c.req.param("id"));
 
   let imageUrl = row.ogImageUrl;
   if (!imageUrl) {

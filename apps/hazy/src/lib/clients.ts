@@ -40,6 +40,11 @@ export function splitPathAndSearch(href: string): {
 export const apiClient = createHazyClient({
   baseUrl: env.API_URL,
   credentials: "include",
+  getProfile: () => {
+    if (typeof window === "undefined") return null;
+    const match = window.location.pathname.match(/^\/(?:en|ja)\/p\/([^/]+)/);
+    return match?.[1] ?? null;
+  },
 });
 
 export const authClient = createHazyAuthClient(env.API_URL);

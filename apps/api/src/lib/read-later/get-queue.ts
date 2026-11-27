@@ -12,13 +12,14 @@ import { SAVED_URL_SUMMARY_COLUMNS } from "@/lib/serializers";
  * my read later list", since that's app state — not something present in
  * any saved page's own content).
  */
-export async function getReadLaterQueue(userId: string): Promise<InboxItem[]> {
+export async function getReadLaterQueue(userId: string, profileId?: string): Promise<InboxItem[]> {
   const db = getDb();
   const now = new Date();
 
   const rows = await db.query.readLaterState.findMany({
     where: and(
       eq(readLaterState.userId, userId),
+      ...(profileId ? [eq(readLaterState.profileId, profileId)] : []),
       or(
         eq(readLaterState.status, "inbox"),
         and(eq(readLaterState.status, "snoozed"), lte(readLaterState.snoozedUntil, now))

@@ -52,6 +52,8 @@ export const sourceKindEnum = pgEnum("source_kind", [
   "note",
 ]);
 export const noteStatusEnum = pgEnum("note_status", ["draft", "done"]);
+export const blogProviderEnum = pgEnum("blog_provider", ["microcms", "qiita", "zenn"]);
+export const blogPostStatusEnum = pgEnum("blog_post_status", ["draft", "published", "archived"]);
 
 // ── Better Auth tables ────────────────────────────────────────────────
 // Prefixed `auth_*` so they never collide with `users`. The domain `users.id`
@@ -118,6 +120,7 @@ export const authVerification = pgTable(
   (t) => [index("auth_verification_identifier_idx").on(t.identifier)]
 );
 
+// dead — Passkey removed; retained so existing migrations stay intact, nothing reads/writes it
 export const authPasskey = pgTable(
   "auth_passkey",
   {
@@ -165,6 +168,28 @@ export const userPreferences = pgTable("user_preferences", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const profiles = pgTable(
+  "profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    slug: varchar("slug", { length: 64 }).notNull(),
+    name: varchar("name", { length: 120 }).notNull(),
+    icon: varchar("icon", { length: 32 }),
+    color: varchar("color", { length: 32 }),
+    isDefault: boolean("is_default").notNull().default(false),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("profiles_user_slug_unique").on(table.userId, table.slug),
+    index("profiles_user_id_idx").on(table.userId),
+  ]
+);
+
 export const savedUrls = pgTable(
   "saved_urls",
   {
@@ -172,6 +197,9 @@ export const savedUrls = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     url: text("url").notNull(),
     normalizedUrl: text("normalized_url").notNull(),
     domain: varchar("domain", { length: 255 }),
@@ -218,8 +246,9 @@ export const savedUrls = pgTable(
       .default(sql`ARRAY[]::text[]`),
   },
   (table) => [
-    unique("saved_urls_user_normalized_unique").on(table.userId, table.normalizedUrl),
+    unique("saved_urls_profile_normalized_unique").on(table.profileId, table.normalizedUrl),
     index("saved_urls_user_id_idx").on(table.userId),
+    index("saved_urls_profile_id_idx").on(table.profileId),
     index("saved_urls_search_vector_idx").using("gin", table.searchVector),
     index("saved_urls_tags_idx").using("gin", table.tags),
   ]
@@ -232,6 +261,9 @@ export const readLaterState = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     savedUrlId: uuid("saved_url_id")
       .notNull()
       .references(() => savedUrls.id, { onDelete: "cascade" }),
@@ -244,6 +276,7 @@ export const readLaterState = pgTable(
   (table) => [
     unique("read_later_user_saved_url_unique").on(table.userId, table.savedUrlId),
     index("read_later_user_status_idx").on(table.userId, table.status),
+    index("read_later_profile_id_idx").on(table.profileId),
   ]
 );
 
@@ -254,6 +287,9 @@ export const collections = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     name: varchar("name", { length: 255 }).notNull(),
     description: text("description"),
     color: varchar("color", { length: 32 }),
@@ -264,7 +300,10 @@ export const collections = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("collections_user_id_idx").on(table.userId)]
+  (table) => [
+    index("collections_user_id_idx").on(table.userId),
+    index("collections_profile_id_idx").on(table.profileId),
+  ]
 );
 
 export const collectionItems = pgTable(
@@ -297,13 +336,19 @@ export const projects = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     description: text("description"),
     tone: varchar("tone", { length: 16 }).notNull().default("neutral"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("projects_user_id_idx").on(table.userId)]
+  (table) => [
+    index("projects_user_id_idx").on(table.userId),
+    index("projects_profile_id_idx").on(table.profileId),
+  ]
 );
 
 export const askThreads = pgTable(
@@ -313,11 +358,17 @@ export const askThreads = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("ask_threads_user_id_idx").on(table.userId)]
+  (table) => [
+    index("ask_threads_user_id_idx").on(table.userId),
+    index("ask_threads_profile_id_idx").on(table.profileId),
+  ]
 );
 
 export const askMessages = pgTable(
@@ -365,6 +416,9 @@ export const notes = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     // Deprecated — hazy-note moved to its own `projects` table. Left in place
     // so the schema diff stays additive; nothing writes it any more.
     collectionId: uuid("collection_id").references(() => collections.id, {
@@ -406,6 +460,7 @@ export const notes = pgTable(
   },
   (table) => [
     index("notes_user_id_idx").on(table.userId),
+    index("notes_profile_id_idx").on(table.profileId),
     index("notes_collection_id_idx").on(table.collectionId),
     index("notes_project_id_idx").on(table.projectId),
   ]
@@ -452,6 +507,9 @@ export const insightProfiles = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     // null = the whole account; otherwise scoped to one project's notes + sources.
     projectId: uuid("project_id").references((): AnyPgColumn => projects.id, {
       onDelete: "set null",
@@ -473,7 +531,10 @@ export const insightProfiles = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (table) => [index("insight_profiles_user_id_idx").on(table.userId)]
+  (table) => [
+    index("insight_profiles_user_id_idx").on(table.userId),
+    index("insight_profiles_profile_id_idx").on(table.profileId),
+  ]
 );
 
 // One row per user: the whole graph blob.
@@ -497,6 +558,9 @@ export const connectCodes = pgTable("connect_codes", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  profileId: uuid("profile_id")
+    .notNull()
+    .references(() => profiles.id, { onDelete: "cascade" }),
   clientName: varchar("client_name", { length: 100 }).notNull(),
   redirectUri: text("redirect_uri").notNull(),
   codeChallenge: varchar("code_challenge", { length: 128 }).notNull(),
@@ -511,6 +575,9 @@ export const apiTokens = pgTable(
     userId: uuid("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
     tokenHash: varchar("token_hash", { length: 64 }).notNull().unique(),
     clientName: varchar("client_name", { length: 100 }).notNull(),
     clientOrigin: text("client_origin").notNull(),
@@ -518,7 +585,76 @@ export const apiTokens = pgTable(
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("api_tokens_user_idx").on(t.userId)]
+  (t) => [
+    index("api_tokens_user_idx").on(t.userId),
+    index("api_tokens_profile_idx").on(t.profileId),
+  ]
+);
+
+// ── External Blog Integration ─────────────────────────────────────────
+export const blogConnections = pgTable(
+  "blog_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    provider: blogProviderEnum("provider").notNull(),
+    label: varchar("label", { length: 120 }).notNull(),
+    config: jsonb("config").$type<Record<string, unknown>>().notNull().default({}),
+    encryptedCredentials: text("encrypted_credentials").notNull(),
+    webhookToken: varchar("webhook_token", { length: 96 }).notNull().unique(),
+    isEnabled: boolean("is_enabled").notNull().default(true),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    lastSyncError: text("last_sync_error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    index("blog_connections_user_profile_idx").on(t.userId, t.profileId),
+    index("blog_connections_profile_idx").on(t.profileId),
+  ]
+);
+
+export const blogPublications = pgTable(
+  "blog_publications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    profileId: uuid("profile_id")
+      .notNull()
+      .references(() => profiles.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => blogConnections.id, { onDelete: "cascade" }),
+    noteId: uuid("note_id").references(() => notes.id, { onDelete: "set null" }),
+    savedUrlId: uuid("saved_url_id").references(() => savedUrls.id, { onDelete: "set null" }),
+    externalId: text("external_id").notNull(),
+    externalSlug: text("external_slug"),
+    externalUrl: text("external_url"),
+    title: text("title").notNull(),
+    status: blogPostStatusEnum("status").notNull().default("draft"),
+    tags: text("tags")
+      .array()
+      .notNull()
+      .default(sql`ARRAY[]::text[]`),
+    contentHash: varchar("content_hash", { length: 64 }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique("blog_publications_connection_external_unique").on(t.connectionId, t.externalId),
+    index("blog_publications_profile_idx").on(t.profileId),
+    index("blog_publications_note_idx").on(t.noteId),
+    index("blog_publications_connection_idx").on(t.connectionId),
+  ]
 );
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -530,6 +666,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [userPreferences.userId],
   }),
+  profiles: many(profiles),
   savedUrls: many(savedUrls),
   collections: many(collections),
   askThreads: many(askThreads),
@@ -540,6 +677,20 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [graphSnapshots.userId],
   }),
+  blogConnections: many(blogConnections),
+  blogPublications: many(blogPublications),
+}));
+
+export const profilesRelations = relations(profiles, ({ one, many }) => ({
+  user: one(users, { fields: [profiles.userId], references: [users.id] }),
+  savedUrls: many(savedUrls),
+  collections: many(collections),
+  projects: many(projects),
+  askThreads: many(askThreads),
+  notes: many(notes),
+  insightProfiles: many(insightProfiles),
+  blogConnections: many(blogConnections),
+  blogPublications: many(blogPublications),
 }));
 
 export const savedUrlsRelations = relations(savedUrls, ({ one, many }) => ({

@@ -14,12 +14,13 @@ const querySchema = z.object({
 
 search.get("/", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const { q, limit } = querySchema.parse({
     q: c.req.query("q"),
     limit: c.req.query("limit"),
   });
 
-  const hits = await searchUserItems(user.id, q, { limit });
+  const hits = await searchUserItems(user.id, q, { limit, profileId: profile.id });
 
   return ok({
     query: q,

@@ -39,12 +39,10 @@
   "auth": {
     "signInTitle": "Sign in to Hazy",
     "tagline": "A memory for the URLs you save.",
-    "continueWithPasskey": "Sign in with Passkey",
     "continueWithGithub": "Continue with GitHub",
     "githubNotConfigured": "GitHub OAuth is not configured on the API server.",
     "signingIn": "Signing in…",
     "signInError": "Sign-in failed or account not authorized.",
-    "passkeyError": "Passkey sign-in was cancelled or failed.",
     "restrictedHint": "Personal workspace — sign-in is limited to the configured owner."
   },
   "library": {
@@ -152,25 +150,7 @@
     },
     "nav": {
       "language": "Language",
-      "connections": "Connected apps",
-      "passkeys": "Passkeys"
-    },
-    "passkeys": {
-      "title": "Passkeys",
-      "note": "Register a passkey on this device after signing in with GitHub so you can sign in passwordlessly.",
-      "namePlaceholder": "Device name (optional)",
-      "add": "Add passkey",
-      "adding": "Adding…",
-      "added": "Passkey registered.",
-      "addFailed": "Could not register passkey.",
-      "loading": "Loading passkeys…",
-      "loadFailed": "Couldn't load passkeys.",
-      "retry": "Retry",
-      "empty": "No passkeys registered yet.",
-      "unnamed": "Unnamed passkey",
-      "delete": "Delete",
-      "deleted": "Passkey deleted.",
-      "deleteFailed": "Could not delete passkey."
+      "connections": "Connected apps"
     },
     "connections": {
       "title": "Connected apps",

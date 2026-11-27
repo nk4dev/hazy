@@ -1,15 +1,9 @@
-import { passkey } from "@better-auth/passkey";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { APIError } from "better-auth/api";
 import { getDb } from "@/db";
-import { authAccount, authPasskey, authSession, authUser, authVerification } from "@/db/schema";
-import {
-  env,
-  getPasskeyRpId,
-  isBetterAuthConfigured,
-  isGithubOAuthConfigured,
-} from "@/env";
+import { authAccount, authSession, authUser, authVerification } from "@/db/schema";
+import { env, isBetterAuthConfigured, isGithubOAuthConfigured } from "@/env";
 import { getAllowedOrigins } from "@/lib/auth/origins";
 
 export type BetterAuthSessionResult = {
@@ -42,7 +36,6 @@ function createAuthInstance() {
         session: authSession,
         account: authAccount,
         verification: authVerification,
-        passkey: authPasskey,
       },
     }),
     baseURL: env.BETTER_AUTH_URL,
@@ -62,13 +55,6 @@ function createAuthInstance() {
           },
         }
       : {}),
-    plugins: [
-      passkey({
-        rpID: getPasskeyRpId(),
-        rpName: env.PASSKEY_RP_NAME,
-        origin: getAllowedOrigins(),
-      }),
-    ],
     advanced: {
       crossSubDomainCookies: env.BETTER_AUTH_COOKIE_DOMAIN
         ? { enabled: true, domain: env.BETTER_AUTH_COOKIE_DOMAIN }

@@ -24,8 +24,6 @@ const envSchema = z.object({
   ADMIN_EMAIL: z.string().email().optional(),
   GITHUB_CLIENT_ID: z.string().min(1).optional(),
   GITHUB_CLIENT_SECRET: z.string().min(1).optional(),
-  PASSKEY_RP_ID: z.string().min(1).optional(),
-  PASSKEY_RP_NAME: z.string().min(1).default("Hazy"),
 
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z.string().min(1).optional(),
   CLERK_SECRET_KEY: z.string().min(1).optional(),
@@ -43,6 +41,8 @@ const envSchema = z.object({
   OPENROUTER_TIMEOUT_MS: z.coerce.number().int().min(3000).max(60000).default(20000),
   OPENROUTER_SITE_URL: z.string().url().default("http://localhost:3100"),
   OPENROUTER_APP_NAME: z.string().min(1).default("Hazy"),
+
+  BLOG_CREDENTIALS_KEY: z.string().min(1).optional(),
 });
 
 /** Deduplicate and preserve priority order for a primary model + comma-separated fallbacks. */
@@ -70,8 +70,21 @@ export function parseModelList(primary: string, fallbacksCsv?: string): string[]
  */
 function sanitizeEmptyStrings(raw: NodeJS.ProcessEnv): Record<string, string | undefined> {
   const sanitized: Record<string, string | undefined> = {};
+  let sawUnexpandedOpRef = false;
   for (const [key, value] of Object.entries(raw)) {
-    sanitized[key] = value === "" ? undefined : value;
+    if (value === "") {
+      sanitized[key] = undefined;
+    } else if (typeof value === "string" && value.startsWith("op://")) {
+      sanitized[key] = undefined;
+      sawUnexpandedOpRef = true;
+    } else {
+      sanitized[key] = value;
+    }
+  }
+  if (sawUnexpandedOpRef) {
+    console.warn(
+      'Detected unexpanded 1Password "op://" references in env; run via `op run --env-file=".env.op" -- bun run dev`.'
+    );
   }
   return sanitized;
 }
@@ -91,19 +104,11 @@ export const isDatabaseConfigured = () => Boolean(env.DATABASE_URL);
 export const isBetterAuthConfigured = () => Boolean(env.BETTER_AUTH_SECRET && env.DATABASE_URL);
 export const isGithubOAuthConfigured = () =>
   Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET);
-export function getPasskeyRpId(
-  rpId: string | undefined = env.PASSKEY_RP_ID,
-  cookieDomain: string | undefined = env.BETTER_AUTH_COOKIE_DOMAIN,
-  authUrl: string = env.BETTER_AUTH_URL
-): string {
-  if (rpId?.trim()) return rpId.trim();
-  if (cookieDomain?.trim()) return cookieDomain.trim().replace(/^\./, "");
-  return new URL(authUrl).hostname;
-}
 export const isClerkConfigured = () =>
   Boolean(env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY && env.CLERK_SECRET_KEY);
 export const isClerkWebhookConfigured = () => Boolean(env.CLERK_WEBHOOK_SIGNING_SECRET);
 export const isOpenRouterConfigured = () => Boolean(env.OPENROUTER_API_KEY);
+export const isBlogCredentialsConfigured = () => Boolean(env.BLOG_CREDENTIALS_KEY);
 
 export type CoreService = "database" | "clerk" | "better_auth";
-export type MissingService = CoreService | "openrouter";
+export type MissingService = CoreService | "openrouter" | "blog_credentials";

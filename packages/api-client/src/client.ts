@@ -3,12 +3,18 @@ import type {
   AskThreadDetailDTO,
   AskThreadListDTO,
   AuthConfigDTO,
+  BlogConnectionDTO,
+  BlogPublicationDTO,
+  BlogPublishInput,
+  BlogSyncResultDTO,
   CollectionDTO,
   CollectionDetailDTO,
   CollectionItemRefDTO,
   CollectionSummaryDTO,
   ConnectCodeDTO,
   ConnectedAppDTO,
+  CreateBlogConnectionInput,
+  CreateProfileInput,
   ItemCollectionsDTO,
   MeDTO,
   NoteDTO,
@@ -27,12 +33,15 @@ import type {
   NoteTagBadgeDTO,
   NoteTagDTO,
   PaginatedResponse,
+  ProfileDTO,
   ReadLaterQueueDTO,
   ReadLaterStateDTO,
   ReadLaterStatsDTO,
   ReadLaterStatus,
   SavedUrlDTO,
   SearchResponseDTO,
+  UpdateBlogConnectionInput,
+  UpdateProfileInput,
 } from "./types";
 
 /** Thrown for every non-2xx response and every `{ error }` envelope. */
@@ -53,6 +62,8 @@ export interface HazyClientConfig {
   baseUrl: string;
   /** Resolves a Bearer token (`hz_…` connected-app token or Clerk JWT). Omit for Better Auth cookie sessions. */
   getToken?: () => Promise<string | null>;
+  /** Resolves the active profile slug/UUID for `X-Hazy-Profile`. */
+  getProfile?: () => string | null | undefined;
   /** Explicit fetch credentials mode. Defaults to `"include"` when cookie-backed (`!getToken`) and `"omit"` for bearer callers. */
   credentials?: RequestCredentials;
 }
@@ -107,6 +118,7 @@ function createRequest(config: HazyClientConfig) {
     }
 
     const token = config.getToken ? await config.getToken() : null;
+    const profile = config.getProfile ? config.getProfile() : null;
     const credentials = config.credentials ?? (config.getToken ? "omit" : "include");
     const res = await fetch(url, {
       method: init.method ?? "GET",
@@ -114,6 +126,7 @@ function createRequest(config: HazyClientConfig) {
       headers: {
         ...(init.body !== undefined ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(profile ? { "X-Hazy-Profile": profile } : {}),
       },
       body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: init.signal,
@@ -154,6 +167,7 @@ export interface ConnectAuthorizeInput {
   redirectUri: string;
   codeChallenge: string;
   codeChallengeMethod: "S256";
+  profileId?: string;
 }
 
 export interface NoteItemPatch {
@@ -376,6 +390,41 @@ export function createHazyClient(config: HazyClientConfig) {
             body: { noteId, format },
           }),
       },
+    },
+    profiles: {
+      list: (signal?: AbortSignal) => request<{ items: ProfileDTO[] }>("/profiles", { signal }),
+      create: (input: CreateProfileInput) =>
+        request<ProfileDTO>("/profiles", { method: "POST", body: input }),
+      update: (id: string, input: UpdateProfileInput) =>
+        request<ProfileDTO>(`/profiles/${id}`, { method: "PATCH", body: input }),
+      delete: (id: string) => request<{ id: string }>(`/profiles/${id}`, { method: "DELETE" }),
+    },
+    blogs: {
+      connections: {
+        list: (signal?: AbortSignal) =>
+          request<{ items: BlogConnectionDTO[] }>("/blogs/connections", { signal }),
+        create: (input: CreateBlogConnectionInput) =>
+          request<BlogConnectionDTO>("/blogs/connections", { method: "POST", body: input }),
+        update: (id: string, input: UpdateBlogConnectionInput) =>
+          request<BlogConnectionDTO>(`/blogs/connections/${id}`, { method: "PATCH", body: input }),
+        delete: (id: string) =>
+          request<{ id: string }>(`/blogs/connections/${id}`, { method: "DELETE" }),
+        test: (id: string) =>
+          request<{ ok: boolean; detail?: string }>(`/blogs/connections/${id}/test`, {
+            method: "POST",
+          }),
+        sync: (id: string) =>
+          request<BlogSyncResultDTO>(`/blogs/connections/${id}/sync`, { method: "POST" }),
+      },
+      publications: {
+        list: (noteId?: string, signal?: AbortSignal) =>
+          request<{ items: BlogPublicationDTO[] }>("/blogs/publications", {
+            query: noteId ? { noteId } : undefined,
+            signal,
+          }),
+      },
+      publish: (input: BlogPublishInput) =>
+        request<BlogPublicationDTO>("/blogs/publish", { method: "POST", body: input }),
     },
   };
 }

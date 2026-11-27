@@ -65,7 +65,11 @@ function dateRangeConditions({ from, to }: DateRange): SQL[] {
 export async function searchUserItems(
   userId: string,
   query: string,
-  { limit = 8, dateRange = {} }: { limit?: number; dateRange?: DateRange } = {}
+  {
+    limit = 8,
+    dateRange = {},
+    profileId,
+  }: { limit?: number; dateRange?: DateRange; profileId?: string } = {}
 ): Promise<SearchHit[]> {
   const { text, domain, tags } = parseSearchQuery(query);
   const trimmed = text.trim();
@@ -74,7 +78,11 @@ export async function searchUserItems(
 
   const db = getDb();
 
-  const scopeConditions: SQL[] = [eq(savedUrls.userId, userId), ...dateRangeConditions(dateRange)];
+  const scopeConditions: SQL[] = [
+    eq(savedUrls.userId, userId),
+    ...(profileId ? [eq(savedUrls.profileId, profileId)] : []),
+    ...dateRangeConditions(dateRange),
+  ];
   if (domain) scopeConditions.push(ilike(savedUrls.domain, `%${domain}%`));
   if (tags.length > 0) scopeConditions.push(arrayContains(savedUrls.tags, tags));
 

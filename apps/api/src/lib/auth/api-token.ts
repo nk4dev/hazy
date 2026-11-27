@@ -35,7 +35,9 @@ export async function pkceChallenge(verifier: string): Promise<string> {
  * Connected apps never create users — the row always exists, since issuing a
  * token required a Clerk session first.
  */
-export async function resolveApiToken(token: string): Promise<AppUser | null> {
+export async function resolveApiToken(
+  token: string
+): Promise<{ user: AppUser; profileId: string } | null> {
   const db = getDb();
   const row = await db.query.apiTokens.findFirst({
     where: and(eq(apiTokens.tokenHash, await sha256Hex(token)), isNull(apiTokens.revokedAt)),
@@ -48,7 +50,7 @@ export async function resolveApiToken(token: string): Promise<AppUser | null> {
   if (!row.lastUsedAt || Date.now() - row.lastUsedAt.getTime() > LAST_USED_RESOLUTION_MS) {
     await db.update(apiTokens).set({ lastUsedAt: new Date() }).where(eq(apiTokens.id, row.id));
   }
-  return user;
+  return { user, profileId: row.profileId };
 }
 
 /** CORS: is `origin` a connected app with at least one live token? */

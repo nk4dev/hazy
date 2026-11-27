@@ -20,7 +20,7 @@ export function loadMonorepoEnv(localDir?: string): void {
     join(REPO_ROOT, ".env"),
   ];
   for (const file of candidates) {
-    if (existsSync(file)) {
+    if (existsSync(file) && typeof process.loadEnvFile === "function") {
       process.loadEnvFile(file);
     }
   }

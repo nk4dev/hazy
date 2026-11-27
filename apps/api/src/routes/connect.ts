@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { apiTokens, connectCodes } from "@/db/schema";
+import { apiTokens, connectCodes, profiles } from "@/db/schema";
 import { ApiError, NotFoundError } from "@/lib/api/errors";
 import { ok } from "@/lib/api/response";
 import { API_TOKEN_PREFIX, pkceChallenge, randomSecret, sha256Hex } from "@/lib/auth/api-token";
@@ -52,33 +52,57 @@ const authorizeSchema = z.object({
   redirectUri: redirectUriSchema,
   codeChallenge: z.string().regex(/^[A-Za-z0-9_-]{43,128}$/),
   codeChallengeMethod: z.literal("S256"),
+  profileId: z.string().uuid().optional(),
 });
 
 connect.post("/authorize", async (c) => {
   const user = c.get("user");
+  const activeProfile = c.get("profile");
   const body = authorizeSchema.parse(await c.req.json());
+  const db = getDb();
+
+  let targetProfileId = activeProfile.id;
+  if (body.profileId) {
+    const owned = await db.query.profiles.findFirst({
+      where: and(eq(profiles.id, body.profileId), eq(profiles.userId, user.id)),
+    });
+    if (!owned) throw new NotFoundError("Profile");
+    targetProfileId = owned.id;
+  }
+
   const code = randomSecret();
 
-  await getDb()
-    .insert(connectCodes)
-    .values({
-      codeHash: await sha256Hex(code),
-      userId: user.id,
-      clientName: body.clientName,
-      redirectUri: body.redirectUri,
-      codeChallenge: body.codeChallenge,
-      expiresAt: new Date(Date.now() + CODE_TTL_MS),
-    });
+  await db.insert(connectCodes).values({
+    codeHash: await sha256Hex(code),
+    userId: user.id,
+    profileId: targetProfileId,
+    clientName: body.clientName,
+    redirectUri: body.redirectUri,
+    codeChallenge: body.codeChallenge,
+    expiresAt: new Date(Date.now() + CODE_TTL_MS),
+  });
 
   return ok({ code }, { status: 201 });
 });
 
 connect.get("/apps", async (c) => {
   const user = c.get("user");
-  const rows = await getDb().query.apiTokens.findMany({
-    where: and(eq(apiTokens.userId, user.id), isNull(apiTokens.revokedAt)),
-    orderBy: [desc(apiTokens.createdAt)],
-  });
+  const rows = await getDb()
+    .select({
+      id: apiTokens.id,
+      clientName: apiTokens.clientName,
+      clientOrigin: apiTokens.clientOrigin,
+      createdAt: apiTokens.createdAt,
+      lastUsedAt: apiTokens.lastUsedAt,
+      profileId: apiTokens.profileId,
+      profileSlug: profiles.slug,
+      profileName: profiles.name,
+    })
+    .from(apiTokens)
+    .leftJoin(profiles, eq(apiTokens.profileId, profiles.id))
+    .where(and(eq(apiTokens.userId, user.id), isNull(apiTokens.revokedAt)))
+    .orderBy(desc(apiTokens.createdAt));
+
   return ok({
     items: rows.map((row) => ({
       id: row.id,
@@ -86,6 +110,9 @@ connect.get("/apps", async (c) => {
       clientOrigin: row.clientOrigin,
       createdAt: row.createdAt.toISOString(),
       lastUsedAt: row.lastUsedAt?.toISOString() ?? null,
+      profileId: row.profileId,
+      profileSlug: row.profileSlug ?? "personal",
+      profileName: row.profileName ?? "Personal",
     })),
   });
 });
@@ -133,10 +160,22 @@ connectToken.post("/", async (c) => {
   const accessToken = randomSecret(API_TOKEN_PREFIX);
   await db.insert(apiTokens).values({
     userId: row.userId,
+    profileId: row.profileId,
     tokenHash: await sha256Hex(accessToken),
     clientName: row.clientName,
     clientOrigin: new URL(row.redirectUri).origin,
   });
 
-  return ok({ accessToken, tokenType: "Bearer" as const, clientName: row.clientName });
+  const profileRow = await db.query.profiles.findFirst({
+    where: eq(profiles.id, row.profileId),
+  });
+
+  return ok({
+    accessToken,
+    tokenType: "Bearer" as const,
+    clientName: row.clientName,
+    ...(profileRow
+      ? { profile: { id: profileRow.id, slug: profileRow.slug, name: profileRow.name } }
+      : {}),
+  });
 });

@@ -120,13 +120,16 @@ export async function getItem(userId: string, id: string): Promise<NoteItemDTO |
   return row ? toItem(row) : undefined;
 }
 
-export async function addItem(userId: string, url: string): Promise<NoteItemDTO> {
+export async function addItem(userId: string, url: string, profileId?: string): Promise<NoteItemDTO> {
   const db = getDb();
+  const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
+  const resolvedProfileId = profileId ?? (await ensureDefaultProfile(db, userId)).id;
   const site = siteFromUrl(url);
   const [row] = await db
     .insert(schema.savedUrls)
     .values({
       userId,
+      profileId: resolvedProfileId,
       url,
       normalizedUrl: normalizeUrl(url),
       domain: site,
@@ -135,7 +138,7 @@ export async function addItem(userId: string, url: string): Promise<NoteItemDTO>
       fetchStatus: "pending",
     })
     .onConflictDoUpdate({
-      target: [schema.savedUrls.userId, schema.savedUrls.normalizedUrl],
+      target: [schema.savedUrls.profileId, schema.savedUrls.normalizedUrl],
       set: { fetchStatus: "pending", updatedAt: new Date() },
     })
     .returning();
@@ -144,8 +147,10 @@ export async function addItem(userId: string, url: string): Promise<NoteItemDTO>
   return item;
 }
 
-export async function addMemo(userId: string, text: string): Promise<NoteItemDTO> {
+export async function addMemo(userId: string, text: string, profileId?: string): Promise<NoteItemDTO> {
   const db = getDb();
+  const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
+  const resolvedProfileId = profileId ?? (await ensureDefaultProfile(db, userId)).id;
   const token = `hazy:memo:${crypto.randomUUID()}`;
   const firstLine = text.trim().split("\n")[0].trim();
   const title = firstLine.length > 60 ? `${firstLine.slice(0, 60)}…` : firstLine || "メモ";
@@ -153,6 +158,7 @@ export async function addMemo(userId: string, text: string): Promise<NoteItemDTO
     .insert(schema.savedUrls)
     .values({
       userId,
+      profileId: resolvedProfileId,
       url: token,
       normalizedUrl: token,
       domain: "メモ",
@@ -375,10 +381,13 @@ export async function createProject(
   opts: { tone?: "accent" | "neutral"; description?: string } = {}
 ): Promise<NoteProjectDTO> {
   const db = getDb();
+  const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
+  const resolvedProfileId = (await ensureDefaultProfile(db, userId)).id;
   const [row] = await db
     .insert(schema.projects)
     .values({
       userId,
+      profileId: resolvedProfileId,
       name: name.trim() || "無題のプロジェクト",
       tone: opts.tone ?? "neutral",
       description: opts.description?.trim() || null,
@@ -534,12 +543,15 @@ export async function createNote(
   } = {}
 ): Promise<NoteDTO> {
   const db = getDb();
+  const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
+  const resolvedProfileId = (await ensureDefaultProfile(db, userId)).id;
   const body: NoteDeltaOp[] =
     input.body ?? (input.text?.trim() ? [{ insert: `${input.text.trim()}\n` }] : []);
   const [row] = await db
     .insert(schema.notes)
     .values({
       userId,
+      profileId: resolvedProfileId,
       projectId: input.projectId || null,
       title: input.title?.trim() || "無題のノート",
       status: input.status ?? "draft",
@@ -796,10 +808,13 @@ export async function buildInsightProfile(
           : isNull(schema.insightProfiles.projectId)
       )
     );
+  const { ensureDefaultProfile } = await import("@/lib/auth/profiles");
+  const resolvedProfileId = (await ensureDefaultProfile(db, userId)).id;
   const [row] = await db
     .insert(schema.insightProfiles)
     .values({
       userId,
+      profileId: resolvedProfileId,
       projectId: scopedProjectId ?? null,
       stats: stats as unknown as Record<string, unknown>,
       profile: read.profile,

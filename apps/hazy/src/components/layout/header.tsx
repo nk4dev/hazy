@@ -1,4 +1,5 @@
 import { HazyMark } from "@repo/ui/components/hazy-mark";
+import { ProfileSwitcher } from "@/components/layout/profile-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@repo/ui/components/ui/avatar";
 import { Button } from "@repo/ui/components/ui/button";
 import {
@@ -54,6 +55,7 @@ export function Header() {
           </Button>
           <SaveUrlDialog triggerLabel={t("saveLink")} />
           <div className="ml-1 flex size-9 items-center justify-center">
+            <ProfileSwitcher />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -83,6 +85,13 @@ export function Header() {
                     <DropdownMenuSeparator />
                   </>
                 )}
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/profiles">Profiles</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings/blogs">Blog Integrations</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onSelect={() => void signOut(locale)}

@@ -15,6 +15,10 @@ export default defineConfig({
     alias: {
       "@": resolve(rootDir, "src"),
     },
+    dedupe: ["react", "react-dom", "@tanstack/react-query", "@tanstack/react-router"],
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   },
   server: {
     port: 3200,

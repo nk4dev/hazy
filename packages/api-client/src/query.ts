@@ -72,9 +72,18 @@ export const hazyQueryKeys = {
     all: ["auth"] as const,
     session: () => ["auth", "session"] as const,
     config: () => ["auth", "config"] as const,
-    passkeys: () => ["auth", "passkeys"] as const,
   },
   me: () => ["me"] as const,
+  profiles: {
+    all: ["profiles"] as const,
+    list: () => ["profiles", "list"] as const,
+  },
+  blogs: {
+    connections: (profileScope = "default") =>
+      ["p", profileScope, "blog-connections"] as const,
+    publications: (profileScope = "default", noteId?: string) =>
+      ["p", profileScope, "blog-publications", noteId ?? "all"] as const,
+  },
   items: {
     all: ["items"] as const,
     list: (sort: "newest" | "oldest" = "newest") => ["items", sort] as const,

@@ -15,8 +15,6 @@ BETTER_AUTH_SECRET=
 ADMIN_EMAIL=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
-PASSKEY_RP_ID=localhost
-PASSKEY_RP_NAME=Hazy
 
 # --- Clerk (temporary fallback / Flutter compatibility) ---
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=

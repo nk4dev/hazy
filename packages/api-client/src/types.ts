@@ -109,7 +109,6 @@ export type UserPreferencesDTO = {
 export type AuthConfigDTO = {
   betterAuth: boolean;
   github: boolean;
-  passkey: boolean;
 };
 
 /** GET /v1/me */
@@ -119,6 +118,8 @@ export type MeDTO = {
   displayName: string | null;
   avatarUrl: string | null;
   preferences: UserPreferencesDTO;
+  activeProfile?: ProfileDTO;
+  profiles?: ProfileDTO[];
 };
 
 /** POST /v1/connect/authorize — the one-shot code hazy's `/connector/add` page redirects back with. */
@@ -348,4 +349,106 @@ export type NoteExportDraftDTO = {
 
 export type NoteExportResultDTO = NoteExportDraftDTO & {
   exportedTo: string;
+};
+
+// ── Multi-Profile ─────────────────────────────────────────────────────
+export type ProfileDTO = {
+  id: string;
+  slug: string;
+  name: string;
+  icon: string | null;
+  color: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateProfileInput = {
+  slug: string;
+  name: string;
+  icon?: string | null;
+  color?: string | null;
+  isDefault?: boolean;
+};
+
+export type UpdateProfileInput = {
+  slug?: string;
+  name?: string;
+  icon?: string | null;
+  color?: string | null;
+  sortOrder?: number;
+  isDefault?: boolean;
+};
+
+// ── External Blog Integration ─────────────────────────────────────────
+export type BlogProvider = "microcms" | "qiita" | "zenn";
+export type BlogPostStatus = "draft" | "published" | "archived";
+
+export type BlogConnectionDTO = {
+  id: string;
+  profileId: string;
+  provider: BlogProvider;
+  label: string;
+  config: Record<string, unknown>;
+  isEnabled: boolean;
+  webhookUrl: string | null;
+  lastSyncedAt: string | null;
+  lastSyncError: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateBlogConnectionInput = {
+  provider: BlogProvider;
+  label: string;
+  config: Record<string, unknown>;
+  credentials: Record<string, unknown>;
+  isEnabled?: boolean;
+};
+
+export type UpdateBlogConnectionInput = {
+  label?: string;
+  config?: Record<string, unknown>;
+  credentials?: Record<string, unknown>;
+  isEnabled?: boolean;
+};
+
+export type BlogPublicationDTO = {
+  id: string;
+  profileId: string;
+  connectionId: string;
+  noteId: string | null;
+  savedUrlId: string | null;
+  externalId: string;
+  externalSlug: string | null;
+  externalUrl: string | null;
+  title: string;
+  status: BlogPostStatus;
+  tags: string[];
+  publishedAt: string | null;
+  lastSyncedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type BlogPublishInput = {
+  connectionId: string;
+  noteId?: string;
+  publicationId?: string;
+  title: string;
+  markdown: string;
+  status?: "draft" | "published";
+  tags?: string[];
+  slug?: string;
+  emoji?: string;
+  zennType?: "tech" | "idea";
+  citedSavedUrlIds?: string[];
+  citedCollectionIds?: string[];
+  citationStyle?: "list" | "footnote" | "cards";
+};
+
+export type BlogSyncResultDTO = {
+  upserted: number;
+  deleted: number;
 };

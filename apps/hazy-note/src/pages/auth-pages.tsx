@@ -1,19 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLocation, useRouter } from "@tanstack/react-router";
+import { useLocation } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Icon } from "@/components/icon";
-import {
-  noteAuthClient,
-  noteQueries,
-  sanitizeRedirectUrl,
-  splitPathAndSearch,
-} from "@/lib/clients";
-import { useAuthSession } from "@/src/components/auth-provider";
+import { noteAuthClient, noteQueries, sanitizeRedirectUrl } from "@/lib/clients";
 
 function AuthCard() {
-  const router = useRouter();
   const location = useLocation();
-  const { refreshSessionAfterAuth } = useAuthSession();
   const authConfig = useQuery(noteQueries.authConfig());
 
   const redirectTarget = useMemo(() => {
@@ -22,34 +14,11 @@ function AuthCard() {
   }, [location.searchStr]);
 
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"passkey" | "github" | null>(null);
-
-  async function handlePasskey() {
-    setError(null);
-    setBusy("passkey");
-    try {
-      const res = await noteAuthClient.signIn.passkey();
-      if (res?.error) {
-        setError(res.error.message || "パスキーでのサインインに失敗しました。");
-        return;
-      }
-      await refreshSessionAfterAuth();
-      const target = splitPathAndSearch(redirectTarget);
-      await router.navigate({
-        to: target.to as never,
-        ...(target.search ? { search: target.search as never } : {}),
-        replace: true,
-      });
-    } catch {
-      setError("パスキーでのサインインがキャンセルされたか失敗しました。");
-    } finally {
-      setBusy(null);
-    }
-  }
+  const [busy, setBusy] = useState(false);
 
   async function handleGithub() {
     setError(null);
-    setBusy("github");
+    setBusy(true);
     try {
       await noteAuthClient.signIn.social({
         provider: "github",
@@ -57,7 +26,7 @@ function AuthCard() {
       });
     } catch {
       setError("GitHub でのサインインに失敗しました。");
-      setBusy(null);
+      setBusy(false);
     }
   }
 
@@ -82,22 +51,12 @@ function AuthCard() {
         <div className="flex flex-col gap-3">
           <button
             type="button"
-            disabled={busy !== null}
-            onClick={() => void handlePasskey()}
+            disabled={busy || !githubEnabled}
+            onClick={() => void handleGithub()}
             className="btn btn-primary w-full"
           >
-            <Icon name="fingerprint" size={16} />
-            {busy === "passkey" ? "サインイン中…" : "パスキーでサインイン"}
-          </button>
-
-          <button
-            type="button"
-            disabled={busy !== null || !githubEnabled}
-            onClick={() => void handleGithub()}
-            className="btn btn-secondary w-full"
-          >
             <Icon name="github-logo" size={16} />
-            {busy === "github" ? "サインイン中…" : "GitHub で続行"}
+            {busy ? "サインイン中…" : "GitHub で続行"}
           </button>
 
           {authConfig.data && !authConfig.data.github && (

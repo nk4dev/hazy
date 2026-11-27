@@ -1,5 +1,6 @@
 import { useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BlogPublishPanel } from "../components/blog-publish-panel";
 import { Icon } from "@/components/icon";
 import { SkeletonLines, Spinner } from "@/components/loading";
 import { Button, Seg } from "@/components/ui";
@@ -308,6 +309,15 @@ export function ExportPage() {
             </div>
           )}
         </div>
+
+        {format === "blog" && draft && (
+          <BlogPublishPanel
+            noteId={noteId}
+            title={draft.title}
+            markdown={markdown}
+            onPublished={flash}
+          />
+        )}
 
         <div className="mt-auto text-[11.5px] leading-[1.7] text-text/45">
           生成文はすべて出典に紐づいています。紐づかない文は書き出し前に灰色で示されます。

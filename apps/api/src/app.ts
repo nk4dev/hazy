@@ -6,12 +6,16 @@ import { isConnectedOrigin } from "@/lib/auth/api-token";
 import { getAuth } from "@/lib/auth/better-auth";
 import { isAllowedOrigin } from "@/lib/auth/origins";
 import { authMiddleware } from "@/middleware/auth";
+import { profileMiddleware } from "@/middleware/profile";
 import { ask } from "@/routes/ask";
+import { blogWebhooks } from "@/routes/blog-webhooks";
+import { blogs } from "@/routes/blogs";
 import { collections_ } from "@/routes/collections";
 import { connect, connectToken } from "@/routes/connect";
 import { items } from "@/routes/items";
 import { me } from "@/routes/me";
 import { noteRoutes } from "@/routes/note";
+import { profileRoutes } from "@/routes/profiles";
 import { readLater } from "@/routes/read-later";
 import { search } from "@/routes/search";
 import { webhooks } from "@/routes/webhooks";
@@ -99,7 +103,7 @@ export function createApp() {
       allowOrigin,
       allowCredentials,
       allowMethods: "GET, POST, PUT, PATCH, DELETE, OPTIONS",
-      allowHeaders: "Content-Type, Authorization",
+      allowHeaders: "Content-Type, Authorization, X-Hazy-Profile",
     };
 
     if (c.req.method === "OPTIONS") {
@@ -122,18 +126,21 @@ export function createApp() {
     ok({
       betterAuth: isBetterAuthConfigured(),
       github: isGithubOAuthConfigured(),
-      passkey: isBetterAuthConfigured(),
     })
   );
 
   // Webhook (Svix signature, not a user session): registered before the authed
   // group so its handler runs and returns before `authMiddleware` in the chain.
+  app.route("/v1/webhooks/blog", blogWebhooks);
   app.route("/v1/webhooks", webhooks);
   // Code → token exchange: the client has no session yet, PKCE is the proof.
   app.route("/v1/connect/token", connectToken);
 
   const v1 = new Hono<AppEnv>();
   v1.use("*", authMiddleware);
+  v1.use("*", profileMiddleware);
+  v1.route("/profiles", profileRoutes);
+  v1.route("/blogs", blogs);
   v1.route("/items", items);
   v1.route("/collections", collections_);
   v1.route("/ask", ask);

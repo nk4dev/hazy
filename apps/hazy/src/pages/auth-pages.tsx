@@ -1,18 +1,14 @@
 import { Button } from "@repo/ui/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { useLocation, useRouter } from "@tanstack/react-router";
-import { KeyRound } from "lucide-react";
+import { useLocation } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useAuthSession } from "@/components/providers/auth-provider";
 import { useLocale, useTranslations } from "@/i18n";
-import { authClient, hazyQueries, sanitizeRedirectUrl, splitPathAndSearch } from "@/lib/clients";
+import { authClient, hazyQueries, sanitizeRedirectUrl } from "@/lib/clients";
 
 function AuthCard() {
   const locale = useLocale();
   const t = useTranslations("auth");
-  const router = useRouter();
   const location = useLocation();
-  const { refreshSessionAfterAuth } = useAuthSession();
   const authConfig = useQuery(hazyQueries.authConfig());
 
   const redirectTarget = useMemo(() => {
@@ -21,34 +17,11 @@ function AuthCard() {
   }, [location.searchStr, locale]);
 
   const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState<"passkey" | "github" | null>(null);
-
-  async function handlePasskey() {
-    setError(null);
-    setSubmitting("passkey");
-    try {
-      const res = await authClient.signIn.passkey();
-      if (res?.error) {
-        setError(res.error.message || t("passkeyError"));
-        return;
-      }
-      await refreshSessionAfterAuth();
-      const target = splitPathAndSearch(redirectTarget);
-      await router.navigate({
-        to: target.to as never,
-        ...(target.search ? { search: target.search as never } : {}),
-        replace: true,
-      });
-    } catch {
-      setError(t("passkeyError"));
-    } finally {
-      setSubmitting(null);
-    }
-  }
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleGithub() {
     setError(null);
-    setSubmitting("github");
+    setSubmitting(true);
     try {
       await authClient.signIn.social({
         provider: "github",
@@ -56,7 +29,7 @@ function AuthCard() {
       });
     } catch {
       setError(t("signInError"));
-      setSubmitting(null);
+      setSubmitting(false);
     }
   }
 
@@ -73,21 +46,10 @@ function AuthCard() {
         <Button
           type="button"
           className="w-full"
-          disabled={submitting !== null}
-          onClick={() => void handlePasskey()}
-        >
-          <KeyRound className="mr-2 size-4" />
-          {submitting === "passkey" ? t("signingIn") : t("continueWithPasskey")}
-        </Button>
-
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full"
-          disabled={submitting !== null || !githubEnabled}
+          disabled={submitting || !githubEnabled}
           onClick={() => void handleGithub()}
         >
-          {submitting === "github" ? t("signingIn") : t("continueWithGithub")}
+          {submitting ? t("signingIn") : t("continueWithGithub")}
         </Button>
 
         {authConfig.data && !authConfig.data.github && (

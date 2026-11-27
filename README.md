@@ -1,76 +1,60 @@
 # hazy
 
-Turborepo for **hazy** and **hazy-note** — two views of one product, one Clerk
-tenant, one database, one API.
+Turborepo for **hazy**, **hazy-note**, and **hazy-dash** — one product, **Better Auth** (GitHub OAuth + Passkeys) + `hz_` API tokens, one database, one API.
 
 **Overview / showcase:** https://apps.nknighta.me/hazy/ (`docs/`, GitHub Pages) —
 what it is, the architecture, and the AI-native toolchain it's built with.
-Every commit here is agent-authored.
 
 | | |
 |---|---|
-| `apps/hazy` | Save URLs, search your reading, ask questions about it, read-later digest. Pure frontend (Next 16, Turbopack, next-intl en/ja) — talks to `apps/api`. |
-| `apps/hazy-note` | Turn saved URLs into your own writing: capture → organise → notes (Quill editor) → compare → export. Next 16. Still has its own `/api/*` route handlers. |
-| `apps/hazy-dash` | A home-screen dashboard — weather, today's reading, recent saves, quick save, Ask. Connects to Hazy as a third-party app ("Connect with Hazy"), so it doubles as the reference client for that flow. Live at `dash.hz.nknighta.me` (dev `:3200`). |
-| `apps/api` | The hazy backend — a **Hono Worker** for `api.hz.nknighta.me`. Serves hazy's `/v1/**` JSON API + the Clerk webhook. See `apps/api/README.md`. |
-| `packages/api-client` | `@repo/api-client` — the typed client (`createHazyClient` / `useHazyClient`) + the wire-contract DTO types, shared by hazy and any future native client. |
+| `apps/hazy` | Save URLs, search your reading, ask questions about it, read-later digest. Pure frontend (React 19 + Vite SPA, TanStack Router/Query, `react-i18next` en/ja) — talks to `apps/api`. |
+| `apps/hazy-note` | Turn saved URLs into your own writing: capture → organise → notes (Quill 2 editor) → analyze → export. Pure frontend (React 19 + Vite SPA, TanStack Router/Query) — talks to `apps/api` (`/v1/note/**`). |
+| `apps/hazy-dash` | Home-screen dashboard — weather, today's reading, recent saves, quick save, Ask. Connects to Hazy via "Connect with Hazy" (`hz_` token). Live at `dash.hz.nknighta.me` (dev `:3200`). |
+| `apps/api` | The hazy backend — a **Hono Worker** for `api.hz.nknighta.me`. Serves `/api/auth/**` (Better Auth) + `/v1/**` JSON API. See `apps/api/README.md`. |
+| `packages/api-client` | `@repo/api-client` — typed client (`createHazyClient`), Better Auth client (`@repo/api-client/auth`), shared TanStack Query helpers (`@repo/api-client/query`), and wire-contract DTOs. |
 | `packages/db` | `@repo/db` — the single Drizzle schema + client + migrations + search-vector trigger. See `packages/db/README.md`. |
 | `packages/ui` | `@repo/ui` — shared Nocturne Tailwind v4 theme + shadcn/ui & common components (`HazyMark`, `Favicon`). |
 
-Both apps resolve the signed-in Clerk user to a `users` row by `clerk_id`; same
-Clerk instance → same `users.id` → `saved_urls` / `collections` are shared. A URL
-saved in hazy shows up in hazy-note's library and vice versa.
+## Prerequisites (1Password CLI Required)
 
-## Getting started
+**This repository requires the [1Password CLI (`op`)](https://developer.1password.com/docs/cli/) for secret management.**
+Plaintext secrets must never be written to `.env`, `.env.local`, `.dev.vars`, or `wrangler.jsonc`.
+
+- Create gitignored `.env.op` (local dev) and `.env.prod.op` (production Neon migrations) using `.env.example` as a reference, with `op://<Vault>/<Item>/<Field>` references.
+- Inject secrets in memory via `op run`:
 
 ```bash
 bun install
-# packages/db/.env.local + apps/*/.env.local + apps/api/.dev.vars
-#   — DATABASE_URL, Clerk, OpenRouter
-bun run dev     # turbo: api on :8787, hazy-note on :3000, hazy on :3100
+
+# Local dev (uses local PG 18 on 127.0.0.1:5433 via .env.op)
+op run --env-file=".env.op" -- bun run dev     # api :8787, hazy-note :3000, hazy :3100, hazy-dash :3200
 ```
 
-hazy dev needs `NEXT_PUBLIC_API_URL=http://localhost:8787` in `apps/hazy/.env.local`.
-
 Local Postgres for development: `apps/hazy-note/scripts/localdb.sh start`
-(user-owned PG on `127.0.0.1:5433`, no Docker). Then, from `packages/db/`:
-`bun db:push && bun db:trigger`.
+(user-owned PG on `127.0.0.1:5433`, no Docker). Then:
+
+```bash
+op run --env-file=".env.op" -- bun --filter @repo/db db:migrate
+op run --env-file=".env.op" -- bun --filter @repo/db db:trigger
+```
 
 ## Tasks (`bun run <task>` at the root → `turbo run`)
 
 | Task | |
 |---|---|
-| `dev` | All dev servers (`--filter=<app>` for one). api runs on `@hono/node-server`; hazy / hazy-note on `next dev --turbopack` |
-| `build` | `next build --turbopack` for the Next apps |
+| `dev` | All dev servers (`--filter=<app>` for one). `api` runs on Node (`@hono/node-server`); `hazy` / `hazy-note` / `hazy-dash` on Vite |
+| `build` | Production builds across all apps |
 | `lint` | Biome |
 | `check-types` | `tsc --noEmit` across every package |
 | `deploy` / `preview` | `apps/api` — `wrangler deploy` / `wrangler dev` |
-| `cf:build` / `cf:deploy` / `cf:preview` | `apps/hazy` / `apps/hazy-note` — OpenNext → Cloudflare Workers |
-| `db:generate` / `db:migrate` / `db:push` / `db:trigger` / `db:studio` | `@repo/db`, driven by `packages/db/.env.local` |
+| `cf:build` / `cf:deploy` | `apps/hazy` / `apps/hazy-note` / `apps/hazy-dash` — Vite `dist/` → Cloudflare Workers Static Assets |
+| `db:generate` / `db:migrate` / `db:push` / `db:trigger` / `db:studio` | `@repo/db` |
 
 ## Deploy
 
-Three independent Cloudflare Workers, each on its own custom domain:
+Four independent Cloudflare Workers on custom domains (`api.hz.nknighta.me`, `hz.nknighta.me`, `note.hz.nknighta.me`, `dash.hz.nknighta.me`).
 
-| Worker | Domain | |
-|---|---|---|
-| `hazy-api` (`apps/api`) | `api.hz.nknighta.me` | plain Hono, no OpenNext |
-| `hazy` (`apps/hazy`) | `hz.nknighta.me` | OpenNext |
-| `hazy-note` (`apps/hazy-note`) | `note.hz.nknighta.me` | OpenNext |
+- **`apps/api`**: `bun run deploy --filter=api` and register production secrets from 1Password (`op read ... | bunx wrangler secret put <KEY> --cwd apps/api`) for `DATABASE_URL` (Neon `production`), `BETTER_AUTH_SECRET`, `ADMIN_EMAIL`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, and `OPENROUTER_API_KEY`.
+- **Frontend SPAs (`hazy`, `hazy-note`, `hazy-dash`)**: `bun run cf:deploy --filter=<app>` (Cloudflare Workers Static Assets).
 
-- **`apps/api`** — `bun run deploy --filter=api`, then `wrangler secret put …`
-  from `apps/api/` for `DATABASE_URL`, `CLERK_SECRET_KEY`,
-  `CLERK_WEBHOOK_SIGNING_SECRET`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`,
-  `OPENROUTER_API_KEY`. Clerk dashboard webhook →
-  `https://api.hz.nknighta.me/v1/webhooks/clerk`.
-- **`apps/hazy`** / **`apps/hazy-note`** — `bun run cf:deploy --filter=<app>`,
-  then `wrangler secret put …` for `DATABASE_URL` (hazy-note only),
-  `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `OPENROUTER_API_KEY`
-  (hazy-note only). `NEXT_PUBLIC_*` (incl. hazy's `NEXT_PUBLIC_API_URL`) are
-  inlined at build from `apps/<app>/.env.local` — the `wrangler.jsonc` `vars`
-  mirror them for reference / server-side reads.
-
-`apps/api` and hazy-note reach the database over `@repo/db`'s Neon HTTP driver
-(Workers has no raw TCP). Locally, a `127.0.0.1` `DATABASE_URL` transparently
-switches to the postgres.js TCP driver instead; `apps/api` dev also runs on Node
-(not workerd) so that path just works.
+`getDb()` in `@repo/db` automatically selects `postgres.js` (TCP) for `localhost` / `127.0.0.1` (local dev) and `@neondatabase/serverless` (HTTP) for Neon in production.

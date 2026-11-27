@@ -15,8 +15,10 @@ export default defineConfig({
     alias: {
       "@": rootDir,
     },
+    dedupe: ["react", "react-dom", "@tanstack/react-query", "@tanstack/react-router"],
   },
   optimizeDeps: {
+    include: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     // @ternlight/base/web loads a WASM binary via URL relative to its module; keep it out of pre-bundling.
     exclude: ["@ternlight/base"],
   },

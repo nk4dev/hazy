@@ -341,10 +341,22 @@ const connectionsSettingsRoute = createRoute({
   component: lazyRouteComponent(() => import("@/pages/connected-apps-page"), "ConnectedAppsPage"),
 });
 
-const passkeysSettingsRoute = createRoute({
+const profilesSettingsRoute = createRoute({
   getParentRoute: () => settingsLayoutRoute,
-  path: "/passkeys",
-  component: lazyRouteComponent(() => import("@/pages/passkeys-page"), "PasskeysPage"),
+  path: "/profiles",
+  component: lazyRouteComponent(
+    () => import("@/components/settings/profiles-settings-view"),
+    "ProfilesSettingsView"
+  ),
+});
+
+const blogsSettingsRoute = createRoute({
+  getParentRoute: () => settingsLayoutRoute,
+  path: "/blogs",
+  component: lazyRouteComponent(
+    () => import("@/components/settings/blogs-settings-view"),
+    "BlogsSettingsView"
+  ),
 });
 
 const localeCatchAllRoute = createRoute({
@@ -380,7 +392,8 @@ const routeTree = rootRoute.addChildren([
         settingsIndexRoute,
         languageSettingsRoute,
         connectionsSettingsRoute,
-        passkeysSettingsRoute,
+        profilesSettingsRoute,
+        blogsSettingsRoute,
       ]),
     ]),
     localeCatchAllRoute,

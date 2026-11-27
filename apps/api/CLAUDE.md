@@ -8,7 +8,7 @@ Serves `/api/auth/**` (Better Auth), `/v1/**` (including `/v1/note/**` for `hazy
 - `@/*` → `./src/*` (tsconfig paths).
 - `src/app.ts` builds the Hono app (split CORS, `onError`, Better Auth mount `/api/auth/*`, `/v1/auth-config`, routers). `src/index.ts` is the Worker entry; `src/server.ts` is local dev on `@hono/node-server`.
 - `src/routes/*` — one Hono sub-app per group (including `routes/note/*` at `/v1/note/**`). Route handlers use `c.get("user")` for the auth'd user, `c.req.param()/.query()/.json()`, `zod .parse()` (caught by `onError`), `return ok(data, { status })`.
-- `src/lib/auth/better-auth.ts` — Better Auth instance (`auth_user`, `auth_session`, `auth_account`, `auth_verification`, `auth_passkey`), `crossSubDomainCookies`, GitHub OAuth + Passkey (`@better-auth/passkey`) only (email/password disabled), and `ADMIN_EMAIL` fail-closed `databaseHooks.user.create.before`.
+- `src/lib/auth/better-auth.ts` — Better Auth instance (`auth_user`, `auth_session`, `auth_account`, `auth_verification`), `crossSubDomainCookies`, GitHub OAuth only (email/password disabled), and `ADMIN_EMAIL` fail-closed `databaseHooks.user.create.before`.
 - `src/middleware/auth.ts` — verifies Bearer `hz_` tokens (`api_token`), Better Auth session cookies (`better_auth`), or temporary Clerk JWT fallback (`clerk`), and resolves/links the internal `users` row (`users.id` UUID preserved).
 - `src/lib/api/response.ts` — `ok()` / `fail()`, plain `Response.json`. Envelope: `{ data }` / `{ error: { code, message, details? } }`.
 

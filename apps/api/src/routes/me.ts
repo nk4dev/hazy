@@ -1,9 +1,10 @@
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getDb } from "@/db";
-import { userPreferences } from "@/db/schema";
+import { profiles, userPreferences } from "@/db/schema";
 import { ok } from "@/lib/api/response";
+import { serializeProfile } from "@/lib/auth/profiles";
 import type { AppEnv } from "@/types/hono";
 
 export const me = new Hono<AppEnv>();
@@ -26,10 +27,20 @@ function toPreferencesDto(row: typeof userPreferences.$inferSelect | undefined) 
 
 me.get("/", async (c) => {
   const user = c.get("user");
+  const authVia = c.get("authVia");
+  const activeProfile = c.get("profile");
   const db = getDb();
   const preferences = await db.query.userPreferences.findFirst({
     where: eq(userPreferences.userId, user.id),
   });
+
+  const userProfiles =
+    authVia !== "api_token"
+      ? await db.query.profiles.findMany({
+          where: eq(profiles.userId, user.id),
+          orderBy: [asc(profiles.sortOrder), asc(profiles.createdAt)],
+        })
+      : undefined;
 
   return ok({
     id: user.id,
@@ -37,6 +48,8 @@ me.get("/", async (c) => {
     displayName: user.displayName,
     avatarUrl: user.avatarUrl,
     preferences: toPreferencesDto(preferences),
+    activeProfile: serializeProfile(activeProfile),
+    ...(userProfiles ? { profiles: userProfiles.map(serializeProfile) } : {}),
   });
 });
 

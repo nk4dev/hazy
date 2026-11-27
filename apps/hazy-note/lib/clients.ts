@@ -40,6 +40,11 @@ export function splitPathAndSearch(href: string): {
 export const noteApiClient = createHazyClient({
   baseUrl: env.API_URL,
   credentials: "include",
+  getProfile: () => {
+    if (typeof window === "undefined") return null;
+    const match = window.location.pathname.match(/^\/p\/([^/]+)/);
+    return match?.[1] ?? null;
+  },
 });
 
 export const noteAuthClient = createHazyAuthClient(env.API_URL);

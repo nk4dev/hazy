@@ -17,10 +17,14 @@ const askSchema = z.object({
   collectionIds: z.array(z.string().uuid()).max(5).optional(),
 });
 
-async function loadOwnedThread(userId: string, id: string) {
+async function loadOwnedThread(userId: string, profileId: string, id: string) {
   const db = getDb();
   const thread = await db.query.askThreads.findFirst({
-    where: and(eq(askThreads.id, id), eq(askThreads.userId, userId)),
+    where: and(
+      eq(askThreads.id, id),
+      eq(askThreads.userId, userId),
+      eq(askThreads.profileId, profileId)
+    ),
   });
   if (!thread) throw new NotFoundError("Thread");
   return thread;
@@ -35,9 +39,10 @@ ask.post("/", async (c) => {
 
 ask.get("/threads", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const db = getDb();
   const rows = await db.query.askThreads.findMany({
-    where: eq(askThreads.userId, user.id),
+    where: and(eq(askThreads.userId, user.id), eq(askThreads.profileId, profile.id)),
     orderBy: (t, { desc }) => [desc(t.updatedAt)],
     limit: 50,
   });
@@ -54,8 +59,9 @@ ask.get("/threads", async (c) => {
 
 ask.get("/threads/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  const thread = await loadOwnedThread(user.id, id);
+  const thread = await loadOwnedThread(user.id, profile.id, id);
   const db = getDb();
 
   const messages = await db.query.askMessages.findMany({
@@ -100,10 +106,19 @@ ask.get("/threads/:id", async (c) => {
 
 ask.delete("/threads/:id", async (c) => {
   const user = c.get("user");
+  const profile = c.get("profile");
   const id = c.req.param("id");
-  await loadOwnedThread(user.id, id);
+  await loadOwnedThread(user.id, profile.id, id);
   const db = getDb();
-  await db.delete(askThreads).where(and(eq(askThreads.id, id), eq(askThreads.userId, user.id)));
+  await db
+    .delete(askThreads)
+    .where(
+      and(
+        eq(askThreads.id, id),
+        eq(askThreads.userId, user.id),
+        eq(askThreads.profileId, profile.id)
+      )
+    );
   return ok({ id });
 });
 
